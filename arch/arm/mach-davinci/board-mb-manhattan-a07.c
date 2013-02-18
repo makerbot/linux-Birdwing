@@ -38,6 +38,14 @@
 #define DA850_USB1_OC_PIN		GPIO_TO_PIN(6, 13)
 
 
+const short da850_lcdcntl_pins[] __initconst = {
+	DA850_LCD_D_0, DA850_LCD_D_1, DA850_LCD_D_2, DA850_LCD_D_3,
+	DA850_LCD_D_4, DA850_LCD_D_5, DA850_LCD_D_6, DA850_LCD_D_7,
+	DA850_LCD_PCLK, DA850_LCD_HSYNC, DA850_LCD_VSYNC, DA850_NLCD_AC_ENB_CS,
+	-1
+};
+
+
 static struct mtd_partition da850_evm_nandflash_partition[] = {
 	{
 		.name		= "u-boot env",
@@ -332,8 +340,27 @@ static __init void omapl138_hawk_init(void)
 
 	omapl138_hawk_usb_init();
 
-  platform_add_devices(da850_evm_devices,
+    platform_add_devices(da850_evm_devices,
         ARRAY_SIZE(da850_evm_devices));
+
+	ret = davinci_cfg_reg_list(lcd_cntl_pins);
+	if (ret)
+		pr_warn("%s: LCDC mux setup failed: %d\n", __func__, ret);
+
+	/* LCD  */
+	ret = davinci_cfg_reg_list(lcd_power_pins);
+	if (ret)
+		pr_warn("%s: EVM specific LCD mux setup failed: %d\n",
+			__func__, ret);
+
+	ret = da850_lcd_hw_init();
+	if (ret)
+		pr_warn("%s: LCD initialization failed: %d\n", __func__, ret);
+
+	ssd2119_pdata.panel_power_ctrl = da850_panel_power_ctrl,
+	ret = da8xx_register_lcdc(&ssd2119_pdata);
+	if (ret)
+		pr_warn("%s: LCDC registration failed: %d\n", __func__, ret);
 
 	ret = da8xx_register_watchdog();
 	if (ret)

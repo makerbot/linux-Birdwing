@@ -259,6 +259,23 @@ static struct fb_videomode known_lcd_panels[] = {
 		.sync           = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
 		.flag           = 0,
 	},
+   [3] = {
+		/* Solomon Systech SSD2119 Driver + UMSH-8252MD-T LCD Module */
+		.name           = "SSD2119",
+		.xres           = 320,
+		.yres           = 240,
+		.pixclock       = 7833600,
+		.left_margin    = 30,
+		.right_margin   = 0,
+		.upper_margin   = 4,
+		.lower_margin   = 1,
+		.hsync_len      = 1,
+		.vsync_len      = 1,
+		.sync           = 0,
+		.flag           = 0,
+	},
+        
+    
 };
 
 /* Enable the Raster Engine of the LCD Controller */
