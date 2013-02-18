@@ -590,20 +590,26 @@ int __init da8xx_register_uio_pruss(void)
 }
 
 static struct lcd_ctrl_config lcd_cfg = {
-	.panel_shade		= COLOR_ACTIVE,
+	.panel_shade	= COLOR_ACTIVE,
 	.bpp			= 16,
 };
 
 struct da8xx_lcdc_platform_data sharp_lcd035q3dg01_pdata = {
-	.manu_name		= "sharp",
+	.manu_name	    	= "sharp",
 	.controller_data	= &lcd_cfg,
-	.type			= "Sharp_LCD035Q3DG01",
+	.type		    	= "Sharp_LCD035Q3DG01",
 };
 
 struct da8xx_lcdc_platform_data sharp_lk043t1dg01_pdata = {
-	.manu_name		= "sharp",
+	.manu_name	    	= "sharp",
 	.controller_data	= &lcd_cfg,
-	.type			= "Sharp_LK043T1DG01",
+	.type	    		= "Sharp_LK043T1DG01",
+};
+
+struct da8xx_lcdc_platform_data ssd2119_pdata = {
+	.manu_name	    	= "solomon systech",
+	.controller_data	= &lcd_cfg,
+	.type		    	= "SSD2119",
 };
 
 static struct resource da8xx_lcdc_resources[] = {
