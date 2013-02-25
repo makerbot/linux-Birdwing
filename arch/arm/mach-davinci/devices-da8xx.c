@@ -607,7 +607,7 @@ struct da8xx_lcdc_platform_data sharp_lk043t1dg01_pdata = {
 };
 
 struct da8xx_lcdc_platform_data ssd2119_pdata = {
-	.manu_name	    	= "solomon systech",
+	.manu_name	    	= "ssd2119",
 	.controller_data	= &lcd_cfg,
 	.type		    	= "SSD2119",
 };
