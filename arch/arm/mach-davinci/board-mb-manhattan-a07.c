@@ -37,13 +37,48 @@
 #define DA850_USB1_VBUS_PIN		GPIO_TO_PIN(2, 4)
 #define DA850_USB1_OC_PIN		GPIO_TO_PIN(6, 13)
 
+#define DA850_LCD_BL_PIN    GPIO_TO_PIN(6, 7)
+#define DA850_LCD_RESET_PIN GPIO_TO_PIN(8, 15)
 
-const short da850_lcdcntl_pins[] __initconst = {
-	DA850_LCD_D_0, DA850_LCD_D_1, DA850_LCD_D_2, DA850_LCD_D_3,
-	DA850_LCD_D_4, DA850_LCD_D_5, DA850_LCD_D_6, DA850_LCD_D_7,
-	DA850_LCD_PCLK, DA850_LCD_HSYNC, DA850_LCD_VSYNC, DA850_NLCD_AC_ENB_CS,
-	-1
+
+static const short da850_lcd_spi_pins[] = {
+	DA850_GPIO4_11,
+	DA850_GPIO4_13,
+	DA850_GPIO4_14,
+    -1
 };
+
+static void da850_panel_power_ctrl(int val)
+{
+	/* lcd backlight */
+	gpio_set_value(DA850_LCD_BL_PIN, val);
+}
+
+static int da850_lcd_hw_init(void)
+{
+	int status;
+
+	status = gpio_request(DA850_LCD_BL_PIN, "lcd bl\n");
+	if (status < 0)
+		return status;
+
+	gpio_direction_output(DA850_LCD_BL_PIN, 0);
+
+	/* Switch off panel power and backlight */
+	da850_panel_power_ctrl(0);
+
+	/* Switch on panel power and backlight */
+	da850_panel_power_ctrl(1);
+
+    /* pull the reset pin high */
+	status = gpio_request(DA850_LCD_RESET_PIN, "lcd reset\n");
+	if (status < 0)
+		return status;
+
+	gpio_direction_output(DA850_LCD_RESET_PIN, 1);
+
+	return 0;
+}
 
 
 static struct mtd_partition da850_evm_nandflash_partition[] = {
@@ -343,15 +378,10 @@ static __init void omapl138_hawk_init(void)
     platform_add_devices(da850_evm_devices,
         ARRAY_SIZE(da850_evm_devices));
 
-	ret = davinci_cfg_reg_list(lcd_cntl_pins);
+	/* LCD  */
+	ret = davinci_cfg_reg_list(da850_lcdcntl_pins);
 	if (ret)
 		pr_warn("%s: LCDC mux setup failed: %d\n", __func__, ret);
-
-	/* LCD  */
-	ret = davinci_cfg_reg_list(lcd_power_pins);
-	if (ret)
-		pr_warn("%s: EVM specific LCD mux setup failed: %d\n",
-			__func__, ret);
 
 	ret = da850_lcd_hw_init();
 	if (ret)
