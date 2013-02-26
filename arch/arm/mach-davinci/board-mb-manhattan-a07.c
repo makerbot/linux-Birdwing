@@ -18,6 +18,7 @@
 #include <linux/mtd/partitions.h>
 #include <linux/mtd/physmap.h>
 #include <linux/platform_device.h>
+#include <linux/spi/spi_gpio.h>
 #include <linux/platform_data/mtd-davinci.h>
 #include <linux/platform_data/mtd-davinci-aemif.h>
 #include <linux/platform_data/spi-davinci.h>
@@ -383,7 +384,7 @@ static struct spi_board_info da850_spi_board_info[] = {
 		.mode = SPI_MODE_3,
 		.max_speed_hz = 10000000,       /* max sample rate at 3V */
 		.bus_num = 1,
-		.controller_data = GPIO_TO_PIN(0,12),
+		.controller_data = (void *) GPIO_TO_PIN(0,12),
     },
 };
 
