@@ -33,6 +33,7 @@
 #include <linux/cpufreq.h>
 #include <linux/console.h>
 #include <linux/spinlock.h>
+#include <linux/spi/spi.h>
 #include <linux/slab.h>
 #include <linux/delay.h>
 #include <linux/lcm.h>
@@ -278,19 +279,6 @@ static struct fb_videomode known_lcd_panels[] = {
     
 };
 
-static struct spi_driver ssd2119_spi_driver = {
-	.driver = {
-		.name		= "ssd2119_spi",
-		.bus		= &spi_bus_type,
-		.owner		= this_module,
-	},
-
-	.probe		= ssd2119_spi_probe,
-	.remove		= __devexit_p(ssd2119_spi_remove),
-	.suspend	= ssd2119_spi_suspend,
-	.resume		= ssd2119_spi_resume,
-};
-
 struct ssd2119_spi {
 	struct spi_device	*spi;
 	u8 buffer[8];
@@ -310,25 +298,25 @@ static int ssd2119_spi_write_reg(u8 reg, u16 val)
 	spi_message_init(&msg);
 
 	/* register index */
-	spi_interface->buffer[0] = ltv_opc_index;
-	spi_interface->buffer[1] = 0x00;
-	spi_interface->buffer[2] = reg & 0x7f;
+	spi_interface.buffer[0] = ltv_opc_index;
+	spi_interface.buffer[1] = 0x00;
+	spi_interface.buffer[2] = reg & 0x7f;
 	index_xfer.tx_buf = spi_interface->buffer;
 	spi_message_add_tail(&index_xfer, &msg);
 
 	/* register value */
-	spi_interface->buffer[4] = ltv_opc_data;
-	spi_interface->buffer[5] = val >> 8;
-	spi_interface->buffer[6] = val;
-	value_xfer.tx_buf = spi_interface->buffer + 4;
+	spi_interface.buffer[4] = ltv_opc_data;
+	spi_interface.buffer[5] = val >> 8;
+	spi_interface.buffer[6] = val;
+	value_xfer.tx_buf = spi_interface.buffer + 4;
 	spi_message_add_tail(&value_xfer, &msg);
     
-	return spi_sync(spi_interface->spi, &msg);
+	return spi_sync(spi_interface.spi, &msg);
 }
 
 static int __devinit ssd2119_spi_probe(struct spi_device *spi)
 {
-	spi_interface->spi = spi;
+	spi_interface.spi = spi;
 
 	return 0;
 }
@@ -341,6 +329,20 @@ static int __devexit ssd2119_spi_remove(struct spi_device *spi)
 
 #define ssd2119_spi_suspend	null
 #define ssd2119_spi_resume		null
+
+static struct spi_driver ssd2119_spi_driver = {
+	.driver = {
+		.name		= "ssd2119_spi",
+		.bus		= &spi_bus_type,
+		.owner		= THIS_MODULE,
+	},
+
+	.probe		= ssd2119_spi_probe,
+	.remove		= __devexit_p(ssd2119_spi_remove),
+	.suspend	= ssd2119_spi_suspend,
+	.resume		= ssd2119_spi_resume,
+};
+
 
 /* Enable the Raster Engine of the LCD Controller */
 static inline void lcd_enable_raster(void)
