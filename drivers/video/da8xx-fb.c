@@ -278,6 +278,70 @@ static struct fb_videomode known_lcd_panels[] = {
     
 };
 
+static struct spi_driver ssd2119_spi_driver = {
+	.driver = {
+		.name		= "ssd2119_spi",
+		.bus		= &spi_bus_type,
+		.owner		= this_module,
+	},
+
+	.probe		= ssd2119_spi_probe,
+	.remove		= __devexit_p(ssd2119_spi_remove),
+	.suspend	= ssd2119_spi_suspend,
+	.resume		= ssd2119_spi_resume,
+};
+
+struct ssd2119_spi {
+	struct spi_device	*spi;
+	u8 buffer[8];
+}spi_interface;
+
+static int ssd2119_spi_write_reg(u8 reg, u16 val)
+{
+	struct spi_message msg;
+	struct spi_transfer index_xfer = {
+		.len		= 3,
+		.cs_change	= 1,
+	};
+	struct spi_transfer value_xfer = {
+		.len		= 3,
+	};
+
+	spi_message_init(&msg);
+
+	/* register index */
+	spi_interface->buffer[0] = ltv_opc_index;
+	spi_interface->buffer[1] = 0x00;
+	spi_interface->buffer[2] = reg & 0x7f;
+	index_xfer.tx_buf = spi_interface->buffer;
+	spi_message_add_tail(&index_xfer, &msg);
+
+	/* register value */
+	spi_interface->buffer[4] = ltv_opc_data;
+	spi_interface->buffer[5] = val >> 8;
+	spi_interface->buffer[6] = val;
+	value_xfer.tx_buf = spi_interface->buffer + 4;
+	spi_message_add_tail(&value_xfer, &msg);
+    
+	return spi_sync(spi_interface->spi, &msg);
+}
+
+static int __devinit ssd2119_spi_probe(struct spi_device *spi)
+{
+	spi_interface->spi = spi;
+
+	return 0;
+}
+
+static int __devexit ssd2119_spi_remove(struct spi_device *spi)
+{
+    // ??? not sure what should go in here
+	return 0;
+}
+
+#define ssd2119_spi_suspend	null
+#define ssd2119_spi_resume		null
+
 /* Enable the Raster Engine of the LCD Controller */
 static inline void lcd_enable_raster(void)
 {
@@ -732,6 +796,84 @@ static void lcd_calc_clk_divider(struct da8xx_fb_par *par)
 
 }
 
+static int lcd_ssd2119_init() {
+
+  // Power supply setting R03h
+  //ssd2119_spi_write_reg(3, 0x21);
+  //ssd2119_spi_write_reg(0x0C, 0x21);
+  //ssd2119_spi_write_reg(0x0D, 0x21);
+  //ssd2119_spi_write_reg(0x0E, 0x21);
+
+  // device on but output off: R07h at 0021h
+  ssd2119_spi_write_reg(7, 0x21);
+
+  // turn on the oscillator: R00h at 0001h
+  //ssd2119_spi_write_reg(0, 0x01);
+
+  // display output on: R07h at 0023h
+  ssd2119_spi_write_reg(7, 0x23);
+
+  // exit sleep mode (R10h at 000h)
+  ssd2119_spi_write_reg(0x10, 0x00);
+
+  // wait 30ms
+
+  // ??? set R07h at 0033h
+  ssd2119_spi_write_reg(7, 0x33);
+
+#define LCD_MODE_65K 0x6000
+#define LCD_WMODE_GENERIC 0x0400
+#define LCD_DOTCLOCK_ACTIVE 0x0100
+#define LCD_NOSYNC_DMODE 0x0200
+  // entry mode setting (R11h)
+  ssd2119_spi_write_reg(0x11, LCD_MODE_65K + LCD_WMODE_GENERIC + LCD_DOTCLOCK_ACTIVE + LCD_NOSYNC_DMODE);
+  
+
+  // LCD driver AC setting (R02h)
+  ssd2119_spi_write_reg(2, 0x0);
+
+  // RAM data write (R22h)
+
+  // Display ON
+
+}
+
+static int lcd_ssd2119_shutdown(){
+
+  // enter sleep mode: R10H at 0001h
+  ssd2119_spi_write_reg(0x10, 0x01);
+
+  // halt the operation: R07h at 0000h
+  ssd2119_spi_write_reg(0x07, 0x00);
+
+  // wait until VGH < 5V
+
+  // remove power from VCI then VDDIO
+
+  // display OFF
+
+}
+
+static int lcd_ssd2119_sleep(){
+
+  // enter sleep mode: R10H at 0001h
+  ssd2119_spi_write_reg(0x10, 0x01);
+
+  // halt the operation: R07h at 0000h
+  ssd2119_spi_write_reg(0x07, 0x00);
+
+}
+
+static int lcd_ssd2119_wake(){
+  
+  // enter sleep mode: R10H at 0001h
+  ssd2119_spi_write_reg(0x10, 0x00);
+
+  // halt the operation: R07h at 0000h
+  ssd2119_spi_write_reg(0x07, 0x33);
+
+}
+
 static int lcd_init(struct da8xx_fb_par *par, const struct lcd_ctrl_config *cfg,
 		struct fb_videomode *panel)
 {
@@ -779,6 +921,8 @@ static int lcd_init(struct da8xx_fb_par *par, const struct lcd_ctrl_config *cfg,
 	/* Configure FDD */
 	lcdc_write((lcdc_read(LCD_RASTER_CTRL_REG) & 0xfff00fff) |
 		       (cfg->fdd << 12), LCD_RASTER_CTRL_REG);
+
+  lcd_ssd2119_init();
 
 	return 0;
 }
@@ -1041,6 +1185,7 @@ static int fb_remove(struct platform_device *dev)
 		framebuffer_release(info);
 		iounmap(da8xx_fb_reg_base);
 		release_mem_region(lcdc_regs->start, resource_size(lcdc_regs));
+    spi_unregister_driver(&ssd2119_spi_driver);
 
 	}
 	return 0;
@@ -1328,6 +1473,12 @@ static int fb_probe(struct platform_device *device)
 		par->panel_power_ctrl(1);
 	}
 
+  /* initialize spi interface */
+  ret = spi_register_driver(&ssd2119_spi_driver);
+  if (ret)
+      goto err_spi_register;
+
+
 	if (lcd_init(par, lcd_cfg, lcdc_info) < 0) {
 		dev_err(&device->dev, "lcd_init failed\n");
 		ret = -EFAULT;
@@ -1475,6 +1626,9 @@ err_release_fb_mem:
 
 err_release_fb:
 	framebuffer_release(da8xx_fb_info);
+
+err_spi_register:
+	spi_unregister_driver(&ssd2119_spi_driver);
 
 err_pm_runtime_disable:
 	pm_runtime_put_sync(&device->dev);
