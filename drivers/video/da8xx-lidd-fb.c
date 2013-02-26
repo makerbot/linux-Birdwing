@@ -52,12 +52,26 @@
 #define LCD_SYNC_LOST			BIT(2)
 #define LCD_FRAME_DONE			BIT(0)
 
+/* LIDD_DMA_EN bit must be disabled while changing any of the LIDD CNTRL bits */
 /* LIDD CNTRL */
-#define ASYN_MPU_8080_MODE 0x3
+#define LIDD_FRAME_DONE_INTERRUPT BIT(10)
+#define LIDD_DMA_CS_SELECT        BIT(9)
+#define LIDD_DMA_ENABLE           BIT(8)
+#define LIDD_CS1_POLARITY         BIT(7)
+#define LIDD_CS0_POLARITY         BIT(6)
+#define LIDD_WS_DIR_POLARITY      BIT(5)
+#define LIDD_RS_EN_POLARITY       BIT(4)
+#define LIDD_RS_POLARITY          BIT(3)
+#define LIDD_ASYN_8080_MODE         0x3
 
-
-#define 
-
+/* LIDD_CONF_REG  */
+#define LIDD_WRITE_SETUP_CYC(x)     ((x) << 27)
+#define LIDD_WRITE_DURATION_CYC(x)  ((x) << 21)
+#define LIDD_WRITE_HOLD_CYC(x)      ((x) << 17)
+#define LIDD_READ_SETUP_CYC(x)      ((x) << 12)
+#define LIDD_READ_DURATION_CYC(x)   ((x) << 6)
+#define LIDD_READ_HOLD_CYC(x)       ((x) << 2)
+#define LIDD_OPERATION_GAP_CYC(x)   ((x) << 0)
 
 /* LCD DMA Control Register */
 #define LCD_DMA_BURST_SIZE(x)		((x) << 4)
@@ -74,44 +88,21 @@
 /* LCD Control Register */
 #define LCD_CLK_DIVISOR(x)		((x) << 8)
 #define LCD_RASTER_MODE			0x01
+#define LCD_LIDD_MODE           0x00
 
-/* LCD Raster Control Register */
-#define LCD_PALETTE_LOAD_MODE(x)	((x) << 20)
-#define PALETTE_AND_DATA		0x00
-#define PALETTE_ONLY			0x01
-#define DATA_ONLY			0x02
-
-#define LCD_MONO_8BIT_MODE		BIT(9)
-#define LCD_RASTER_ORDER		BIT(8)
-#define LCD_TFT_MODE			BIT(7)
-#define LCD_V1_UNDERFLOW_INT_ENA	BIT(6)
-#define LCD_V2_UNDERFLOW_INT_ENA	BIT(5)
-#define LCD_V1_PL_INT_ENA		BIT(4)
-#define LCD_V2_PL_INT_ENA		BIT(6)
-#define LCD_MONOCHROME_MODE		BIT(1)
-#define LCD_RASTER_ENABLE		BIT(0)
-#define LCD_TFT_ALT_ENABLE		BIT(23)
-#define LCD_STN_565_ENABLE		BIT(24)
-#define LCD_V2_DMA_CLK_EN		BIT(2)
-#define LCD_V2_LIDD_CLK_EN		BIT(1)
-#define LCD_V2_CORE_CLK_EN		BIT(0)
-#define LCD_V2_LPP_B10			26
-#define LCD_V2_TFT_24BPP_MODE		BIT(25)
-#define LCD_V2_TFT_24BPP_UNPACK		BIT(26)
-
-/* LCD Raster Timing 2 Register */
-#define LCD_AC_BIAS_TRANSITIONS_PER_INT(x)	((x) << 16)
-#define LCD_AC_BIAS_FREQUENCY(x)		((x) << 8)
-#define LCD_SYNC_CTRL				BIT(25)
-#define LCD_SYNC_EDGE				BIT(24)
-#define LCD_INVERT_PIXEL_CLOCK			BIT(22)
-#define LCD_INVERT_LINE_CLOCK			BIT(21)
-#define LCD_INVERT_FRAME_CLOCK			BIT(20)
 
 /* LCD Block */
 #define  LCD_PID_REG				0x0
 #define  LCD_CTRL_REG				0x4
 #define  LCD_STAT_REG				0x8
+#define  LCD_LIDD_CNTRL_REG         0xC
+#define  LCD_LIDD_CS0_REG           0x10
+#define  LCD_LIDD_CS1_REG           0x14
+#define  LCD_LIDD_CS0_ADDRESS       0x18
+#define  LCD_LIDD_CS1_ADDRESS       0x1C
+#define  LCD_LIDD_CS0_DATA          0x20
+#define  LCD_LIDD_CS1_DATA          0x24
+
 #define  LCD_RASTER_CTRL_REG			0x28
 #define  LCD_RASTER_TIMING_0_REG		0x2C
 #define  LCD_RASTER_TIMING_1_REG		0x30
@@ -122,26 +113,8 @@
 #define  LCD_DMA_FRM_BUF_BASE_ADDR_1_REG	0x4C
 #define  LCD_DMA_FRM_BUF_CEILING_ADDR_1_REG	0x50
 
-/* Interrupt Registers available only in Version 2 */
-#define  LCD_RAW_STAT_REG			0x58
-#define  LCD_MASKED_STAT_REG			0x5c
-#define  LCD_INT_ENABLE_SET_REG			0x60
-#define  LCD_INT_ENABLE_CLR_REG			0x64
-#define  LCD_END_OF_INT_IND_REG			0x68
-
-/* Clock registers available only on Version 2 */
-#define  LCD_CLK_ENABLE_REG			0x6c
-#define  LCD_CLK_RESET_REG			0x70
-#define  LCD_CLK_MAIN_RESET			BIT(3)
-
 #define LCD_NUM_BUFFERS	2
 
-#define WSI_TIMEOUT	50
-#define PALETTE_SIZE	256
-#define LEFT_MARGIN	64
-#define RIGHT_MARGIN	64
-#define UPPER_MARGIN	32
-#define LOWER_MARGIN	32
 
 static void __iomem *da8xx_fb_reg_base;
 static struct resource *lcdc_regs;
