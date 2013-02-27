@@ -928,9 +928,6 @@ enum davinci_da850_index {
 	DA850_GPIO6_10,
 	DA850_GPIO6_13,
 	DA850_RTC_ALARM,
-	DA850_GPIO4_11,
-	DA850_GPIO4_13,
-	DA850_GPIO4_14,
 
 	/* VPIF Capture */
 	DA850_VPIF_DIN0,
@@ -973,6 +970,15 @@ enum davinci_da850_index {
 	DA850_VPIF_DOUT15,
 	DA850_VPIF_CLKO2,
 	DA850_VPIF_CLKO3,
+
+  /* Pins from Manhattan Board */
+
+  /* Pins from thermocouple.pins */
+  DA850_GPIO1_3,
+  DA850_GPIO0_12,
+  DA850_GPIO0_13,
+  DA850_GPIO3_1,
+
 };
 
 enum davinci_tnetv107x_index {
