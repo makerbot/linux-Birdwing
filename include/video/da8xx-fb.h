@@ -30,6 +30,21 @@ struct da8xx_lcdc_platform_data {
 	void (*panel_power_ctrl)(int);
 };
 
+struct da8xx_spi_pin_data {
+
+  unsigned cs;
+  unsigned sdi;
+  unsigned sck;
+};
+
+struct da8xx_lcdc_spi_platform_data {
+	const char manu_name[10];
+	void *controller_data;
+	const char type[25];
+	void (*panel_power_ctrl)(int);
+  struct da8xx_spi_pin_data *spi;
+};
+
 struct lcd_ctrl_config {
 	enum panel_shade panel_shade;
 

@@ -42,11 +42,17 @@
 #define DA850_LCD_RESET_PIN GPIO_TO_PIN(8, 15)
 
 
-static const short da850_lcd_spi_pins[] = {
-	DA850_GPIO4_11,
-	DA850_GPIO4_13,
-	DA850_GPIO4_14,
-    -1
+static short mb_lcd_spi_pins[] = {
+  DA850_GPIO1_3,
+  DA850_GPIO0_13,
+  DA850_GPIO0_12,
+  -1,
+};
+
+static struct da8xx_spi_pin_data lcd_spi_gpio_data = {
+    .sck = GPIO_TO_PIN(1, 3),
+    .sdi = GPIO_TO_PIN(0, 13),
+    .cs = GPIO_TO_PIN(0, 12),
 };
 
 static void da850_panel_power_ctrl(int val)
@@ -362,32 +368,6 @@ static struct davinci_uart_config omapl138_hawk_uart_config __initdata = {
 	.enabled_uarts = 0x7,
 };
 
-static struct spi_gpio_platform_data spi_gpio_data = {
-    .sck = GPIO_TO_PIN(1, 3),
-    .mosi = GPIO_TO_PIN(0, 13),
-    .miso = GPIO_TO_PIN(3, 1),
-    .num_chipselect = 1,
-};
-
-static struct platform_device spi_gpio_device = {
-    .name = "spi_gpio",
-    .id  = 0,
-    .dev = { 
-        .platform_data = &spi_gpio_data,
-        },
-};
-
-static struct spi_board_info da850_spi_board_info[] = {
-    [0] = {
-		.modalias = "ssd2119_spi",
-		.platform_data = &spi_gpio_device,
-		.mode = SPI_MODE_3,
-		.max_speed_hz = 10000000,       /* max sample rate at 3V */
-		.bus_num = 1,
-		.controller_data = (void *) GPIO_TO_PIN(0,12),
-    },
-};
-
 static __init void omapl138_hawk_init(void)
 {
 	int ret;
@@ -410,17 +390,17 @@ static __init void omapl138_hawk_init(void)
 	if (ret)
 		pr_warn("%s: LCDC mux setup failed: %d\n", __func__, ret);
 
-	spi_register_board_info(da850_spi_board_info,
-			ARRAY_SIZE(da850_spi_board_info));
-
-	platform_device_register(&spi_gpio_device);
-
 	ret = da850_lcd_hw_init();
 	if (ret)
 		pr_warn("%s: LCD initialization failed: %d\n", __func__, ret);
 
+	ret = davinci_cfg_reg_list(mb_lcd_spi_pins);
+	if (ret)
+		pr_warn("%s: LCDC spi mux setup failed: %d\n", __func__, ret);
+
 	ssd2119_pdata.panel_power_ctrl = da850_panel_power_ctrl,
-	ret = da8xx_register_lcdc(&ssd2119_pdata);
+  ssd2119_pdata.spi = &lcd_spi_gpio_data;
+	ret = da8xx_register_lcdc_spi(&ssd2119_pdata);
 	if (ret)
 		pr_warn("%s: LCDC registration failed: %d\n", __func__, ret);
 

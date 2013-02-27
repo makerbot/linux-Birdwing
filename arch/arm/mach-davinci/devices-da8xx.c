@@ -606,7 +606,7 @@ struct da8xx_lcdc_platform_data sharp_lk043t1dg01_pdata = {
 	.type	    		= "Sharp_LK043T1DG01",
 };
 
-struct da8xx_lcdc_platform_data ssd2119_pdata = {
+struct da8xx_lcdc_spi_platform_data ssd2119_pdata = {
 	.manu_name	    	= "ssd2119",
 	.controller_data	= &lcd_cfg,
 	.type		    	= "SSD2119",
@@ -633,6 +633,12 @@ static struct platform_device da8xx_lcdc_device = {
 };
 
 int __init da8xx_register_lcdc(struct da8xx_lcdc_platform_data *pdata)
+{
+	da8xx_lcdc_device.dev.platform_data = pdata;
+	return platform_device_register(&da8xx_lcdc_device);
+}
+
+int __init da8xx_register_lcdc_spi(struct da8xx_lcdc_spi_platform_data *pdata)
 {
 	da8xx_lcdc_device.dev.platform_data = pdata;
 	return platform_device_register(&da8xx_lcdc_device);
