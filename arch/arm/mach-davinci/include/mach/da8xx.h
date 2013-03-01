@@ -89,6 +89,7 @@ int da8xx_register_usb11(struct da8xx_ohci_root_hub *pdata);
 int da8xx_register_emac(void);
 int da8xx_register_uio_pruss(void);
 int da8xx_register_lcdc(struct da8xx_lcdc_platform_data *pdata);
+int da8xx_register_lcdc_lidd(struct da8xx_lcdc_platform_data *pdata);
 int da8xx_register_lcdc_spi(struct da8xx_lcdc_spi_platform_data *pdata);
 int da8xx_register_mmcsd0(struct davinci_mmc_config *config);
 int da850_register_mmcsd1(struct davinci_mmc_config *config);
@@ -110,7 +111,6 @@ extern struct platform_device da8xx_serial_device;
 extern struct emac_platform_data da8xx_emac_pdata;
 extern struct da8xx_lcdc_platform_data sharp_lcd035q3dg01_pdata;
 extern struct da8xx_lcdc_platform_data sharp_lk043t1dg01_pdata;
-extern struct da8xx_lcdc_spi_platform_data ssd2119_pdata;
 
 
 extern const short da830_emif25_pins[];

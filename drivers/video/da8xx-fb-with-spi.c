@@ -40,6 +40,7 @@
 #include <video/da8xx-fb.h>
 #include <asm/div64.h>
 #include <linux/gpio.h>
+#include <linux/delay.h>
 
 #define DRIVER_NAME "da8xx_lcdc"
 
@@ -172,7 +173,7 @@ struct da8xx_fb_par {
 	int			vsync_flag;
 	int			vsync_timeout;
 	spinlock_t		lock_for_chan_update;
-  struct da8xx_spi_pin_data *spi;
+    struct da8xx_spi_pin_data *spi;
 
 	/*
 	 * LCDC has 2 ping pong DMA channels, channel 0
@@ -396,6 +397,7 @@ static int lcd_ssd2119_spi_init(struct da8xx_fb_par *par) {
   ret = ssd2119_spi_write_reg(par, 0x10, 0x00);
 
   // wait 30ms
+  mdelay(30);
 
   // ??? set R07h at 0033h
   ret = ssd2119_spi_write_reg(par, 7, 0x33);
@@ -965,9 +967,9 @@ static int lcd_init(struct da8xx_fb_par *par, const struct lcd_ctrl_config *cfg,
 	if (ret < 0)
 		return ret;
 
-  ret = lcd_ssd2119_spi_init(par);
-  if (ret < 0)
-    return ret;
+    ret = lcd_ssd2119_spi_init(par);
+    if (ret < 0)
+      return ret;
 
 	/* Configure FDD */
 	lcdc_write((lcdc_read(LCD_RASTER_CTRL_REG) & 0xfff00fff) |
