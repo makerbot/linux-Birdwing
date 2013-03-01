@@ -41,7 +41,7 @@
 #define DA850_LCD_BL_PIN    GPIO_TO_PIN(6, 7)
 #define DA850_LCD_RESET_PIN GPIO_TO_PIN(8, 15)
 
-
+#ifdef LCD_SPI
 static short mb_lcd_spi_pins[] = {
   DA850_GPIO1_3,
   DA850_GPIO0_13,
@@ -54,6 +54,19 @@ static struct da8xx_spi_pin_data lcd_spi_gpio_data = {
     .sdi = GPIO_TO_PIN(0, 13),
     .cs = GPIO_TO_PIN(0, 12),
 };
+
+struct da8xx_lcdc_spi_platform_data ssd2119_pdata = {
+	.manu_name	    	= "ssd2119",
+	.controller_data	= &lcd_cfg,
+	.type		    	= "SSD2119",
+};
+#else
+struct da8xx_lcdc_platform_data ssd2119_pdata = {
+	.manu_name	    	= "ssd2119",
+	.controller_data	= &lcd_cfg,
+	.type		    	= "SSD2119",
+};
+#endif
 
 static void da850_panel_power_ctrl(int val)
 {
@@ -394,13 +407,18 @@ static __init void omapl138_hawk_init(void)
 	if (ret)
 		pr_warn("%s: LCD initialization failed: %d\n", __func__, ret);
 
+	ssd2119_pdata.panel_power_ctrl = da850_panel_power_ctrl,
+
+#ifdef LCDC_SPI
 	ret = davinci_cfg_reg_list(mb_lcd_spi_pins);
 	if (ret)
 		pr_warn("%s: LCDC spi mux setup failed: %d\n", __func__, ret);
 
-	ssd2119_pdata.panel_power_ctrl = da850_panel_power_ctrl,
-  ssd2119_pdata.spi = &lcd_spi_gpio_data;
+    ssd2119_pdata.spi = &lcd_spi_gpio_data;
 	ret = da8xx_register_lcdc_spi(&ssd2119_pdata);
+#else
+    ret = da8xx_register_lcdc_lidd(&ssd2119_pdata);
+#endif
 	if (ret)
 		pr_warn("%s: LCDC registration failed: %d\n", __func__, ret);
 
