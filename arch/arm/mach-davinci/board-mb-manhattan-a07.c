@@ -41,7 +41,7 @@
 #define DA850_LCD_BL_PIN    GPIO_TO_PIN(6, 7)
 #define DA850_LCD_RESET_PIN GPIO_TO_PIN(8, 15)
 
-#ifdef LCD_SPI
+#ifdef CONFIG_FB_DA8XX
 static short mb_lcd_spi_pins[] = {
   DA850_GPIO1_3,
   DA850_GPIO0_13,
@@ -398,7 +398,7 @@ static __init void omapl138_hawk_init(void)
 		pr_warn("%s: LCD initialization failed: %d\n", __func__, ret);
 
 
-#ifdef LCD_SPI
+#ifdef CONFIG_FB_DA8XX
 	ret = davinci_cfg_reg_list(mb_lcd_spi_pins);
 	if (ret)
 		pr_warn("%s: LCDC spi mux setup failed: %d\n", __func__, ret);
@@ -410,7 +410,7 @@ static __init void omapl138_hawk_init(void)
 	ssd2119_pdata.panel_power_ctrl = da850_panel_power_ctrl,
   pr_info("LCD LIDD: %s \n", ssd2119_pdata.manu_name);
   ret = da8xx_register_lcdc_lidd(&ssd2119_pdata);
-#endif
+#endif //FB_DA8XX_LIDD
 	if (ret)
 		pr_warn("%s: LCDC registration failed: %d\n", __func__, ret);
 
