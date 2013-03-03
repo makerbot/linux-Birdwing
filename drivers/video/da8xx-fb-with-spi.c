@@ -173,7 +173,7 @@ struct da8xx_fb_par {
 	int			vsync_flag;
 	int			vsync_timeout;
 	spinlock_t		lock_for_chan_update;
-    struct da8xx_spi_pin_data *spi;
+  struct da8xx_spi_pin_data *spi;
 
 	/*
 	 * LCDC has 2 ping pong DMA channels, channel 0
@@ -284,14 +284,14 @@ static struct fb_videomode known_lcd_panels[] = {
 
 
 // set the chip select line
-void ssd2119_spi_set_cs(struct da8xx_spi_pin_data *spi, u8 val){
+static void ssd2119_spi_set_cs(struct da8xx_spi_pin_data *spi, u8 val){
 
   gpio_set_value(spi->cs, val);
 
 }
 
 // send one bit of data
-void ssd2119_spi_send_bit(struct da8xx_spi_pin_data *spi, u8 val){
+static void ssd2119_spi_send_bit(struct da8xx_spi_pin_data *spi, u8 val){
 
   gpio_set_value(spi->sck, 0);
 
@@ -301,14 +301,9 @@ void ssd2119_spi_send_bit(struct da8xx_spi_pin_data *spi, u8 val){
 
 }
 
-/*
- * Reverse bit order of a uint8_t to match required format for SPI communcation
- * 
- * @param[in] 	int_in uint8_t to be reversed
- * @return[out] bit reversed uint8_t
- * 
- */
-u8 bit_reverse(u8 int_in){
+
+/* Reverse bit order of a uint8_t to match required format for SPI communcation */
+static u8 bit_reverse(u8 int_in){
 	
 	u8 rev_bit = 0;
 	rev_bit |= (int_in & 0x1) << 7;
@@ -325,19 +320,19 @@ u8 bit_reverse(u8 int_in){
 
 
 // send one byte of data, MSB first
-void ssd2119_spi_send_byte(struct da8xx_spi_pin_data *spi, u8 val){
+static void ssd2119_spi_send_byte(struct da8xx_spi_pin_data *spi, u8 val){
 
   u8 rev_val = bit_reverse(val);
   u8 i; 
  
   for (i = 0; i < 8; i++){
-    ssd2119_spi_send_bit(spi, rev_val & 0xFF);
+    ssd2119_spi_send_bit(spi, rev_val & 0x01);
     rev_val >>= 1;
   }
 }
 
 // data_type is "0" for command and "1" for data
-void ssd2119_spi_send_packet(struct da8xx_spi_pin_data * spi, u8 data, u8 data_type){
+static void ssd2119_spi_send_packet(struct da8xx_spi_pin_data * spi, u8 data, u8 data_type){
 
   ssd2119_spi_set_cs(spi, 0);
 
@@ -349,16 +344,23 @@ void ssd2119_spi_send_packet(struct da8xx_spi_pin_data * spi, u8 data, u8 data_t
 
 }
 
-
+static int ssd2119_spi_init(struct da8xx_fb_par *par){
+ 
+    int ret = -1;
+ 
+    if (par->spi){
+ 
+        ret = gpio_direction_output(par->spi->cs, 1);
+        ret = gpio_direction_output(par->spi->sdi, 1);
+        ret = gpio_direction_output(par->spi->sck, 1);
+    }
+    return ret;
+}
 
 static int ssd2119_spi_write_reg(struct da8xx_fb_par *par, u8 reg, u16 val)
 {
 	
 	if (par->spi){
-
-    gpio_direction_output(par->spi->cs, 1);
-    gpio_direction_output(par->spi->sdi, 1);
-    gpio_direction_output(par->spi->sck, 1);
 
     // transfer command code
     ssd2119_spi_send_packet(par->spi, reg, 0);
@@ -967,9 +969,17 @@ static int lcd_init(struct da8xx_fb_par *par, const struct lcd_ctrl_config *cfg,
 	if (ret < 0)
 		return ret;
 
-    ret = lcd_ssd2119_spi_init(par);
-    if (ret < 0)
+  ret = ssd2119_spi_init(par);
+  if (ret < 0){
+      pr_err("init error in spi !!\n");
       return ret;
+  }
+ 
+  ret = lcd_ssd2119_spi_init(par);
+  if (ret < 0){
+    pr_err("init error in spi lcd sequence!!\n");
+    return ret;
+  }
 
 	/* Configure FDD */
 	lcdc_write((lcdc_read(LCD_RASTER_CTRL_REG) & 0xfff00fff) |
