@@ -614,6 +614,18 @@ struct da8xx_lcdc_platform_data sharp_lk043t1dg01_pdata = {
 	.type	    		= "Sharp_LK043T1DG01",
 };
 
+struct da8xx_lcdc_spi_platform_data ssd2119_spi_pdata = {
+	.manu_name	    	= "ssd2119",
+	.controller_data	= &lcd_cfg,
+	.type		    	= "SSD2119",
+};
+
+struct da8xx_lcdc_platform_data ssd2119_pdata = {
+	.manu_name	    	= "ssd2119",
+	.controller_data	= &lcd_cfg,
+	.type		    	= "SSD2119",
+};
+
 static struct resource da8xx_lcdc_resources[] = {
 	[0] = { /* registers */
 		.start  = DA8XX_LCD_CNTRL_BASE,
@@ -649,7 +661,7 @@ int __init da8xx_register_lcdc(struct da8xx_lcdc_platform_data *pdata)
 
 int __init da8xx_register_lcdc_lidd(struct da8xx_lcdc_platform_data *pdata)
 {
-	da8xx_lcdc_device.dev.platform_data = pdata;
+	da8xx_lcdc_lidd_device.dev.platform_data = pdata;
 	return platform_device_register(&da8xx_lcdc_lidd_device);
 }
 
