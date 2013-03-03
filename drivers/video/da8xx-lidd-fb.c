@@ -39,7 +39,8 @@
 #include <video/da8xx-fb.h>
 #include <asm/div64.h>
 
-#define DRIVER_NAME "da8xx_lcdc_ssd2119"
+/* this Driver has been modified to work with the solomon systech ssd2119 LCD module in LIDD mode */
+#define DRIVER_NAME "da8xx_lcdc_lidd"
 
 #define LCD_VERSION_1	1
 #define LCD_VERSION_2	2
@@ -179,6 +180,21 @@ static struct fb_videomode known_lcd_panels[] = {
 	},
 };
 
+/* Variable Screen Information */
+static struct fb_var_screeninfo da8xx_fb_var = {
+	.xoffset = 0,
+	.yoffset = 0,
+	.transp = {0, 0, 0},
+	.nonstd = 0,
+	.activate = 0,
+	.height = -1,
+	.width = -1,
+	.accel_flags = 0,
+	.sync = 0,
+	.vmode = FB_VMODE_NONINTERLACED
+};
+
+
 
 static struct fb_fix_screeninfo da8xx_fb_fix = {
 	.id = "DA8xx FB Drv",
@@ -194,9 +210,11 @@ static struct fb_fix_screeninfo da8xx_fb_fix = {
 /* Enable the LCD Controller */
 static inline void lcd_enable(void)
 {
+    u32 lidd_reg;
+
     // disable the DMA
     lidd_reg = lcdc_read(LCD_LIDD_CTRL_REG);
-    lidd_reg |= LCD_LIDD_DMA_ENABLE;
+    lidd_reg |= LIDD_DMA_ENABLE;
     lcdc_write(lidd_reg, LCD_LIDD_CTRL_REG);        
     return;
 }
@@ -204,10 +222,22 @@ static inline void lcd_enable(void)
 /* Disable the LCD Controller */
 static inline void lcd_disable(bool wait_for_frame_done)
 {
-    // disable the DMA
-    lidd_reg = lcdc_read(LCD_LIDD_CTRL_REG);
-    lidd_reg &= ~LCD_LIDD_DMA_ENABLE;
-    lcdc_write(lidd_reg, LCD_LIDD_CTRL_REG);        
+  u32 lidd_reg;
+  int ret;
+
+  // disable the DMA
+  lidd_reg = lcdc_read(LCD_LIDD_CTRL_REG);
+  lidd_reg &= ~LIDD_DMA_ENABLE;
+  lcdc_write(lidd_reg, LCD_LIDD_CTRL_REG);        
+
+	if ((wait_for_frame_done == true) && (lcd_revision == LCD_VERSION_2)) {
+		frame_done_flag = 0;
+		ret = wait_event_interruptible_timeout(frame_done_wq,
+				frame_done_flag != 0,
+				msecs_to_jiffies(50));
+		if (ret == 0)
+			pr_err("LCD Controller timed out\n");
+	}
     return;
 }
 
@@ -221,7 +251,7 @@ static void lcd_blit(int load_mode, struct da8xx_fb_par *par)
 	//reg_ras = lcdc_read(LCD_RASTER_CTRL_REG);
 	//reg_ras &= ~(3 << 20);
 
-    printk("LCD_BLIT!!\n");
+  pr_info("LCD_BLIT!!\n");
 	reg_dma  = lcdc_read(LCD_DMA_CTRL_REG);
 
 	if (load_mode == LOAD_DATA) {
@@ -410,7 +440,7 @@ static void lcd_calc_clk_divider(struct da8xx_fb_par *par)
 	lcdc_write(LCD_CLK_DIVISOR(div), LCD_CTRL_REG);
 }
 
-void ssd2119_write_reg(u8 reg, u16 val){
+static void ssd2119_write_reg(u8 reg, u16 val){
 
     lcdc_write(reg, LCD_LIDD_CS0_ADDR);
     
@@ -422,19 +452,18 @@ void ssd2119_write_reg(u8 reg, u16 val){
     lcdc_write(val & 0xFF, LCD_LIDD_CS0_DATA);
 }
 
-static int ssd2119_module_init() {
+static int ssd2119_module_init(void) {
 
     int device_code;
-    int ret;
 
     // check device accress
     lcdc_write(0x0, LCD_LIDD_CS0_ADDR);
     mdelay(10);
     device_code = lcdc_read(LCD_LIDD_CS0_DATA);
-    printk("Device Code: %d\n", device_code);
+    pr_info("Device Code: %d\n", device_code);
     if(device_code != 0x99){
-        printk("Device Code Error!\n");
-        ret -1;
+        pr_err("Device Code Error!\n");
+        //return -1;
     }
 
     
@@ -496,7 +525,7 @@ static int lcd_init(struct da8xx_fb_par *par, const struct lcd_ctrl_config *cfg,
     lcdc_write(LIDD_FRAME_DONE_INTERRUPT | LIDD_ASYN_8080_MODE, LCD_LIDD_CTRL_REG);
 
     /* clear status bits */
-    lcdc_write(0x3FFF, LCD_STAT);
+    lcdc_write(0x3FFF, LCD_STAT_REG);
 
     /* configure stobe timing */
     lcdc_write( LIDD_WRITE_SETUP(0x2) | LIDD_WRITE_DURATION(0x2) | LIDD_WRITE_HOLD(0x2) |  
@@ -537,7 +566,7 @@ static irqreturn_t lcdc_irq_handler_rev01(int irq, void *arg)
 		 * interrupt via the following write to the status register. If
 		 * this is done after then one gets multiple PL done interrupts.
 		 */
-        printk("PL Load Done interrupt\n");
+    pr_info("PL Load Done interrupt\n");
 		lcd_disable(false);
 
 		lcdc_write(stat, LCD_STAT_REG);
@@ -557,7 +586,7 @@ static irqreturn_t lcdc_irq_handler_rev01(int irq, void *arg)
         lcdc_write(stat, LCD_STAT_REG);
             
         // reset the LCD address
-        ssd119_write_reg(0x22, 0x0);
+        ssd2119_write_reg(0x22, 0x0);
 
 		if (stat & LCD_END_OF_FRAME0) {
 			par->which_dma_channel_done = 0;
@@ -669,10 +698,10 @@ static int lcd_da8xx_cpufreq_transition(struct notifier_block *nb,
 	if (val == CPUFREQ_POSTCHANGE) {
 		if (par->lcd_fck_rate != clk_get_rate(par->lcdc_clk)) {
 			par->lcd_fck_rate = clk_get_rate(par->lcdc_clk);
-			lcd_disable_raster(true);
+			lcd_disable(true);
 			lcd_calc_clk_divider(par);
 			if (par->blank == FB_BLANK_UNBLANK)
-				lcd_enable_raster();
+				lcd_enable();
 		}
 	}
 
@@ -732,10 +761,38 @@ static int fb_remove(struct platform_device *dev)
 }
 
 
+static int fb_wait_for_vsync(struct fb_info *info)
+{
+	struct da8xx_fb_par *par = info->par;
+	int ret;
+
+	/*
+	 * Set flag to 0 and wait for isr to set to 1. It would seem there is a
+	 * race condition here where the ISR could have occurred just before or
+	 * just after this set. But since we are just coarsely waiting for
+	 * a frame to complete then that's OK. i.e. if the frame completed
+	 * just before this code executed then we have to wait another full
+	 * frame time but there is no way to avoid such a situation. On the
+	 * other hand if the frame completed just after then we don't need
+	 * to wait long at all. Either way we are guaranteed to return to the
+	 * user immediately after a frame completion which is all that is
+	 * required.
+	 */
+	par->vsync_flag = 0;
+	ret = wait_event_interruptible_timeout(par->vsync_wait,
+					       par->vsync_flag != 0,
+					       par->vsync_timeout);
+	if (ret < 0)
+		return ret;
+	if (ret == 0)
+		return -ETIMEDOUT;
+
+	return 0;
+}
+
 static int fb_ioctl(struct fb_info *info, unsigned int cmd,
 			  unsigned long arg)
 {
-	struct lcd_sync_arg sync_arg;
 
 	switch (cmd) {
 	case FBIOGET_CONTRAST:
@@ -744,10 +801,11 @@ static int fb_ioctl(struct fb_info *info, unsigned int cmd,
 	case FBIPUT_BRIGHTNESS:
 	case FBIGET_COLOR:
 	case FBIPUT_COLOR:
-		return -ENOTTY;
 	case FBIPUT_HSYNC:
 	case FBIPUT_VSYNC:
+		return -ENOTTY;
 	case FBIO_WAITFORVSYNC:
+		return fb_wait_for_vsync(info);
 	default:
 		return -EINVAL;
 	}
@@ -879,7 +937,9 @@ static int fb_probe(struct platform_device *device)
 	int ret, i;
 	unsigned long ulcm;
 
-	if (fb_pdata == NULL) {
+  pr_info("probing the LCD LIDD module\n");
+
+ 	if (fb_pdata == NULL) {
 		dev_err(&device->dev, "Can not get platform data\n");
 		return -ENOENT;
 	}
@@ -1148,6 +1208,7 @@ static void lcd_context_restore(void)
 {
 	lcdc_write(reg_context.ctrl, LCD_CTRL_REG);
 	lcdc_write(reg_context.dma_ctrl, LCD_DMA_CTRL_REG);
+	lcdc_write(reg_context.dma_frm_buf_base_addr_0,
 			LCD_DMA_FRM_BUF_BASE_ADDR_0_REG);
 	lcdc_write(reg_context.dma_frm_buf_ceiling_addr_0,
 			LCD_DMA_FRM_BUF_CEILING_ADDR_0_REG);
@@ -1212,7 +1273,8 @@ static struct platform_driver da8xx_fb_driver = {
 };
 
 static int __init da8xx_fb_init(void)
-{
+{ 
+  pr_info("register the fb lidd driver\n");
 	return platform_driver_register(&da8xx_fb_driver);
 }
 
