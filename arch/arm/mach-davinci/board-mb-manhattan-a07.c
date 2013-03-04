@@ -57,10 +57,19 @@ static struct da8xx_spi_pin_data lcd_spi_gpio_data = {
 #endif
 
 
+static short mb_lcd_power_pins[] = {
+    DA850_GPIO6_7,
+    DA850_GPIO8_15,
+    -1,
+};
+
 static void da850_panel_power_ctrl(int val)
 {
 	/* lcd backlight */
 	gpio_set_value(DA850_LCD_BL_PIN, val);
+
+    /* lcd_reset */
+    gpio_set_value(DA850_LCD_RESET_PIN, val);
 }
 
 static int da850_lcd_hw_init(void)
@@ -73,22 +82,66 @@ static int da850_lcd_hw_init(void)
 
 	gpio_direction_output(DA850_LCD_BL_PIN, 0);
 
+    /* pull the reset pin high */
+	status = gpio_request(DA850_LCD_RESET_PIN, "lcd reset\n");
+	if (status < 0)
+		return status;
+
+	gpio_direction_output(DA850_LCD_RESET_PIN, 0);
+
 	/* Switch off panel power and backlight */
 	da850_panel_power_ctrl(0);
 
 	/* Switch on panel power and backlight */
 	da850_panel_power_ctrl(1);
 
-    /* pull the reset pin high */
-	status = gpio_request(DA850_LCD_RESET_PIN, "lcd reset\n");
-	if (status < 0)
-		return status;
-
-	gpio_direction_output(DA850_LCD_RESET_PIN, 1);
 
 	return 0;
 }
 
+const short mb_manhattan_led_pins[] = {
+    DA850_GPIO0_1,
+    DA850_GPIO0_2,
+    DA850_GPIO0_3,
+    DA850_GPIO2_8,
+    -1
+};
+
+static struct gpio_led gpio_leds[] = {
+    {
+        .name           = "Green_0",
+        .gpio           = GPIO_TO_PIN(0,3),
+    .default_state = LEDS_GPIO_DEFSTATE_OFF,
+    },
+    {
+        .name           = "Green_1",
+        .gpio           = GPIO_TO_PIN(2,8),
+    .default_state = LEDS_GPIO_DEFSTATE_OFF,
+    },
+    {
+        .name           = "Red_0",
+        .gpio           = GPIO_TO_PIN(0,1),
+    .default_state = LEDS_GPIO_DEFSTATE_OFF,
+    },
+    {
+        .name           = "Red_1",
+        .gpio           = GPIO_TO_PIN(0,2),
+    .default_trigger = "heartbeat",
+    },
+};
+
+static struct gpio_led_platform_data gpio_led_info = {
+    .leds       = gpio_leds,
+    .num_leds   = ARRAY_SIZE(gpio_leds),
+};
+
+static struct platform_device leds_gpio = {
+    .name   = "leds-gpio",
+    .id = -1,
+    .dev    = {
+    .platform_data  = &gpio_led_info,
+    },
+};
 
 static struct mtd_partition da850_evm_nandflash_partition[] = {
 	{
@@ -387,12 +440,14 @@ static __init void omapl138_hawk_init(void)
     platform_add_devices(da850_evm_devices,
         ARRAY_SIZE(da850_evm_devices));
   
-  pr_info("LCD Init start\n");
 	/* LCD  */
 	ret = davinci_cfg_reg_list(da850_lcdcntl_pins);
 	if (ret)
 		pr_warn("%s: LCDC mux setup failed: %d\n", __func__, ret);
 
+    ret = davinci_cfg_reg_list(mb_lcd_power_pins);
+	if (ret)
+		pr_warn("%s: LCD pins initialization failed: %d\n", __func__, ret);
 	ret = da850_lcd_hw_init();
 	if (ret)
 		pr_warn("%s: LCD initialization failed: %d\n", __func__, ret);
@@ -404,12 +459,12 @@ static __init void omapl138_hawk_init(void)
 		pr_warn("%s: LCDC spi mux setup failed: %d\n", __func__, ret);
 
 	ssd2119_spi_pdata.panel_power_ctrl = da850_panel_power_ctrl,
-  ssd2119_spi_pdata.spi = &lcd_spi_gpio_data;
+    ssd2119_spi_pdata.spi = &lcd_spi_gpio_data;
 	ret = da8xx_register_lcdc_spi(&ssd2119_spi_pdata);
 #else
-	ssd2119_pdata.panel_power_ctrl = da850_panel_power_ctrl,
-  pr_info("LCD LIDD: %s \n", ssd2119_pdata.manu_name);
-  ret = da8xx_register_lcdc_lidd(&ssd2119_pdata);
+    ssd2119_pdata.panel_power_ctrl = da850_panel_power_ctrl,
+    pr_info("LCD LIDD: %s \n", ssd2119_pdata.manu_name);
+    ret = da8xx_register_lcdc_lidd(&ssd2119_pdata);
 #endif //FB_DA8XX_LIDD
 	if (ret)
 		pr_warn("%s: LCDC registration failed: %d\n", __func__, ret);
@@ -418,6 +473,15 @@ static __init void omapl138_hawk_init(void)
 	if (ret)
 		pr_warn("%s: watchdog registration failed: %d\n",
 			__func__, ret);
+
+    ret = davinci_cfg_reg_list(mb_manhattan_led_pins);
+    if (ret)
+      pr_warn("mb_manhattan_init: LED pinmux failed: %d\n", ret);
+
+    platform_device_register(&leds_gpio);
+    if (ret)
+         pr_warn("da850_evm_init: led device initialization failed: %d\n", ret);
+
 }
 
 #ifdef CONFIG_SERIAL_8250_CONSOLE
