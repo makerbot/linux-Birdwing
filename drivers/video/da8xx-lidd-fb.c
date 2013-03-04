@@ -207,6 +207,18 @@ static struct fb_fix_screeninfo da8xx_fb_fix = {
 	.accel = FB_ACCEL_NONE
 };
 
+static void ssd2119_write_reg(u8 reg, u16 val){
+
+    lcdc_write(reg, LCD_LIDD_CS0_ADDR);
+    
+    /* 16 Bit MODE */
+    //lcdc_write(val, LCD_LIDD_CS0_DATA);
+
+    /* 8 Bit Mode */
+    lcdc_write((val >> 8) & 0xFF, LCD_LIDD_CS0_DATA);
+    lcdc_write(val & 0xFF, LCD_LIDD_CS0_DATA);
+}
+
 /* Enable the LCD Controller */
 static inline void lcd_enable(void)
 {
@@ -222,13 +234,13 @@ static inline void lcd_enable(void)
 /* Disable the LCD Controller */
 static inline void lcd_disable(bool wait_for_frame_done)
 {
-  u32 lidd_reg;
-  int ret;
+    u32 lidd_reg;
+    int ret;
 
-  // disable the DMA
-  lidd_reg = lcdc_read(LCD_LIDD_CTRL_REG);
-  lidd_reg &= ~LIDD_DMA_ENABLE;
-  lcdc_write(lidd_reg, LCD_LIDD_CTRL_REG);        
+    // disable the DMA
+    lidd_reg = lcdc_read(LCD_LIDD_CTRL_REG);
+    lidd_reg &= ~LIDD_DMA_ENABLE;
+    lcdc_write(lidd_reg, LCD_LIDD_CTRL_REG);        
 
 	if ((wait_for_frame_done == true) && (lcd_revision == LCD_VERSION_2)) {
 		frame_done_flag = 0;
@@ -251,10 +263,15 @@ static void lcd_blit(int load_mode, struct da8xx_fb_par *par)
 	//reg_ras = lcdc_read(LCD_RASTER_CTRL_REG);
 	//reg_ras &= ~(3 << 20);
 
-  pr_info("LCD_BLIT!!\n");
+    pr_info("LCD_BLIT!!\n");
 	reg_dma  = lcdc_read(LCD_DMA_CTRL_REG);
 
+    lcd_disable(true);
+
 	if (load_mode == LOAD_DATA) {
+        // reset the LCD address
+        lcdc_write(0x22, LCD_LIDD_CS0_ADDR);
+
 		start    = par->dma_start;
 		end      = par->dma_end;
 
@@ -440,26 +457,15 @@ static void lcd_calc_clk_divider(struct da8xx_fb_par *par)
 	lcdc_write(LCD_CLK_DIVISOR(div), LCD_CTRL_REG);
 }
 
-static void ssd2119_write_reg(u8 reg, u16 val){
-
-    lcdc_write(reg, LCD_LIDD_CS0_ADDR);
-    
-    /* 16 Bit MODE */
-    //lcdc_write(val, LCD_LIDD_CS0_DATA);
-
-    /* 8 Bit Mode */
-    lcdc_write((val >> 8) & 0xFF, LCD_LIDD_CS0_DATA);
-    lcdc_write(val & 0xFF, LCD_LIDD_CS0_DATA);
-}
-
 static int ssd2119_module_init(void) {
 
     int device_code;
+    int temp;
 
-    // check device accress
+    // check device code
     lcdc_write(0x0, LCD_LIDD_CS0_ADDR);
     mdelay(10);
-    device_code = lcdc_read(LCD_LIDD_CS0_DATA);
+    device_code = lcdc_read(LCD_LIDD_CS0_DATA) & 0xFF;
     pr_info("Device Code: %d\n", device_code);
     if(device_code != 0x99){
         pr_err("Device Code Error!\n");
@@ -468,6 +474,7 @@ static int ssd2119_module_init(void) {
 
     
     // Power supply setting R03h
+    ssd2119_write_reg(0x28, 0x0006);
     //ssd2119_write_reg(3, 0x21);
     //ssd2119_write_reg(0x0C, 0x21);
     //ssd2119_write_reg(0x0D, 0x21);
@@ -488,6 +495,8 @@ static int ssd2119_module_init(void) {
     // wait 30ms
     mdelay(30);
 
+    ssd2119_write_reg(0x01, 0x72ef);
+
     // ??? set R07h at 0033h
     ssd2119_write_reg(7, 0x33);
 
@@ -505,6 +514,16 @@ static int ssd2119_module_init(void) {
 
 
     // Display ON
+    // reset the LCD address
+    lcdc_write(0x22, LCD_LIDD_CS0_ADDR);
+    
+    // test image
+    for (temp = 0; temp < (240*320); temp++){
+        lcdc_write(0xFC, LCD_LIDD_CS0_DATA);
+        lcdc_write(0x00, LCD_LIDD_CS0_DATA);
+    }
+    //delay 10s
+    mdelay(10000);
     
     return 0;
 }
@@ -528,12 +547,22 @@ static int lcd_init(struct da8xx_fb_par *par, const struct lcd_ctrl_config *cfg,
     lcdc_write(0x3FFF, LCD_STAT_REG);
 
     /* configure stobe timing */
-    lcdc_write( LIDD_WRITE_SETUP(0x2) | LIDD_WRITE_DURATION(0x2) | LIDD_WRITE_HOLD(0x2) |  
-                    LIDD_READ_SETUP(0x2) | LIDD_READ_DURATION(0x2) | LIDD_READ_HOLD(0x2) |  
-                    LIDD_OPERATION_GAP(0),  LCD_LIDD_CS0_CONF);
+    //lcdc_write( LIDD_WRITE_SETUP(0x2) | LIDD_WRITE_DURATION(0x2) | LIDD_WRITE_HOLD(0x2) |  
+    //                LIDD_READ_SETUP(0x2) | LIDD_READ_DURATION(0x2) | LIDD_READ_HOLD(0x2) |  
+    //                LIDD_OPERATION_GAP(0),  LCD_LIDD_CS0_CONF);
+    lcdc_write(0x10442088, LCD_LIDD_CS0_CONF);
 
 	/* Calculate the divider */
 	lcd_calc_clk_divider(par);
+
+    /* cycle the power on the LCD Module */
+    if (par->panel_power_ctrl){
+        par->panel_power_ctrl(0);
+        mdelay(200);
+
+        par->panel_power_ctrl(1);
+        mdelay(200);
+    }
 
     ret = ssd2119_module_init();
 	if (ret < 0)
@@ -546,7 +575,6 @@ static int lcd_init(struct da8xx_fb_par *par, const struct lcd_ctrl_config *cfg,
 
 	return 0;
 }
-
 
 /* IRQ handler for version 1 LCDC */
 static irqreturn_t lcdc_irq_handler_rev01(int irq, void *arg)
@@ -566,7 +594,7 @@ static irqreturn_t lcdc_irq_handler_rev01(int irq, void *arg)
 		 * interrupt via the following write to the status register. If
 		 * this is done after then one gets multiple PL done interrupts.
 		 */
-    pr_info("PL Load Done interrupt\n");
+        pr_info("PL Load Done interrupt\n");
 		lcd_disable(false);
 
 		lcdc_write(stat, LCD_STAT_REG);
@@ -586,7 +614,7 @@ static irqreturn_t lcdc_irq_handler_rev01(int irq, void *arg)
         lcdc_write(stat, LCD_STAT_REG);
             
         // reset the LCD address
-        ssd2119_write_reg(0x22, 0x0);
+        lcdc_write(0x22, LCD_LIDD_CS0_ADDR);
 
 		if (stat & LCD_END_OF_FRAME0) {
 			par->which_dma_channel_done = 0;
