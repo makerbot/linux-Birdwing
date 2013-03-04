@@ -754,27 +754,18 @@ enum davinci_da850_index {
 	DA850_NUART0_RTS,
 	DA850_UART0_RXD,
 	DA850_UART0_TXD,
-
 	/* UART1 function */
-	DA850_NUART1_CTS,
-	DA850_NUART1_RTS,
 	DA850_UART1_RXD,
 	DA850_UART1_TXD,
-
 	/* UART2 function */
-	DA850_NUART2_CTS,
-	DA850_NUART2_RTS,
 	DA850_UART2_RXD,
 	DA850_UART2_TXD,
-
 	/* I2C1 function */
 	DA850_I2C1_SCL,
 	DA850_I2C1_SDA,
-
 	/* I2C0 function */
 	DA850_I2C0_SDA,
 	DA850_I2C0_SCL,
-
 	/* EMAC function */
 	DA850_MII_TXEN,
 	DA850_MII_TXCLK,
@@ -801,7 +792,6 @@ enum davinci_da850_index {
 	DA850_RMII_RXD_1,
 	DA850_RMII_RXER,
 	DA850_RMII_MHZ_50_CLK,
-
 	/* McASP function */
 	DA850_ACLKR,
 	DA850_ACLKX,
@@ -826,7 +816,6 @@ enum davinci_da850_index {
 	DA850_AXR_2,
 	DA850_AXR_1,
 	DA850_AXR_0,
-
 	/* LCD function */
 	DA850_LCD_D_7,
 	DA850_LCD_D_6,
@@ -848,7 +837,6 @@ enum davinci_da850_index {
 	DA850_LCD_HSYNC,
 	DA850_LCD_VSYNC,
 	DA850_NLCD_AC_ENB_CS,
-
 	/* MMC/SD0 function */
 	DA850_MMCSD0_DAT_0,
 	DA850_MMCSD0_DAT_1,
@@ -856,7 +844,6 @@ enum davinci_da850_index {
 	DA850_MMCSD0_DAT_3,
 	DA850_MMCSD0_CLK,
 	DA850_MMCSD0_CMD,
-
 	/* MMC/SD1 function */
 	DA850_MMCSD1_DAT_0,
 	DA850_MMCSD1_DAT_1,
@@ -864,7 +851,6 @@ enum davinci_da850_index {
 	DA850_MMCSD1_DAT_3,
 	DA850_MMCSD1_CLK,
 	DA850_MMCSD1_CMD,
-
 	/* EMIF2.5/EMIFA function */
 	DA850_EMA_D_7,
 	DA850_EMA_D_6,
@@ -880,14 +866,6 @@ enum davinci_da850_index {
 	DA850_NEMA_CS_4,
 	DA850_NEMA_WE,
 	DA850_NEMA_OE,
-	DA850_EMA_D_15,
-	DA850_EMA_D_14,
-	DA850_EMA_D_13,
-	DA850_EMA_D_12,
-	DA850_EMA_D_11,
-	DA850_EMA_D_10,
-	DA850_EMA_D_9,
-	DA850_EMA_D_8,
 	DA850_EMA_A_0,
 	DA850_EMA_A_3,
 	DA850_EMA_A_4,
@@ -910,11 +888,18 @@ enum davinci_da850_index {
 	DA850_EMA_A_21,
 	DA850_EMA_A_22,
 	DA850_EMA_A_23,
+	DA850_EMA_D_8,
+	DA850_EMA_D_9,
+	DA850_EMA_D_10,
+	DA850_EMA_D_11,
+	DA850_EMA_D_12,
+	DA850_EMA_D_13,
+	DA850_EMA_D_14,
+	DA850_EMA_D_15,
 	DA850_EMA_BA_1,
 	DA850_EMA_CLK,
 	DA850_EMA_WAIT_1,
 	DA850_NEMA_CS_2,
-
 	/* GPIO function */
 	DA850_GPIO2_4,
 	DA850_GPIO2_6,
@@ -928,7 +913,6 @@ enum davinci_da850_index {
 	DA850_GPIO6_10,
 	DA850_GPIO6_13,
 	DA850_RTC_ALARM,
-
 	/* VPIF Capture */
 	DA850_VPIF_DIN0,
 	DA850_VPIF_DIN1,
@@ -950,7 +934,6 @@ enum davinci_da850_index {
 	DA850_VPIF_CLKIN1,
 	DA850_VPIF_CLKIN2,
 	DA850_VPIF_CLKIN3,
-
 	/* VPIF Display */
 	DA850_VPIF_DOUT0,
 	DA850_VPIF_DOUT1,
@@ -970,14 +953,20 @@ enum davinci_da850_index {
 	DA850_VPIF_DOUT15,
 	DA850_VPIF_CLKO2,
 	DA850_VPIF_CLKO3,
+    /* Pins from Manhattan Board */
 
-  /* Pins from Manhattan Board */
-
-  /* Pins from thermocouple.pins */
-  DA850_GPIO1_3,
-  DA850_GPIO0_12,
-  DA850_GPIO0_13,
-  DA850_GPIO3_1,
+    /* Pins from thermocouple.pins */
+    DA850_GPIO1_3,
+    DA850_GPIO0_12,
+    DA850_GPIO0_13,
+    DA850_GPIO3_1,
+    /* Pins from leds.pins */
+    DA850_GPIO0_1,
+    DA850_GPIO0_2,
+    DA850_GPIO0_3,
+    /* Pins from lcd.pins */
+    DA850_GPIO6_7,
+    DA850_GPIO8_15,
 
 };
 
