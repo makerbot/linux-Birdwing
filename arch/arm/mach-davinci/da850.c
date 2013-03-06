@@ -223,6 +223,7 @@ static struct clk pruss_clk = {
 	.name		= "pruss",
 	.parent		= &pll0_sysclk2,
 	.lpsc		= DA8XX_LPSC0_PRUSS,
+	.flags		= ALWAYS_ENABLED,
 };
 
 static struct clk uart0_clk = {

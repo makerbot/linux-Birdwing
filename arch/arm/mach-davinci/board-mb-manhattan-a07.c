@@ -482,6 +482,10 @@ static __init void omapl138_hawk_init(void)
     if (ret)
          pr_warn("da850_evm_init: led device initialization failed: %d\n", ret);
 
+	/* Register PRUSS device */
+	da8xx_register_uio_pruss();
+    if (ret)
+         pr_warn("pruss init failed %d\n", ret);
 }
 
 #ifdef CONFIG_SERIAL_8250_CONSOLE
