@@ -460,7 +460,6 @@ static void lcd_calc_clk_divider(struct da8xx_fb_par *par)
 static int ssd2119_module_init(void) {
 
     int device_code;
-    int temp;
 
     // check device code
     lcdc_write(0x0, LCD_LIDD_CS0_ADDR);
@@ -514,16 +513,6 @@ static int ssd2119_module_init(void) {
 
 
     // Display ON
-    // reset the LCD address
-    lcdc_write(0x22, LCD_LIDD_CS0_ADDR);
-    
-    // test image
-    for (temp = 0; temp < (240*320); temp++){
-        lcdc_write(0xFC, LCD_LIDD_CS0_DATA);
-        lcdc_write(0x00, LCD_LIDD_CS0_DATA);
-    }
-    //delay 10s
-    mdelay(10000);
     
     return 0;
 }

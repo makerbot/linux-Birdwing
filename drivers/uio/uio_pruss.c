@@ -30,7 +30,7 @@
 #define DRV_NAME "pruss_uio"
 #define DRV_VERSION "1.0"
 
-static int sram_pool_sz = SZ_16K;
+static int sram_pool_sz = SZ_128K;
 module_param(sram_pool_sz, int, 0);
 MODULE_PARM_DESC(sram_pool_sz, "sram pool size to allocate ");
 
@@ -166,6 +166,7 @@ static int pruss_probe(struct platform_device *dev)
 		gdev->sram_paddr =
 			gen_pool_virt_to_phys(gdev->sram_pool,
 					      gdev->sram_vaddr);
+        pr_info("sram_vaddr: %lx,  sram_paddr: %x\n", gdev->sram_vaddr, gdev->sram_paddr);
 	}
 
 	gdev->ddr_vaddr = dma_alloc_coherent(&dev->dev, extram_pool_sz,
@@ -210,6 +211,7 @@ static int pruss_probe(struct platform_device *dev)
 		if (ret < 0)
 			goto out_free;
 	}
+    pr_info("pruss registered succsussfully\n");
 
 	platform_set_drvdata(dev, gdev);
 	return 0;
