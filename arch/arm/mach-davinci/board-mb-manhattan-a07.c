@@ -19,6 +19,7 @@
 #include <linux/mtd/physmap.h>
 #include <linux/platform_device.h>
 #include <linux/spi/spi_gpio.h>
+#include <linux/spi/spi.h>
 #include <linux/platform_data/mtd-davinci.h>
 #include <linux/platform_data/mtd-davinci-aemif.h>
 #include <linux/platform_data/spi-davinci.h>
@@ -32,11 +33,35 @@
 #include <mach/mux.h>
 
 #define MANHATTAN_PHY_ID		NULL
-#define DA850_HAWK_MMCSD_CD_PIN		GPIO_TO_PIN(3, 12)
-#define DA850_HAWK_MMCSD_WP_PIN		GPIO_TO_PIN(3, 13)
 
 #define DA850_USB1_VBUS_PIN		GPIO_TO_PIN(2, 4)
 #define DA850_USB1_OC_PIN		GPIO_TO_PIN(6, 13)
+
+
+static struct davinci_spi_config toolhead_spi_cfg = {
+	.io_type	= SPI_IO_TYPE_DMA,
+	.c2tdelay	= 8,
+	.t2cdelay	= 8,
+};
+
+static struct spi_board_info toolhead_spi_info[] = {
+	{
+		.modalias		= "toolhead_0",
+		.controller_data	= &toolhead_spi_cfg,
+		.mode			= SPI_MODE_0,
+		.max_speed_hz		= 30000000,
+		.bus_num		= 1,
+		.chip_select		= 0,
+	},
+	{
+		.modalias		= "toolhead_1",
+		.controller_data	= &toolhead_spi_cfg,
+		.mode			= SPI_MODE_0,
+		.max_speed_hz		= 30000000,
+		.bus_num		= 1,
+		.chip_select		= 1,
+	},
+};
 
 #define DA850_LCD_BL_PIN    GPIO_TO_PIN(6, 7)
 #define DA850_LCD_RESET_PIN GPIO_TO_PIN(8, 15)
@@ -55,7 +80,6 @@ static struct da8xx_spi_pin_data lcd_spi_gpio_data = {
     .cs = GPIO_TO_PIN(0, 12),
 };
 #endif
-
 
 static short mb_lcd_power_pins[] = {
     DA850_GPIO6_7,
@@ -451,6 +475,17 @@ static __init void omapl138_hawk_init(void)
 	ret = da850_lcd_hw_init();
 	if (ret)
 		pr_warn("%s: LCD initialization failed: %d\n", __func__, ret);
+
+	ret = spi_register_board_info(toolhead_spi_info,
+				      ARRAY_SIZE(toolhead_spi_info));
+	if (ret)
+		pr_warn("%s: spi info registration failed: %d\n", __func__,
+			ret);
+
+	da8xx_spi_pdata[1].num_chipselect=2;
+    ret = da8xx_register_spi_bus(1, ARRAY_SIZE(toolhead_spi_info));
+	if (ret)
+		pr_warn("%s: SPI 1 registration failed: %d\n", __func__, ret);
 
 
 #ifdef CONFIG_FB_DA8XX

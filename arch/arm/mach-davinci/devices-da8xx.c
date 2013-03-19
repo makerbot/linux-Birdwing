@@ -871,7 +871,7 @@ static struct resource da8xx_spi1_resources[] = {
 	},
 };
 
-static struct davinci_spi_platform_data da8xx_spi_pdata[] = {
+struct davinci_spi_platform_data da8xx_spi_pdata[] = {
 	[0] = {
 		.version	= SPI_VERSION_2,
 		.intr_line	= 1,

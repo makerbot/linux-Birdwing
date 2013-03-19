@@ -620,7 +620,7 @@ CONFIG_PREVENT_FIRMWARE_BUILD=y
 # CONFIG_DEBUG_DEVRES is not set
 # CONFIG_SYS_HYPERVISOR is not set
 # CONFIG_GENERIC_CPU_DEVICES is not set
-# CONFIG_DMA_SHARED_BUFFER is not set
+CONFIG_DMA_SHARED_BUFFER=y
 # CONFIG_CMA is not set
 
 #
@@ -1145,15 +1145,15 @@ CONFIG_I2C_DAVINCI=y
 # CONFIG_I2C_DEBUG_ALGO is not set
 # CONFIG_I2C_DEBUG_BUS is not set
 CONFIG_SPI=y
-# CONFIG_SPI_DEBUG is not set
+CONFIG_SPI_DEBUG=y
 CONFIG_SPI_MASTER=y
 
 #
 # SPI Master Controller Drivers
 #
 # CONFIG_SPI_ALTERA is not set
-# CONFIG_SPI_BITBANG is not set
-# CONFIG_SPI_DAVINCI is not set
+CONFIG_SPI_BITBANG=y
+CONFIG_SPI_DAVINCI=y
 # CONFIG_SPI_GPIO is not set
 # CONFIG_SPI_OC_TINY is not set
 # CONFIG_SPI_PXA2XX_PCI is not set
@@ -1165,7 +1165,7 @@ CONFIG_SPI_MASTER=y
 #
 # SPI Protocol Masters
 #
-# CONFIG_SPI_SPIDEV is not set
+CONFIG_SPI_SPIDEV=y
 # CONFIG_SPI_TLE62X0 is not set
 # CONFIG_HSI is not set
 
@@ -1369,7 +1369,157 @@ CONFIG_REGULATOR_DUMMY=y
 # CONFIG_REGULATOR_TPS65023 is not set
 CONFIG_REGULATOR_TPS6507X=y
 # CONFIG_REGULATOR_TPS6524X is not set
-# CONFIG_MEDIA_SUPPORT is not set
+CONFIG_MEDIA_SUPPORT=y
+
+#
+# Multimedia core support
+#
+CONFIG_MEDIA_CAMERA_SUPPORT=y
+# CONFIG_MEDIA_ANALOG_TV_SUPPORT is not set
+# CONFIG_MEDIA_DIGITAL_TV_SUPPORT is not set
+# CONFIG_MEDIA_RADIO_SUPPORT is not set
+# CONFIG_MEDIA_RC_SUPPORT is not set
+# CONFIG_MEDIA_CONTROLLER is not set
+CONFIG_VIDEO_DEV=y
+CONFIG_VIDEO_V4L2=y
+# CONFIG_VIDEO_ADV_DEBUG is not set
+# CONFIG_VIDEO_FIXED_MINOR_RANGES is not set
+CONFIG_VIDEOBUF2_CORE=y
+CONFIG_VIDEOBUF2_MEMOPS=y
+CONFIG_VIDEOBUF2_VMALLOC=y
+
+#
+# Media drivers
+#
+CONFIG_MEDIA_USB_SUPPORT=y
+
+#
+# Webcam devices
+#
+CONFIG_USB_VIDEO_CLASS=y
+CONFIG_USB_VIDEO_CLASS_INPUT_EVDEV=y
+CONFIG_USB_GSPCA=m
+# CONFIG_USB_M5602 is not set
+# CONFIG_USB_STV06XX is not set
+# CONFIG_USB_GL860 is not set
+# CONFIG_USB_GSPCA_BENQ is not set
+# CONFIG_USB_GSPCA_CONEX is not set
+# CONFIG_USB_GSPCA_CPIA1 is not set
+# CONFIG_USB_GSPCA_ETOMS is not set
+# CONFIG_USB_GSPCA_FINEPIX is not set
+# CONFIG_USB_GSPCA_JEILINJ is not set
+# CONFIG_USB_GSPCA_JL2005BCD is not set
+# CONFIG_USB_GSPCA_KINECT is not set
+# CONFIG_USB_GSPCA_KONICA is not set
+# CONFIG_USB_GSPCA_MARS is not set
+# CONFIG_USB_GSPCA_MR97310A is not set
+# CONFIG_USB_GSPCA_NW80X is not set
+# CONFIG_USB_GSPCA_OV519 is not set
+# CONFIG_USB_GSPCA_OV534 is not set
+# CONFIG_USB_GSPCA_OV534_9 is not set
+# CONFIG_USB_GSPCA_PAC207 is not set
+# CONFIG_USB_GSPCA_PAC7302 is not set
+# CONFIG_USB_GSPCA_PAC7311 is not set
+# CONFIG_USB_GSPCA_SE401 is not set
+# CONFIG_USB_GSPCA_SN9C2028 is not set
+# CONFIG_USB_GSPCA_SN9C20X is not set
+# CONFIG_USB_GSPCA_SONIXB is not set
+# CONFIG_USB_GSPCA_SONIXJ is not set
+# CONFIG_USB_GSPCA_SPCA500 is not set
+# CONFIG_USB_GSPCA_SPCA501 is not set
+# CONFIG_USB_GSPCA_SPCA505 is not set
+# CONFIG_USB_GSPCA_SPCA506 is not set
+# CONFIG_USB_GSPCA_SPCA508 is not set
+# CONFIG_USB_GSPCA_SPCA561 is not set
+# CONFIG_USB_GSPCA_SPCA1528 is not set
+# CONFIG_USB_GSPCA_SQ905 is not set
+# CONFIG_USB_GSPCA_SQ905C is not set
+# CONFIG_USB_GSPCA_SQ930X is not set
+# CONFIG_USB_GSPCA_STK014 is not set
+# CONFIG_USB_GSPCA_STV0680 is not set
+# CONFIG_USB_GSPCA_SUNPLUS is not set
+# CONFIG_USB_GSPCA_T613 is not set
+# CONFIG_USB_GSPCA_TOPRO is not set
+# CONFIG_USB_GSPCA_TV8532 is not set
+# CONFIG_USB_GSPCA_VC032X is not set
+# CONFIG_USB_GSPCA_VICAM is not set
+# CONFIG_USB_GSPCA_XIRLINK_CIT is not set
+# CONFIG_USB_GSPCA_ZC3XX is not set
+# CONFIG_USB_PWC is not set
+# CONFIG_VIDEO_CPIA2 is not set
+# CONFIG_USB_ZR364XX is not set
+# CONFIG_USB_STKWEBCAM is not set
+# CONFIG_USB_S2255 is not set
+# CONFIG_USB_SN9C102 is not set
+
+#
+# Webcam, TV (analog/digital) USB devices
+#
+# CONFIG_VIDEO_EM28XX is not set
+CONFIG_V4L_PLATFORM_DRIVERS=y
+# CONFIG_VIDEO_VPSS_SYSTEM is not set
+# CONFIG_VIDEO_VPFE_CAPTURE is not set
+# CONFIG_SOC_CAMERA is not set
+# CONFIG_V4L_MEM2MEM_DRIVERS is not set
+# CONFIG_V4L_TEST_DRIVERS is not set
+
+#
+# Supported MMC/SDIO adapters
+#
+CONFIG_MEDIA_SUBDRV_AUTOSELECT=y
+
+#
+# Media ancillary drivers (tuners, sensors, i2c, frontends)
+#
+
+#
+# Audio decoders, processors and mixers
+#
+
+#
+# RDS decoders
+#
+
+#
+# Video decoders
+#
+
+#
+# Video and audio decoders
+#
+
+#
+# MPEG video encoders
+#
+
+#
+# Video encoders
+#
+
+#
+# Camera sensor devices
+#
+
+#
+# Flash devices
+#
+
+#
+# Video improvement chips
+#
+
+#
+# Miscelaneous helper chips
+#
+
+#
+# Sensors used on soc_camera driver
+#
+
+#
+# Tools to develop new frontends
+#
+# CONFIG_DVB_DUMMY_FE is not set
 
 #
 # Graphics support
@@ -1639,6 +1789,7 @@ CONFIG_USB_G_PRINTER=m
 # CONFIG_USB_G_MULTI is not set
 # CONFIG_USB_G_HID is not set
 # CONFIG_USB_G_DBGP is not set
+# CONFIG_USB_G_WEBCAM is not set
 
 #
 # OTG and related infrastructure
@@ -1694,6 +1845,7 @@ CONFIG_LEDS_TRIGGER_DEFAULT_ON=y
 CONFIG_RTC_LIB=y
 # CONFIG_RTC_CLASS is not set
 # CONFIG_DMADEVICES is not set
+CONFIG_TI_EDMA=y
 # CONFIG_AUXDISPLAY is not set
 CONFIG_UIO=y
 # CONFIG_UIO_PDRV is not set
