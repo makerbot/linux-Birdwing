@@ -967,7 +967,12 @@ enum davinci_da850_index {
     /* Pins from lcd.pins */
     DA850_GPIO6_7,
     DA850_GPIO8_15,
-
+    /* Pins for SPI */
+	DA850_SPI1_SOMI,
+	DA850_SPI1_SIMO,
+	DA850_SPI1_CLK,
+	DA850_SPI1_SCS_0,
+    DA850_GPIO5_12,
 };
 
 enum davinci_tnetv107x_index {
