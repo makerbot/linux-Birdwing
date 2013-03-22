@@ -212,6 +212,8 @@ static void davinci_spi_chipselect(struct spi_device *spi, int value)
 	u16 spidat1 = CS_DEFAULT;
 	bool gpio_chipsel = false;
 
+    dev_err(&spi->dev, "chipselect\n");
+
 	dspi = spi_master_get_devdata(spi->master);
 	pdata = dspi->pdata;
 
@@ -278,6 +280,8 @@ static int davinci_spi_setup_transfer(struct spi_device *spi,
 	struct davinci_spi_config *spicfg;
 	u8 bits_per_word = 0;
 	u32 hz = 0, spifmt = 0, prescale = 0;
+
+    dev_err(&spi->dev, "setup transfer\n");
 
 	dspi = spi_master_get_devdata(spi->master);
 	spicfg = (struct davinci_spi_config *)spi->controller_data;
@@ -533,6 +537,8 @@ static int davinci_spi_bufs(struct spi_device *spi, struct spi_transfer *t)
 	void *dummy_buf = NULL;
 	struct scatterlist sg_rx, sg_tx;
 
+    dev_err(&spi->dev, "spi bufs function\n");
+
 	dspi = spi_master_get_devdata(spi->master);
 	pdata = dspi->pdata;
 	spicfg = (struct davinci_spi_config *)spi->controller_data;
@@ -552,6 +558,7 @@ static int davinci_spi_bufs(struct spi_device *spi, struct spi_transfer *t)
 	clear_io_bits(dspi->base + SPIGCR1, SPIGCR1_POWERDOWN_MASK);
 	set_io_bits(dspi->base + SPIGCR1, SPIGCR1_SPIENA_MASK);
 
+    dev_err(&spi->dev, "init completion\n"); 
 	INIT_COMPLETION(dspi->done);
 
 	if (spicfg->io_type == SPI_IO_TYPE_INTR)
@@ -580,6 +587,8 @@ static int davinci_spi_bufs(struct spi_device *spi, struct spi_transfer *t)
 		struct dma_async_tx_descriptor *rxdesc;
 		struct dma_async_tx_descriptor *txdesc;
 		void *buf;
+
+        dev_err(&spi->dev, "dma transfer\n");
 
 		dummy_buf = kzalloc(t->len, GFP_KERNEL);
 		if (!dummy_buf)
@@ -643,6 +652,7 @@ static int davinci_spi_bufs(struct spi_device *spi, struct spi_transfer *t)
 		dma_async_issue_pending(dspi->dma_tx);
 
 		set_io_bits(dspi->base + SPIINT, SPIINT_DMA_REQ_EN);
+        dev_err(&spi->dev, "done with DMA transfer setup\n");
 	}
 
 	/* Wait for the transfer to complete */
@@ -657,6 +667,7 @@ static int davinci_spi_bufs(struct spi_device *spi, struct spi_transfer *t)
 		}
 	}
 
+    dev_err(&spi->dev, "transfer completed\n");
 	clear_io_bits(dspi->base + SPIINT, SPIINT_MASKALL);
 	if (spicfg->io_type == SPI_IO_TYPE_DMA) {
 		clear_io_bits(dspi->base + SPIINT, SPIINT_DMA_REQ_EN);
@@ -686,6 +697,9 @@ static int davinci_spi_bufs(struct spi_device *spi, struct spi_transfer *t)
 		dev_err(&spi->dev, "SPI data transfer error\n");
 		return -EIO;
 	}
+
+    dev_err(&spi->dev, "transfer finished no errors\n");
+
 
 	return t->len;
 

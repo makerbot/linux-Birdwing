@@ -38,6 +38,14 @@
 #define DA850_USB1_OC_PIN		GPIO_TO_PIN(6, 13)
 
 
+static short toolhead_spi_pins[] = {
+	DA850_SPI1_SOMI,
+	DA850_SPI1_SIMO,
+	DA850_SPI1_CLK,
+	DA850_SPI1_SCS_0,
+    DA850_GPIO5_12,
+};
+
 static struct davinci_spi_config toolhead_spi_cfg = {
 	.io_type	= SPI_IO_TYPE_DMA,
 	.c2tdelay	= 8,
@@ -46,17 +54,17 @@ static struct davinci_spi_config toolhead_spi_cfg = {
 
 static struct spi_board_info toolhead_spi_info[] = {
 	{
-		.modalias		= "toolhead_0",
+		.modalias		= "spidev",
 		.controller_data	= &toolhead_spi_cfg,
-		.mode			= SPI_MODE_0,
+		.mode			= SPI_MODE_3,
 		.max_speed_hz		= 30000000,
 		.bus_num		= 1,
 		.chip_select		= 0,
 	},
 	{
-		.modalias		= "toolhead_1",
+		.modalias		= "spidev",
 		.controller_data	= &toolhead_spi_cfg,
-		.mode			= SPI_MODE_0,
+		.mode			= SPI_MODE_3,
 		.max_speed_hz		= 30000000,
 		.bus_num		= 1,
 		.chip_select		= 1,
@@ -464,17 +472,10 @@ static __init void omapl138_hawk_init(void)
     platform_add_devices(da850_evm_devices,
         ARRAY_SIZE(da850_evm_devices));
   
-	/* LCD  */
-	ret = davinci_cfg_reg_list(da850_lcdcntl_pins);
+    /* Toolhead SPI */ 
+	ret = davinci_cfg_reg_list(toolhead_spi_pins);
 	if (ret)
-		pr_warn("%s: LCDC mux setup failed: %d\n", __func__, ret);
-
-    ret = davinci_cfg_reg_list(mb_lcd_power_pins);
-	if (ret)
-		pr_warn("%s: LCD pins initialization failed: %d\n", __func__, ret);
-	ret = da850_lcd_hw_init();
-	if (ret)
-		pr_warn("%s: LCD initialization failed: %d\n", __func__, ret);
+		pr_warn("%s: Toolhead spi mux setup failed: %d\n", __func__, ret);
 
 	ret = spi_register_board_info(toolhead_spi_info,
 				      ARRAY_SIZE(toolhead_spi_info));
@@ -487,6 +488,18 @@ static __init void omapl138_hawk_init(void)
 	if (ret)
 		pr_warn("%s: SPI 1 registration failed: %d\n", __func__, ret);
 
+
+	/* LCD  */
+	ret = davinci_cfg_reg_list(da850_lcdcntl_pins);
+	if (ret)
+		pr_warn("%s: LCDC mux setup failed: %d\n", __func__, ret);
+
+    ret = davinci_cfg_reg_list(mb_lcd_power_pins);
+	if (ret)
+		pr_warn("%s: LCD pins initialization failed: %d\n", __func__, ret);
+	ret = da850_lcd_hw_init();
+	if (ret)
+		pr_warn("%s: LCD initialization failed: %d\n", __func__, ret);
 
 #ifdef CONFIG_FB_DA8XX
 	ret = davinci_cfg_reg_list(mb_lcd_spi_pins);
