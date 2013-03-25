@@ -108,6 +108,7 @@
 #define SPILVL		0x0c
 #define SPIFLG		0x10
 #define SPIPC0		0x14
+#define SPIPC2		0x1c
 #define SPIDAT1		0x3c
 #define SPIBUF		0x40
 #define SPIDELAY	0x48
@@ -212,7 +213,6 @@ static void davinci_spi_chipselect(struct spi_device *spi, int value)
 	u16 spidat1 = CS_DEFAULT;
 	bool gpio_chipsel = false;
 
-    dev_err(&spi->dev, "chipselect\n");
 
 	dspi = spi_master_get_devdata(spi->master);
 	pdata = dspi->pdata;
@@ -226,6 +226,7 @@ static void davinci_spi_chipselect(struct spi_device *spi, int value)
 	 * line for the controller
 	 */
 	if (gpio_chipsel) {
+        dev_err(&spi->dev, "gpio chipselect\n");
 		if (value == BITBANG_CS_ACTIVE)
 			gpio_set_value(pdata->chip_sel[chip_sel], 0);
 		else
@@ -236,6 +237,7 @@ static void davinci_spi_chipselect(struct spi_device *spi, int value)
 			spidat1 &= ~(0x1 << chip_sel);
 		}
 
+        dev_err(&spi->dev, "writing SPIDAT: %08x to  %08x \n", spidat1, (int)(dspi->base + SPIDAT1 + 2));
 		iowrite16(spidat1, dspi->base + SPIDAT1 + 2);
 	}
 }
@@ -558,7 +560,6 @@ static int davinci_spi_bufs(struct spi_device *spi, struct spi_transfer *t)
 	clear_io_bits(dspi->base + SPIGCR1, SPIGCR1_POWERDOWN_MASK);
 	set_io_bits(dspi->base + SPIGCR1, SPIGCR1_SPIENA_MASK);
 
-    dev_err(&spi->dev, "init completion\n"); 
 	INIT_COMPLETION(dspi->done);
 
 	if (spicfg->io_type == SPI_IO_TYPE_INTR)
@@ -570,6 +571,9 @@ static int davinci_spi_bufs(struct spi_device *spi, struct spi_transfer *t)
 		tx_data = dspi->get_tx(dspi);
 		spidat1 &= 0xFFFF0000;
 		spidat1 |= tx_data & 0xFFFF;
+        dev_err(&spi->dev, "reading config register cfg1: %08x \n", ioread32(dspi->base + SPIGCR1));        
+        dev_err(&spi->dev, "reading pins register: %08x \n", ioread32(dspi->base + SPIPC2));        
+        dev_err(&spi->dev, "writing SPIDAT: %08x to  %08x \n", spidat1, dspi->base + SPIDAT1);
 		iowrite32(spidat1, dspi->base + SPIDAT1);
 	} else {
 		struct dma_slave_config dma_rx_conf = {

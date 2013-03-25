@@ -915,6 +915,8 @@ int __init da8xx_register_spi_bus(int instance, unsigned num_chipselect)
 	if (instance == 1 && cpu_is_davinci_da850()) {
 		da8xx_spi1_resources[0].start = DA850_SPI1_BASE;
 		da8xx_spi1_resources[0].end = DA850_SPI1_BASE + SZ_4K - 1;
+        
+       pr_warn("cpu is davinci da850 flag hit\n");
 	}
 
 	return platform_device_register(&da8xx_spi_device[instance]);
