@@ -114,6 +114,7 @@
 #define SPIDELAY	0x48
 #define SPIDEF		0x4c
 #define SPIFMT0		0x50
+#define SPIFMT1		0x54
 
 /* SPI Controller driver's private data. */
 struct davinci_spi {
@@ -381,6 +382,7 @@ static int davinci_spi_setup_transfer(struct spi_device *spi,
 	}
 
 	iowrite32(spifmt, dspi->base + SPIFMT0);
+	iowrite32(spifmt, dspi->base + SPIFMT1);
 
 	return 0;
 }
@@ -573,6 +575,7 @@ static int davinci_spi_bufs(struct spi_device *spi, struct spi_transfer *t)
 		spidat1 |= tx_data & 0xFFFF;
         dev_err(&spi->dev, "reading config register cfg1: %08x \n", ioread32(dspi->base + SPIGCR1));        
         dev_err(&spi->dev, "reading pins register: %08x \n", ioread32(dspi->base + SPIPC2));        
+        dev_err(&spi->dev, "reading format register: %08x \n", ioread32(dspi->base + SPIFMT1));        
         dev_err(&spi->dev, "writing SPIDAT: %08x to  %08x \n", spidat1, dspi->base + SPIDAT1);
 		iowrite32(spidat1, dspi->base + SPIDAT1);
 	} else {
