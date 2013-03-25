@@ -47,7 +47,7 @@ static short toolhead_spi_pins[] = {
 };
 
 static struct davinci_spi_config toolhead_spi_cfg = {
-	.io_type	= SPI_IO_TYPE_DMA,
+	.io_type	= SPI_IO_TYPE_INTR,
 	.c2tdelay	= 8,
 	.t2cdelay	= 8,
 };

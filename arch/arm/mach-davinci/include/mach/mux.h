@@ -973,6 +973,7 @@ enum davinci_da850_index {
 	DA850_SPI1_CLK,
 	DA850_SPI1_SCS_0,
     DA850_GPIO5_12,
+
 };
 
 enum davinci_tnetv107x_index {
