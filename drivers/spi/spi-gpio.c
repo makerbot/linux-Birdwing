@@ -400,6 +400,8 @@ static int spi_gpio_probe(struct platform_device *pdev)
 	u16 master_flags = 0;
 	bool use_of = 0;
 
+    dev_err(&pdev->dev, "hey I'm probing the gpio spi!!!!\n");
+
 	status = spi_gpio_probe_dt(pdev);
 	if (status < 0)
 		return status;
@@ -479,7 +481,9 @@ gpio_free:
 			gpio_free(SPI_MOSI_GPIO);
 		gpio_free(SPI_SCK_GPIO);
 		spi_master_put(master);
-	}
+	}else {
+        dev_err(&pdev->dev, "hey I initialized the gpio spi without any errors!!!!\n");
+    }
 
 	return status;
 }

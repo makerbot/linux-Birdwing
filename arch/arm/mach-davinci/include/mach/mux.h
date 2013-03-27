@@ -974,6 +974,11 @@ enum davinci_da850_index {
 	DA850_SPI1_SCS_0,
     DA850_GPIO5_12,
 
+    /*SPI GPIO pins :( */
+    DA850_GPIO2_11,
+    DA850_GPIO2_14,
+    DA850_GPIO2_13,
+    DA850_GPIO2_10,
 };
 
 enum davinci_tnetv107x_index {

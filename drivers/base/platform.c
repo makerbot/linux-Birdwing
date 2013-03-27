@@ -281,6 +281,9 @@ int platform_device_add(struct platform_device *pdev)
 {
 	int i, ret;
 
+	pr_err("Start Registering platform device '%s'\n",
+		 dev_name(&pdev->dev));
+
 	if (!pdev)
 		return -EINVAL;
 
@@ -334,12 +337,14 @@ int platform_device_add(struct platform_device *pdev)
 		}
 	}
 
-	pr_debug("Registering platform device '%s'. Parent at %s\n",
+	pr_err("Registering platform device '%s'. Parent at %s\n",
 		 dev_name(&pdev->dev), dev_name(pdev->dev.parent));
 
 	ret = device_add(&pdev->dev);
-	if (ret == 0)
+	if (ret == 0){
+        pr_err("success!!");
 		return ret;
+    }
 
  failed:
 	if (pdev->id_auto) {
