@@ -295,8 +295,11 @@ static int spi_gpio_alloc(unsigned pin, const char *label, bool is_in)
 	if (value == 0) {
 		if (is_in)
 			value = gpio_direction_input(pin);
-		else
+		else{
 			value = gpio_direction_output(pin, 0);
+            pr_err(" pin: %d set to output\n", pin);
+        }
+            
 	}
 	return value;
 }
