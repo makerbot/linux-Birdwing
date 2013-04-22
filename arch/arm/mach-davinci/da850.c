@@ -672,6 +672,24 @@ static const struct mux_config da850_pins[] = {
     MUX_CFG(DA850,  GPIO2_14,   5,  4,  15, 8,  false)
     MUX_CFG(DA850,  GPIO2_13,   5,  8,  15, 8,  false)
     MUX_CFG(DA850,  GPIO2_10,   5,  20, 15, 8,  false)
+    /* Pins for stepper pru */
+    MUX_CFG(DA850,  PRU1_R30_8, 18, 20, 15, 2,  false)
+    MUX_CFG(DA850,  PRU1_R30_16,    11, 28, 15, 4,  false)
+    MUX_CFG(DA850,  PRU1_R30_3, 19, 8,  15, 4,  false)
+    MUX_CFG(DA850,  PRU1_R30_6, 18, 28, 15, 4,  false)
+    MUX_CFG(DA850,  PRU1_R30_15,    12, 0,  15, 4,  false)
+    MUX_CFG(DA850,  PRU1_R30_21,    11, 8,  15, 4,  false)
+    MUX_CFG(DA850,  PRU1_R30_24,    10, 28, 15, 4,  false)
+    MUX_CFG(DA850,  PRU1_R30_25,    10, 24, 15, 4,  false)
+    MUX_CFG(DA850,  PRU1_R30_19,    11, 16, 15, 4,  false)
+    MUX_CFG(DA850,  PRU1_R30_17,    11, 24, 15, 4,  false)
+    MUX_CFG(DA850,  PRU1_R30_18,    11, 20, 15, 4,  false)
+    MUX_CFG(DA850,  PRU1_R30_9, 14, 4,  15, 4,  false)
+    MUX_CFG(DA850,  PRU1_R30_0, 19, 20, 15, 4,  false)
+    MUX_CFG(DA850,  PRU1_R30_1, 19, 16, 15, 4,  false)
+    MUX_CFG(DA850,  PRU1_R30_11,    13, 12, 15, 4,  false)
+    MUX_CFG(DA850,  PRU1_R30_23,    11, 0,  15, 4,  false)
+    MUX_CFG(DA850,  PRU1_R30_22,    11, 4,  15, 4,  false)
 
 #endif
 };
