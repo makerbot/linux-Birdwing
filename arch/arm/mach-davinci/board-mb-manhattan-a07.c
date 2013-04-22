@@ -480,7 +480,7 @@ static __init void omapl138_hawk_init(void)
 
 	omapl138_hawk_config_emac();
 
-	ret = da850_register_edma(da850_edma_rsv);
+	ret = da850_register_edma(0);
 	if (ret)
 		pr_warn("%s: EDMA registration failed: %d\n", __func__, ret);
 
