@@ -31,12 +31,33 @@
 #include <mach/cp_intc.h>
 #include <mach/da8xx.h>
 #include <mach/mux.h>
+#include <mach/psc.h>
 
 #define MANHATTAN_PHY_ID		NULL
 
 #define DA850_USB1_VBUS_PIN		GPIO_TO_PIN(2, 4)
 #define DA850_USB1_OC_PIN		GPIO_TO_PIN(6, 13)
 
+static short stepper_pru_pins[] = {
+    DA850_PRU1_R30_8,
+    DA850_PRU1_R30_16,
+    DA850_PRU1_R30_3,
+    DA850_PRU1_R30_6,
+    DA850_PRU1_R30_15,
+    DA850_PRU1_R30_21,
+    DA850_PRU1_R30_24,
+    DA850_PRU1_R30_25,
+    DA850_PRU1_R30_19,
+    DA850_PRU1_R30_17,
+    DA850_PRU1_R30_18,
+    DA850_PRU1_R30_9,
+    DA850_PRU1_R30_0,
+    DA850_PRU1_R30_1,
+    DA850_PRU1_R30_11,
+    DA850_PRU1_R30_23,
+    DA850_PRU1_R30_22,
+   -1,
+};
 
 static short toolhead_spi_pins[] = {
 	DA850_GPIO2_11, //DA850_SPI1_SOMI,
@@ -430,7 +451,6 @@ static __init void omapl138_hawk_usb_init(void)
 	}
 
 	/* Setup the Ref. clock frequency for the HAWK at 24 MHz. */
-
 	cfgchip2 = __raw_readl(DA8XX_SYSCFG0_VIRT(DA8XX_CFGCHIP2_REG));
 	cfgchip2 &= ~CFGCHIP2_REFFREQ;
 	cfgchip2 |=  CFGCHIP2_REFFREQ_24MHZ;
@@ -473,6 +493,7 @@ static struct davinci_uart_config omapl138_hawk_uart_config __initdata = {
 static __init void omapl138_hawk_init(void)
 {
 	int ret;
+	u32 cfgchip3;
 
 	davinci_serial_init(&omapl138_hawk_uart_config);
 
@@ -545,10 +566,24 @@ static __init void omapl138_hawk_init(void)
     if (ret)
          pr_warn("da850_evm_init: led device initialization failed: %d\n", ret);
 
+	/* Setup alternate events on the PRUs */
+	cfgchip3 = __raw_readl(DA8XX_SYSCFG0_VIRT(DA8XX_CFGCHIP3_REG));
+	cfgchip3 |=  BIT(3);
+	__raw_writel(cfgchip3, DA8XX_SYSCFG0_VIRT(DA8XX_CFGCHIP3_REG));
+
+    ret = davinci_cfg_reg_list(stepper_pru_pins);
+	if (ret)
+		pr_warn("%s: stepper pins initialization failed: %d\n", __func__, ret);
+
 	/* Register PRUSS device */
 	da8xx_register_uio_pruss();
     if (ret)
          pr_warn("pruss init failed %d\n", ret);
+
+    /* read the pruss clock */
+
+    davinci_psc_is_clk_active(0,13);
+
 }
 
 #ifdef CONFIG_SERIAL_8250_CONSOLE

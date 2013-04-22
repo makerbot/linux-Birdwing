@@ -262,7 +262,7 @@ int __init davinci_clk_disable_unused(void)
 		if (!davinci_psc_is_clk_active(ck->gpsc, ck->lpsc))
 			continue;
 
-		pr_debug("Clocks: disable unused %s\n", ck->name);
+		pr_warn("Clocks: disable unused %s\n", ck->name);
 
 		davinci_psc_config(ck->domain, ck->gpsc, ck->lpsc,
 				false, ck->flags);

@@ -32,6 +32,7 @@ int __init davinci_psc_is_clk_active(unsigned int ctlr, unsigned int id)
 {
 	void __iomem *psc_base;
 	u32 mdstat;
+    u32 mdctl;
 	struct davinci_soc_info *soc_info = &davinci_soc_info;
 
 	if (!soc_info->psc_bases || (ctlr >= soc_info->psc_bases_num)) {
@@ -42,6 +43,10 @@ int __init davinci_psc_is_clk_active(unsigned int ctlr, unsigned int id)
 
 	psc_base = ioremap(soc_info->psc_bases[ctlr], SZ_4K);
 	mdstat = __raw_readl(psc_base + MDSTAT + 4 * id);
+    mdctl = __raw_readl(psc_base + MDCTL + 4 * id);
+
+    pr_debug("clock module: %d, CNTL: %08x,  STAT: %08x\n", id, mdstat, mdctl);
+    
 	iounmap(psc_base);
 
 	/* if clocked, state can be "Enable" or "SyncReset" */
