@@ -980,6 +980,27 @@ enum davinci_da850_index {
     DA850_GPIO2_13,
     DA850_GPIO2_10,
 
+<<<<<<< HEAD
+    /* stepper pru pins */
+    DA850_PRU1_R30_8,
+    DA850_PRU1_R30_16,
+    DA850_PRU1_R30_3,
+    DA850_PRU1_R30_6,
+    DA850_PRU1_R30_15,
+    DA850_PRU1_R30_21,
+    DA850_PRU1_R30_24,
+    DA850_PRU1_R30_25,
+    DA850_PRU1_R30_19,
+    DA850_PRU1_R30_17,
+    DA850_PRU1_R30_18,
+    DA850_PRU1_R30_9,
+    DA850_PRU1_R30_0,
+    DA850_PRU1_R30_1,
+    DA850_PRU1_R30_11,
+    DA850_PRU1_R30_23,
+    DA850_PRU1_R30_22,
+=======
+>>>>>>> 00cf0b8174484da46cd519cdf1b3de2c5092cb11
 };
 
 enum davinci_tnetv107x_index {
