@@ -711,6 +711,10 @@ static int __init nand_davinci_probe(struct platform_device *pdev)
 		info->chip.ecc.size = 512;
 		info->chip.ecc.strength = pdata->ecc_bits;
 		break;
+    case NAND_ECC_SOFT_BCH:
+        info->chip.ecc.size = 1024;
+        info->chip.ecc.bytes = 42;
+        break;
 	default:
 		ret = -EINVAL;
 		goto err_ecc;

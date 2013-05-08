@@ -393,6 +393,7 @@ static int da8xx_musb_set_mode(struct musb *musb, u8 musb_mode)
 		cfgchip2 |= CFGCHIP2_FORCE_HOST;
 		break;
 	case MUSB_PERIPHERAL:	/* Force VBUS valid, ID = 1 */
+        dev_dbg(musb->controller, "peripheral mode\n");
 		cfgchip2 |= CFGCHIP2_FORCE_DEVICE;
 		break;
 	case MUSB_OTG:		/* Don't override the VBUS/ID comparators */
@@ -483,6 +484,8 @@ static int da8xx_probe(struct platform_device *pdev)
 	struct clk			*clk;
 
 	int				ret = -ENOMEM;
+
+    dev_err(&pdev->dev, "probing the da8xx musb\n");
 
 	glue = kzalloc(sizeof(*glue), GFP_KERNEL);
 	if (!glue) {

@@ -259,8 +259,8 @@ static struct davinci_aemif_timing da850_evm_nandflash_timing = {
 static struct davinci_nand_pdata da850_evm_nandflash_data = {
 	.parts		= da850_evm_nandflash_partition,
 	.nr_parts	= ARRAY_SIZE(da850_evm_nandflash_partition),
-	.ecc_mode	= NAND_ECC_HW,
-	.ecc_bits	= 1,
+	.ecc_mode	= NAND_ECC_SOFT_BCH,
+	.ecc_bits	= 24,
 	.bbt_options	= NAND_BBT_USE_FLASH,
 	.timing		= &da850_evm_nandflash_timing,
 };
@@ -456,7 +456,17 @@ static __init void omapl138_hawk_usb_init(void)
 	cfgchip2 = __raw_readl(DA8XX_SYSCFG0_VIRT(DA8XX_CFGCHIP2_REG));
 	cfgchip2 &= ~CFGCHIP2_REFFREQ;
 	cfgchip2 |=  CFGCHIP2_REFFREQ_24MHZ;
+
+
+	cfgchip2 |=  CFGCHIP2_FORCE_DEVICE;
+	cfgchip2 |=  CFGCHIP2_SESENDEN | CFGCHIP2_PHY_PLLON;
+
 	__raw_writel(cfgchip2, DA8XX_SYSCFG0_VIRT(DA8XX_CFGCHIP2_REG));
+   
+    ret = da8xx_register_usb20(1000, 3);
+    if (ret)
+        pr_warning("%s: USB 2.0 registration failed: %d\n",
+               __func__, ret);
 
 	ret = gpio_request_one(DA850_USB1_VBUS_PIN,
 			GPIOF_DIR_OUT, "USB1 VBUS");
