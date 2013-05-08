@@ -48,6 +48,12 @@ static struct musb_hdrc_platform_data usb_data = {
 	.config		= &musb_config,
 };
 
+static struct musb_hdrc_platform_data usb_peripheral_data = {
+	.mode           = MUSB_PERIPHERAL,
+	.clock		= "usb",
+	.config		= &musb_config,
+};
+
 static struct resource usb_resources[] = {
 	{
 		/* physical address */
@@ -112,13 +118,16 @@ static struct resource da8xx_usb20_resources[] = {
 
 int __init da8xx_register_usb20(unsigned mA, unsigned potpgt)
 {
-	usb_data.clock  = "usb20";
+	usb_data.clock = "usb20";
 	usb_data.power	= mA > 510 ? 255 : mA / 2;
 	usb_data.potpgt = (potpgt + 1) / 2;
+    usb_data.mode   = MUSB_PERIPHERAL,
 
 	usb_dev.resource = da8xx_usb20_resources;
 	usb_dev.num_resources = ARRAY_SIZE(da8xx_usb20_resources);
 	usb_dev.name = "musb-da8xx";
+
+    pr_warn("register usb20 with musb-da8xx\n");
 
 	return platform_device_register(&usb_dev);
 }
@@ -133,6 +142,7 @@ void __init davinci_setup_usb(unsigned mA, unsigned potpgt_ms)
 #ifdef CONFIG_ARCH_DAVINCI_DA8XX
 int __init da8xx_register_usb20(unsigned mA, unsigned potpgt)
 {
+    pr_warn("empty usb20 reg\n");
 	return 0;
 }
 #endif

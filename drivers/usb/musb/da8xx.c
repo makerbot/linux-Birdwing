@@ -327,7 +327,7 @@ static irqreturn_t da8xx_musb_interrupt(int irq, void *hci)
 		u8 devctl = musb_readb(mregs, MUSB_DEVCTL);
 		int err;
 
-		err = musb->int_usb & USB_INTR_VBUSERROR;
+		err = musb->int_usb & MUSB_INTR_VBUSERROR;
 		if (err) {
 			/*
 			 * The Mentor core doesn't debounce VBUS as needed
@@ -393,6 +393,7 @@ static int da8xx_musb_set_mode(struct musb *musb, u8 musb_mode)
 		cfgchip2 |= CFGCHIP2_FORCE_HOST;
 		break;
 	case MUSB_PERIPHERAL:	/* Force VBUS valid, ID = 1 */
+        dev_dbg(musb->controller, "peripheral mode\n");
 		cfgchip2 |= CFGCHIP2_FORCE_DEVICE;
 		break;
 	case MUSB_OTG:		/* Don't override the VBUS/ID comparators */
@@ -480,6 +481,8 @@ static int da8xx_probe(struct platform_device *pdev)
 	struct clk			*clk;
 
 	int				ret = -ENOMEM;
+
+    dev_err(&pdev->dev, "probing the da8xx musb\n");
 
 	glue = kzalloc(sizeof(*glue), GFP_KERNEL);
 	if (!glue) {
