@@ -110,6 +110,8 @@ static inline void phy_on(void)
 	pr_info("Waiting for USB PHY clock good...\n");
 	while (!(__raw_readl(CFGCHIP2) & CFGCHIP2_PHYCLKGD))
 		cpu_relax();
+
+    pr_info("chip config2: %8x\n", __raw_readl(CFGCHIP2));
 }
 
 static inline void phy_off(void)
@@ -388,19 +390,21 @@ static int da8xx_musb_set_mode(struct musb *musb, u8 musb_mode)
 	u32 cfgchip2 = __raw_readl(CFGCHIP2);
 
 	cfgchip2 &= ~CFGCHIP2_OTGMODE;
+    dev_info(musb->controller, "!!!!!!musb_mode : %2x  , chip config2: %8x \n", musb_mode, cfgchip2);
 	switch (musb_mode) {
 	case MUSB_HOST:		/* Force VBUS valid, ID = 0 */
+        dev_info(musb->controller, "peripheral mode\n");
 		cfgchip2 |= CFGCHIP2_FORCE_HOST;
 		break;
 	case MUSB_PERIPHERAL:	/* Force VBUS valid, ID = 1 */
-        dev_dbg(musb->controller, "peripheral mode\n");
+        dev_info(musb->controller, "peripheral mode\n");
 		cfgchip2 |= CFGCHIP2_FORCE_DEVICE;
 		break;
 	case MUSB_OTG:		/* Don't override the VBUS/ID comparators */
 		cfgchip2 |= CFGCHIP2_NO_OVERRIDE;
 		break;
 	default:
-		dev_dbg(musb->controller, "Trying to set unsupported mode %u\n", musb_mode);
+		dev_info(musb->controller, "Trying to set unsupported mode %u\n", musb_mode);
 	}
 
 	__raw_writel(cfgchip2, CFGCHIP2);
@@ -435,7 +439,7 @@ static int da8xx_musb_init(struct musb *musb)
 	msleep(5);
 
 	/* NOTE: IRQs are in mixed mode, not bypass to pure MUSB */
-	pr_debug("DA8xx OTG revision %08x, PHY %03x, control %02x\n",
+	pr_info("DA8xx OTG revision %08x, PHY %03x, control %02x\n",
 		 rev, __raw_readl(CFGCHIP2),
 		 musb_readb(reg_base, DA8XX_USB_CTRL_REG));
 
