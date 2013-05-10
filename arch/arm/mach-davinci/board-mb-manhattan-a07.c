@@ -457,7 +457,7 @@ static __init void omapl138_hawk_usb_init(void)
 	cfgchip2 &= ~CFGCHIP2_REFFREQ;
 	cfgchip2 |=  CFGCHIP2_REFFREQ_24MHZ;
 
-
+    cfgchip2 &= ~CFGCHIP2_OTGMODE;
 	cfgchip2 |=  CFGCHIP2_FORCE_DEVICE;
 	cfgchip2 |=  CFGCHIP2_SESENDEN | CFGCHIP2_PHY_PLLON;
 

@@ -331,7 +331,7 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver)
 	return -ENODEV;
 
 found:
-	dev_dbg(&udc->dev, "registering UDC driver [%s]\n",
+	dev_info(&udc->dev, "registering UDC driver [%s]\n",
 			driver->function);
 
 	udc->driver = driver;

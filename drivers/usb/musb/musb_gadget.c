@@ -1934,7 +1934,7 @@ static int musb_gadget_start(struct usb_gadget *g,
 
 	pm_runtime_get_sync(musb->controller);
 
-	dev_dbg(musb->controller, "registering driver %s\n", driver->function);
+	dev_info(musb->controller, "registering driver %s\n", driver->function);
 
 	musb->softconnect = 0;
 	musb->gadget_driver = driver;

@@ -1648,6 +1648,8 @@ musb_mode_store(struct device *dev, struct device_attribute *attr,
 	unsigned long	flags;
 	int		status;
 
+    dev_err(dev, "musb_mode_store: %s\n", buf);
+    
 	spin_lock_irqsave(&musb->lock, flags);
 	if (sysfs_streq(buf, "host"))
 		status = musb_platform_set_mode(musb, MUSB_HOST);
@@ -1920,6 +1922,8 @@ musb_init_controller(struct device *dev, int nIrq, void __iomem *ctrl)
 			: MUSB_CONTROLLER_HDRC, musb);
 	if (status < 0)
 		goto fail3;
+
+    dev_err(dev, "nr_endpoints: \n", musb->nr_endpoints);
 
 	setup_timer(&musb->otg_timer, musb_otg_timer_func, (unsigned long) musb);
 
