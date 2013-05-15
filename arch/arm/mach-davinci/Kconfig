@@ -245,7 +245,7 @@ config MACH_OMAPL138_HAWKBOARD
 	  Information of this board may be found at
 	  http://www.hawkboard.org/
 
-config MACH_DAVINCI_MANHATTAN_A07
+config MACH_DAVINCI_MANHATTAN
 	bool "TI AM1808 / Makerbot Development platform"
 	depends on ARCH_DAVINCI_DA850
 	help

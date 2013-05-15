@@ -647,7 +647,7 @@ static const struct mux_config da850_pins[] = {
 	MUX_CFG(DA850, VPIF_DOUT15,	17,	8,	15,	1,	false)
 	MUX_CFG(DA850, VPIF_CLKO2,	19,	12,	15,	1,	false)
 	MUX_CFG(DA850, VPIF_CLKO3,	19,	20,	15,	1,	false)
-    /* PINS from MANHATTAN board */
+    /* PINS from MANHATTAN RevA board */
 
     /* Pins from thermocouple.pins */
     MUX_CFG(DA850,  GPIO1_3,    4,  16, 15, 8,  false)
@@ -690,6 +690,57 @@ static const struct mux_config da850_pins[] = {
     MUX_CFG(DA850,  PRU1_R30_11,    13, 12, 15, 4,  false)
     MUX_CFG(DA850,  PRU1_R30_23,    11, 0,  15, 4,  false)
     MUX_CFG(DA850,  PRU1_R30_22,    11, 4,  15, 4,  false)
+
+    /*** new pins from manhattan revB ***/
+    /* Pins from stepper.pins */
+    MUX_CFG(DA850,  PRU1_R31_26,    18, 12, 15, 0,  false)
+    MUX_CFG(DA850,  PRU1_R30_20,    11, 12, 15, 4,  false)
+    MUX_CFG(DA850,  PRU1_R31_23,    11, 0,  15, 0,  false)
+    MUX_CFG(DA850,  PRU1_R30_29,    10, 8,  15, 4,  false)
+    MUX_CFG(DA850,  PRU1_R31_25,    18, 16, 15, 0,  false)
+    /* Pins from adc.pins */
+    MUX_CFG(DA850,  GPIO5_6,    12, 4,  15, 8,  false)
+    MUX_CFG(DA850,  GPIO5_5,    12, 8,  15, 8,  false)
+    MUX_CFG(DA850,  GPIO5_3,    12, 16, 15, 8,  false)
+    MUX_CFG(DA850,  GPIO5_0,    12, 28, 15, 8,  false)
+    MUX_CFG(DA850,  GPIO5_4,    12, 12, 15, 8,  false)
+    /* Pins from chamber_heater.pins */
+    MUX_CFG(DA850,  GPIO1_5,    4,  8,  15, 8,  false)
+    MUX_CFG(DA850,  GPIO1_4,    4,  12, 15, 8,  false)
+    MUX_CFG(DA850,  GPIO2_12,   5,  12, 15, 8,  false)
+    MUX_CFG(DA850,  GPIO0_14,   0,  4,  15, 8,  false)
+    /* Pins from endstops.pins */
+    MUX_CFG(DA850,  GPIO3_2,    8,  20, 15, 8,  false)
+    MUX_CFG(DA850,  GPIO3_4,    8,  12, 15, 8,  false)
+    MUX_CFG(DA850,  GPIO3_5,    8,  8,  15, 8,  false)
+    /* Pins from interface.pins */
+    MUX_CFG(DA850,  GPIO0_4,    1,  12, 15, 8,  false)
+    MUX_CFG(DA850,  GPIO0_5,    1,  8,  15, 8,  false)
+    MUX_CFG(DA850,  GPIO0_6,    1,  4,  15, 8,  false)
+    MUX_CFG(DA850,  GPIO0_0,    1,  28, 15, 8,  false)
+    MUX_CFG(DA850,  GPIO0_7,    1,  0,  15, 8,  false)
+    /* Pins from jtag.pins */
+    MUX_CFG(DA850,  RTCK,   19, 28, 15, 1,  false)
+    /* Pins from lcd.pins */
+    MUX_CFG(DA850,  GPIO6_3,    19, 12, 15, 8,  false)
+    MUX_CFG(DA850,  GPIO6_8,    13, 28, 15, 8,  false)
+    /* Pins from toolhead.pins */
+    MUX_CFG(DA850,  GPIO2_5,    6,  8,  15, 8,  false)
+    MUX_CFG(DA850,  GPIO2_7,    6,  0,  15, 8,  false)
+    MUX_CFG(DA850,  GPIO6_5,    16, 4,  15, 8,  false)
+    MUX_CFG(DA850,  GPIO6_11,   13, 16, 15, 8,  false)
+    MUX_CFG(DA850,  GPIO0_15,   0,  0,  15, 8,  false)
+    MUX_CFG(DA850,  GPIO1_15,   2,  0,  15, 8,  false)
+    /* Pins from usb.pins */
+    MUX_CFG(DA850,  GPIO2_9,    5,  24, 15, 8,  false)
+    /* Pins from wifi.pins */
+    MUX_CFG(DA850,  GPIO4_2,    10, 20, 15, 8,  false)
+    MUX_CFG(DA850,  GPIO4_3,    10, 16, 15, 8,  false)
+    MUX_CFG(DA850,  GPIO4_4,    10, 12, 15, 8,  false)
+    MUX_CFG(DA850,  GPIO5_11,   11, 16, 15, 8,  false)
+    MUX_CFG(DA850,  GPIO4_6,    10, 4,  15, 8,  false)
+    MUX_CFG(DA850,  GPIO4_7,    10, 0,  15, 8,  false)
+
 
 #endif
 };

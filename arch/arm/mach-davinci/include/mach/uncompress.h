@@ -94,7 +94,7 @@ static inline void __arch_decomp_setup(unsigned long arch_id)
 		DEBUG_LL_DA8XX(davinci_da850_evm,	1);
 		DEBUG_LL_DA8XX(mityomapl138,		1);
 		DEBUG_LL_DA8XX(omapl138_hawkboard,	1);
-		DEBUG_LL_DA8XX(davinci_manhattan_a07,	1);
+		DEBUG_LL_DA8XX(davinci_manhattan,	1);
 
 		/* TNETV107x boards */
 		DEBUG_LL_TNETV107X(tnetv107x,		1);
