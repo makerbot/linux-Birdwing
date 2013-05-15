@@ -35,37 +35,43 @@
 
 #define MANHATTAN_PHY_ID		NULL
 
-#define DA850_USB1_VBUS_PIN		GPIO_TO_PIN(2, 4)
-#define DA850_USB1_OC_PIN		GPIO_TO_PIN(6, 13)
+#define DA850_USB1_VBUS_PIN		GPIO_TO_PIN(2, 9)
+#define DA850_USB1_OC_PIN		GPIO_TO_PIN(2, 8)
 
 static short stepper_pru_pins[] = {
+    DA850_PRU1_R30_1,
     DA850_PRU1_R30_8,
-    DA850_PRU1_R30_16,
     DA850_PRU1_R30_3,
     DA850_PRU1_R30_6,
+    DA850_PRU1_R30_11,
+    DA850_PRU1_R31_26,
+    DA850_PRU1_R30_22,
     DA850_PRU1_R30_15,
     DA850_PRU1_R30_21,
-    DA850_PRU1_R30_24,
-    DA850_PRU1_R30_25,
-    DA850_PRU1_R30_19,
-    DA850_PRU1_R30_17,
+    DA850_PRU1_R30_20,
+    DA850_PRU1_R30_16,
+    DA850_PRU1_R31_23,
     DA850_PRU1_R30_18,
+    DA850_PRU1_R30_29,
+    DA850_PRU1_R30_17,
     DA850_PRU1_R30_9,
     DA850_PRU1_R30_0,
-    DA850_PRU1_R30_1,
-    DA850_PRU1_R30_11,
-    DA850_PRU1_R30_23,
-    DA850_PRU1_R30_22,
+    DA850_PRU1_R31_25,
    -1,
 };
 
 static short toolhead_spi_pins[] = {
-	DA850_GPIO1_3,  //2_11, //DA850_SPI1_SOMI,
-	DA850_GPIO0_13,   //2_10, //DA850_SPI1_SIMO,
-	DA850_GPIO3_1,   // 2_13, //DA850_SPI1_CLK,
-	DA850_GPIO0_12, //2_14, //DA850_SPI1_SCS_0,
-    DA850_GPIO2_11,
-    DA850_GPIO5_12,
+	DA850_GPIO2_11, //DA850_SPI1_SOMI,
+	DA850_GPIO2_13, //DA850_SPI1_CLK,
+	DA850_GPIO2_10, //DA850_SPI1_SIMO,
+	DA850_GPIO2_14, //DA850_SPI1_SCS_0,
+	DA850_GPIO1_3, //DA850_SPI1_SCS_5,
+    DA850_GPIO2_5,
+    DA850_GPIO2_7,
+    DA850_GPIO6_5,
+    DA850_GPIO6_11,
+    DA850_GPIO0_15,
+    DA850_GPIO1_15,
     -1,
 };
 
@@ -76,9 +82,9 @@ static struct davinci_spi_config toolhead_spi_cfg = {
 };
 
 static struct spi_gpio_platform_data spi1_pdata = {
-	.miso		= GPIO_TO_PIN(1, 3), //2, 13),
-	.mosi		= GPIO_TO_PIN(0, 13),
-	.sck        = GPIO_TO_PIN(3, 1),
+	.miso		= GPIO_TO_PIN(2, 11), //2, 13),
+	.mosi		= GPIO_TO_PIN(2, 10),
+	.sck        = GPIO_TO_PIN(2, 13),
     .num_chipselect = 1,
 };
 
@@ -91,7 +97,7 @@ static struct platform_device spi1_device = {
 static struct spi_board_info toolhead_spi_info[] = {
 	{
 		.modalias		= "spidev",
-		.controller_data	= (void *)GPIO_TO_PIN(2,11),
+		.controller_data	= (void *)GPIO_TO_PIN(2,14),
 		//.controller_data	= &toolhead_spi_cfg,
 		.mode			= SPI_MODE_3,
 		.max_speed_hz		= 30000000,
@@ -113,21 +119,22 @@ static struct spi_board_info toolhead_spi_info[] = {
 
 #ifdef CONFIG_FB_DA8XX
 static short mb_lcd_spi_pins[] = {
-  DA850_GPIO1_3,
-  DA850_GPIO0_13,
-  DA850_GPIO0_12,
+  DA850_GPIO6_3,
+  DA850_GPIO6_13,
+  DA850_GPIO6_7,
+  DA850_GPIO6_8,
   -1,
 };
 
 static struct da8xx_spi_pin_data lcd_spi_gpio_data = {
-    .sck = GPIO_TO_PIN(1, 3),
-    .sdi = GPIO_TO_PIN(0, 13),
-    .cs = GPIO_TO_PIN(0, 12),
+    .sck = GPIO_TO_PIN(6, 13),
+    .sdi = GPIO_TO_PIN(6, 3),
+    .cs = GPIO_TO_PIN(6, 8),
 };
 #endif
 
 static short mb_lcd_power_pins[] = {
-    DA850_GPIO6_7,
+    DA850_GPIO6_9,
     DA850_GPIO8_15,
     -1,
 };
@@ -171,32 +178,16 @@ static int da850_lcd_hw_init(void)
 
 const short mb_manhattan_led_pins[] = {
     DA850_GPIO0_1,
-    DA850_GPIO0_2,
-    DA850_GPIO0_3,
-    DA850_GPIO2_8,
+    DA850_PRU1_R30_24,
+    DA850_PRU1_R30_25,
     -1
 };
 
 static struct gpio_led gpio_leds[] = {
     {
-        .name           = "Green_0",
-        .gpio           = GPIO_TO_PIN(0,3),
-    .default_state = LEDS_GPIO_DEFSTATE_OFF,
-    },
-    {
-        .name           = "Green_1",
-        .gpio           = GPIO_TO_PIN(2,8),
-    .default_state = LEDS_GPIO_DEFSTATE_OFF,
-    },
-    {
-        .name           = "Red_0",
+        .name           = "Status LED",
         .gpio           = GPIO_TO_PIN(0,1),
-    .default_state = LEDS_GPIO_DEFSTATE_OFF,
-    },
-    {
-        .name           = "Red_1",
-        .gpio           = GPIO_TO_PIN(0,2),
-    .default_trigger = "heartbeat",
+        .default_trigger= "heartbeat",
     },
 };
 
@@ -385,7 +376,7 @@ static irqreturn_t omapl138_hawk_usb_ocic_irq(int irq, void *dev_id);
 static da8xx_ocic_handler_t hawk_usb_ocic_handler;
 
 static const short da850_hawk_usb11_pins[] = {
-	DA850_GPIO2_4, DA850_GPIO6_13,
+	DA850_GPIO2_8, DA850_GPIO2_9,
 	-1
 };
 

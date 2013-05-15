@@ -998,6 +998,57 @@ enum davinci_da850_index {
     DA850_PRU1_R30_11,
     DA850_PRU1_R30_23,
     DA850_PRU1_R30_22,
+
+    /*** new pins from revB ***/
+    /* Pins from stepper.pins */
+    DA850_PRU1_R31_26,
+    DA850_PRU1_R30_20,
+    DA850_PRU1_R31_23,
+    DA850_PRU1_R30_29,
+    DA850_PRU1_R31_25,
+        /* Pins from adc.pins */
+    DA850_GPIO5_6,
+    DA850_GPIO5_5,
+    DA850_GPIO5_3,
+    DA850_GPIO5_0,
+    DA850_GPIO5_4,
+    /* Pins from chamber_heater.pins */
+    DA850_GPIO1_5,
+    DA850_GPIO1_4,
+    DA850_GPIO2_12,
+    DA850_GPIO0_14,
+    /* Pins from endstops.pins */
+    DA850_GPIO3_2,
+    DA850_GPIO3_4,
+    DA850_GPIO3_5,
+    /* Pins from interface.pins */
+    DA850_GPIO0_4,
+    DA850_GPIO0_5,
+    DA850_GPIO0_6,
+    DA850_GPIO0_0,
+    DA850_GPIO0_7,
+    /* Pins from jtag.pins */
+    DA850_RTCK,
+    /* Pins from lcd.pins */
+    DA850_GPIO6_3,
+    DA850_GPIO6_8,
+    /* Pins from toolhead.pins */
+    DA850_GPIO2_5,
+    DA850_GPIO2_7,
+    DA850_GPIO6_5,
+    DA850_GPIO6_11,
+    DA850_GPIO0_15,
+    DA850_GPIO1_15,
+    /* Pins from usb.pins */
+    DA850_GPIO2_9,
+    /* Pins from wifi.pins */
+    DA850_GPIO4_2,
+    DA850_GPIO4_3,
+    DA850_GPIO4_4,
+    DA850_GPIO5_11,
+    DA850_GPIO4_6,
+    DA850_GPIO4_7,
+
 };
 
 enum davinci_tnetv107x_index {

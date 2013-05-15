@@ -91,15 +91,10 @@ static inline void __arch_decomp_setup(unsigned long arch_id)
 
 		/* DA8xx boards */
 		DEBUG_LL_DA8XX(davinci_da830_evm,	2);
-		DEBUG_LL_DA8XX(davinci_da850_evm,	2);
+		DEBUG_LL_DA8XX(davinci_da850_evm,	1);
 		DEBUG_LL_DA8XX(mityomapl138,		1);
-		DEBUG_LL_DA8XX(omapl138_hawkboard,	2);
-		/* In moving from the 3.8-davinci kernel to 3.10-davinci,
-		 * the uart port changed from 1 to 2 for da850 and omapl138.
-		 * I am hoping that this reflects a bugfix or a change to
-		 * demo boards rather than a kernel remapping of these ports.
-		 */
-		DEBUG_LL_DA8XX(davinci_manhattan_a07,   1);
+		DEBUG_LL_DA8XX(omapl138_hawkboard,	1);
+		DEBUG_LL_DA8XX(davinci_manhattan,	1);
 
 		/* TNETV107x boards */
 		DEBUG_LL_TNETV107X(tnetv107x,		1);
