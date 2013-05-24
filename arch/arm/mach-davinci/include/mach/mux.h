@@ -1048,6 +1048,10 @@ enum davinci_da850_index {
     DA850_GPIO5_11,
     DA850_GPIO4_6,
     DA850_GPIO4_7,
+    /* test */
+    DA850_GPIO5_7,
+    /* power pins */
+    DA850_GPIO3_15,
 
 };
 
