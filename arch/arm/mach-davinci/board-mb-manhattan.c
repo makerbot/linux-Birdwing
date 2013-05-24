@@ -114,6 +114,34 @@ static struct spi_board_info toolhead_spi_info[] = {
 	},*/
 };
 
+#define DA850_12V_POWER_PIN  GPIO_TO_PIN(3,15)
+
+static short mb_power_pins[] = {
+  DA850_GPIO3_15,
+  -1,
+};
+
+static void da850_12V_power_control(int val)
+{
+	/* 12V power rail */
+	gpio_set_value(DA850_12V_POWER_PIN, val);
+}
+
+static int da850_power_init(void)
+{
+	int status;
+
+	status = gpio_request(DA850_12V_POWER_PIN, "12V power\n");
+	if (status < 0)
+		return status;
+
+	gpio_direction_output(DA850_12V_POWER_PIN, 0);
+
+    da850_12V_power_control(0);
+
+	return 0;
+}
+
 #define DA850_LCD_BL_PIN    GPIO_TO_PIN(6, 7)
 #define DA850_LCD_RESET_PIN GPIO_TO_PIN(8, 15)
 
@@ -507,6 +535,15 @@ static __init void omapl138_hawk_init(void)
 		pr_warn("%s: EDMA registration failed: %d\n", __func__, ret);
 
 	omapl138_hawk_usb_init();
+
+	ret = davinci_cfg_reg_list(mb_power_pins);
+    if (ret)
+        pr_warn("%s: power pin setup failed!: %d\n", __func__, ret);
+    ret = da850_power_init();
+    if (ret)
+        pr_warn("%s: power pin init failed!: %d\n", __func__, ret);
+    else
+        pr_warn("power pin success!!!!!!!!!!!!!!!!: pin value: %d\n", gpio_get_value(DA850_12V_POWER_PIN));
 
     platform_add_devices(da850_evm_devices,
         ARRAY_SIZE(da850_evm_devices));
