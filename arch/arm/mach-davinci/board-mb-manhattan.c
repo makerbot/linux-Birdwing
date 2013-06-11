@@ -85,7 +85,7 @@ static struct spi_gpio_platform_data spi1_pdata = {
 	.miso		= GPIO_TO_PIN(2, 11), //2, 13),
 	.mosi		= GPIO_TO_PIN(2, 10),
 	.sck        = GPIO_TO_PIN(2, 13),
-    .num_chipselect = 1,
+    .num_chipselect = 2,
 };
 
 static struct platform_device spi1_device = {
@@ -104,14 +104,14 @@ static struct spi_board_info toolhead_spi_info[] = {
 		.bus_num		= 1,
 		.chip_select		= 0,
 	},
-	/*{
+	{
 		.modalias		= "spidev",
-		//.controller_data	= &toolhead_spi_cfg,
+		.controller_data	= (void *)GPIO_TO_PIN(1,3),
 		.mode			= SPI_MODE_3,
 		.max_speed_hz		= 30000000,
 		.bus_num		= 1,
 		.chip_select		= 1,
-	},*/
+	},
 };
 
 #define DA850_12V_POWER_PIN  GPIO_TO_PIN(3,15)
