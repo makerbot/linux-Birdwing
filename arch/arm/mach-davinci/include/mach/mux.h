@@ -1001,6 +1001,10 @@ enum davinci_da850_index {
 
     /*** new pins from revB ***/
     /* Pins from stepper.pins */
+    DA850_GPIO5_10, 
+    DA850_GPIO8_14,
+    DA850_GPIO5_15,
+    DA850_GPIO8_13,
     DA850_PRU1_R31_26,
     DA850_PRU1_R30_20,
     DA850_PRU1_R31_23,

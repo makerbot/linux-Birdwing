@@ -44,19 +44,19 @@ static short stepper_pru_pins[] = {
     DA850_PRU1_R30_3,
     DA850_PRU1_R30_6,
     DA850_PRU1_R30_11,
-    DA850_PRU1_R31_26,
+    DA850_GPIO8_14,
     DA850_PRU1_R30_22,
     DA850_PRU1_R30_15,
     DA850_PRU1_R30_21,
     DA850_PRU1_R30_20,
     DA850_PRU1_R30_16,
-    DA850_PRU1_R31_23,
+    DA850_GPIO5_15,
     DA850_PRU1_R30_18,
     DA850_PRU1_R30_29,
     DA850_PRU1_R30_17,
     DA850_PRU1_R30_9,
     DA850_PRU1_R30_0,
-    DA850_PRU1_R31_25,
+    DA850_GPIO8_13,
    -1,
 };
 
@@ -142,7 +142,7 @@ static int da850_power_init(void)
 	return 0;
 }
 
-#define DA850_LCD_BL_PIN    GPIO_TO_PIN(6, 7)
+#define DA850_LCD_BL_PIN    GPIO_TO_PIN(6, 9)
 #define DA850_LCD_RESET_PIN GPIO_TO_PIN(8, 15)
 
 #ifdef CONFIG_FB_DA8XX
@@ -174,6 +174,8 @@ static void da850_panel_power_ctrl(int val)
 
     /* lcd_reset */
     gpio_set_value(DA850_LCD_RESET_PIN, val);
+
+    pr_warn("switching lcd power to : %d!!!!!!!\n", val);
 }
 
 static int da850_lcd_hw_init(void)
@@ -184,13 +186,13 @@ static int da850_lcd_hw_init(void)
 	if (status < 0)
 		return status;
 
-	gpio_direction_output(DA850_LCD_BL_PIN, 0);
 
     /* pull the reset pin high */
 	status = gpio_request(DA850_LCD_RESET_PIN, "lcd reset\n");
 	if (status < 0)
 		return status;
 
+	gpio_direction_output(DA850_LCD_BL_PIN, 0);
 	gpio_direction_output(DA850_LCD_RESET_PIN, 0);
 
 	/* Switch off panel power and backlight */
@@ -322,7 +324,6 @@ static short omapl138_hawk_mii_pins[] __initdata = {
 	DA850_MDIO_D,
 	-1
 };
-
 static __init void omapl138_hawk_config_emac(void)
 {
 	void __iomem *cfgchip3 = DA8XX_SYSCFG0_VIRT(DA8XX_CFGCHIP3_REG);
@@ -613,6 +614,10 @@ static __init void omapl138_hawk_init(void)
     ret = davinci_cfg_reg_list(stepper_pru_pins);
 	if (ret)
 		pr_warn("%s: stepper pins initialization failed: %d\n", __func__, ret);
+
+    // Disable pull-ups on MS2/Sense inputs on the steppers (CP19 & CP30 in PUPD_ENA reg)
+    // default pull up configuration: 0xC3FFFFFF
+	__raw_writel(0xBFF7FFFF,  ioremap(DA8XX_PUPD_ENA, SZ_1K) );
 
 	/* Register PRUSS device */
 	da8xx_register_uio_pruss();

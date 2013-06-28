@@ -334,6 +334,8 @@ static void ssd2119_spi_send_byte(struct da8xx_spi_pin_data *spi, u8 val){
 // data_type is "0" for command and "1" for data
 static void ssd2119_spi_send_packet(struct da8xx_spi_pin_data * spi, u8 data, u8 data_type){
 
+  pr_warn("send packet\n");
+
   ssd2119_spi_set_cs(spi, 0);
 
   ssd2119_spi_send_bit(spi, data_type); // command code;
@@ -362,16 +364,18 @@ static int ssd2119_spi_write_reg(struct da8xx_fb_par *par, u8 reg, u16 val)
 	
 	if (par->spi){
 
-    // transfer command code
-    ssd2119_spi_send_packet(par->spi, reg, 0);
+        printk("spi reg: %d val: %d \n", reg, val);    
 
-    // transfer first data byte
-    ssd2119_spi_send_packet(par->spi, reg >> 8, 1);
+        // transfer command code
+        ssd2119_spi_send_packet(par->spi, reg, 0);
 
-    //transfer second data byte
-    ssd2119_spi_send_packet(par->spi, reg & 0xFF, 1);
+        // transfer first data byte
+        ssd2119_spi_send_packet(par->spi, (val >> 8) & 0xFF, 1);
 
-    return 0;
+        //transfer second data byte
+        ssd2119_spi_send_packet(par->spi, val & 0xFF, 1);
+
+        return 0;
   }
 	return -1;
 }
