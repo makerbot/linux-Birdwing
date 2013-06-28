@@ -693,6 +693,10 @@ static const struct mux_config da850_pins[] = {
 
     /*** new pins from manhattan revB ***/
     /* Pins from stepper.pins */
+    MUX_CFG(DA850,  GPIO5_10,   11, 20, 15, 8,  false)
+    MUX_CFG(DA850,  GPIO8_14,   18, 12, 15, 8,  false)
+    MUX_CFG(DA850,  GPIO5_15,   11, 0,  15, 8,  false)
+    MUX_CFG(DA850,  GPIO8_13,   18, 16, 15, 8,  false)
     MUX_CFG(DA850,  PRU1_R31_26,    18, 12, 15, 0,  false)
     MUX_CFG(DA850,  PRU1_R30_20,    11, 12, 15, 4,  false)
     MUX_CFG(DA850,  PRU1_R31_23,    11, 0,  15, 0,  false)

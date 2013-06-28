@@ -276,13 +276,13 @@ void __init davinci_setup_mmc(int module, struct davinci_mmc_config *config)
 	platform_device_register(pdev);
 }
 
-#else
+#else //	defined(CONFIG_MMC_DAVINCI) || defined(CONFIG_MMC_DAVINCI_MODULE)
 
 void __init davinci_setup_mmc(int module, struct davinci_mmc_config *config)
 {
 }
 
-#endif
+#endif //	defined(CONFIG_MMC_DAVINCI) || defined(CONFIG_MMC_DAVINCI_MODULE)
 
 /*-------------------------------------------------------------------------*/
 
