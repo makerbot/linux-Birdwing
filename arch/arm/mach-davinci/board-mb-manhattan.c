@@ -114,6 +114,41 @@ static struct spi_board_info toolhead_spi_info[] = {
 	},
 };
 
+
+static short wifi_pins[] = {
+    DA850_GPIO4_2,
+    DA850_GPIO4_3,
+    DA850_GPIO4_4,
+    DA850_GPIO5_11,
+    DA850_GPIO4_6,
+    DA850_GPIO4_7,
+    -1,
+};
+
+static struct spi_gpio_platform_data spi2_pdata = {
+	.miso		= GPIO_TO_PIN(4,3),
+	.mosi		= GPIO_TO_PIN(4,4),
+	.sck        = GPIO_TO_PIN(4,7),
+    .num_chipselect = 1,
+};
+
+static struct platform_device spi2_device = {
+	.name		= "spi_gpio",
+	.id		= 2,
+	.dev.platform_data = &spi2_pdata,
+};
+
+static struct spi_board_info wifi_spi_info[] = {
+	{
+		.modalias		= "spidev",
+		.controller_data	= (void *)GPIO_TO_PIN(4,6),
+		.mode			= SPI_MODE_3,
+		.max_speed_hz		= 30000000,
+		.bus_num		= 2,
+		.chip_select		= 0,
+	},
+};
+
 #define DA850_12V_POWER_PIN  GPIO_TO_PIN(3,15)
 
 static short mb_power_pins[] = {
@@ -561,7 +596,21 @@ static __init void omapl138_hawk_init(void)
 			ret);
 
     platform_device_register(&spi1_device);
-    //ret = da8xx_register_spi_bus(1, ARRAY_SIZE(toolhead_spi_info));
+	if (ret)
+		pr_warn("%s: SPI 1 registration failed: %d\n", __func__, ret);
+
+    /* WIFI */
+	ret = davinci_cfg_reg_list(wifi_pins);
+	if (ret)
+		pr_warn("%s: Toolhead spi mux setup failed: %d\n", __func__, ret);
+
+	ret = spi_register_board_info(wifi_spi_info,
+				      ARRAY_SIZE(wifi_spi_info));
+	if (ret)
+		pr_warn("%s: spi info registration failed: %d\n", __func__,
+			ret);
+
+    platform_device_register(&spi2_device);
 	if (ret)
 		pr_warn("%s: SPI 1 registration failed: %d\n", __func__, ret);
 
