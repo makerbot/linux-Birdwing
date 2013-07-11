@@ -334,8 +334,6 @@ static void ssd2119_spi_send_byte(struct da8xx_spi_pin_data *spi, u8 val){
 // data_type is "0" for command and "1" for data
 static void ssd2119_spi_send_packet(struct da8xx_spi_pin_data * spi, u8 data, u8 data_type){
 
-  pr_warn("send packet\n");
-
   ssd2119_spi_set_cs(spi, 0);
 
   ssd2119_spi_send_bit(spi, data_type); // command code;
@@ -364,7 +362,7 @@ static int ssd2119_spi_write_reg(struct da8xx_fb_par *par, u8 reg, u16 val)
 	
 	if (par->spi){
 
-        printk("spi reg: %d val: %d \n", reg, val);    
+        //printk("spi reg: %d val: %d \n", reg, val);    
 
         // transfer command code
         ssd2119_spi_send_packet(par->spi, reg, 0);
@@ -827,7 +825,6 @@ static int fb_setcolreg(unsigned regno, unsigned red, unsigned green,
 		green = CNVT_TOHW(green, info->var.green.length);
 		blue = CNVT_TOHW(blue, info->var.blue.length);
 
-        pr_err("truecolor red:%d, green%d, blue:%d rlength:%d, glength:%d, blength:%d\n", red, green, blue, info->var.red.length, info->var.green.length, info->var.blue.length);
 		break;
 	case FB_VISUAL_PSEUDOCOLOR:
 		switch (info->var.bits_per_pixel) {
@@ -879,8 +876,6 @@ static int fb_setcolreg(unsigned regno, unsigned red, unsigned green,
 		v = (red << info->var.red.offset) |
 			(green << info->var.green.offset) |
 			(blue << info->var.blue.offset);
-
-        pr_err("roffset:%d, goffset:%d, boffset:%d\n", info->var.red.offset, info->var.green.offset, info->var.blue.offset);
 
 		switch (info->var.bits_per_pixel) {
 		case 16:

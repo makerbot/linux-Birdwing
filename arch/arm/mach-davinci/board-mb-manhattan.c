@@ -13,6 +13,8 @@
 #include <linux/init.h>
 #include <linux/console.h>
 #include <linux/gpio.h>
+#include <linux/gpio_keys.h>
+#include <linux/input.h>
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/nand.h>
 #include <linux/mtd/partitions.h>
@@ -37,6 +39,54 @@
 
 #define DA850_USB1_VBUS_PIN		GPIO_TO_PIN(2, 9)
 #define DA850_USB1_OC_PIN		GPIO_TO_PIN(2, 8)
+
+#define OPTION_BUTTON   GPIO_TO_PIN(0, 3)
+#define BACK_BUTTON     GPIO_TO_PIN(0, 4)
+#define SELECT_BUTTON   GPIO_TO_PIN(0, 0)
+
+static short button_pins[] = {
+    DA850_GPIO0_0,
+    DA850_GPIO0_2,
+    DA850_GPIO0_3,
+    DA850_GPIO0_4,
+    DA850_GPIO0_5,
+    DA850_GPIO0_6,
+    DA850_GPIO0_7,
+};
+
+static struct gpio_keys_button gpio_keys[] = {
+        {
+            .code = KEY_ENTER,
+            .gpio = OPTION_BUTTON,
+            .desc = "Option",
+            .type = EV_KEY,
+        },
+        {
+            .code = KEY_BACKSPACE,
+            .gpio = BACK_BUTTON,
+            .desc = "Back",
+            .type = EV_KEY,
+        },
+        {
+            .code = KEY_SPACE,
+            .gpio = SELECT_BUTTON,
+            .desc = "Select",
+            .type = EV_KEY,
+        },
+};
+ 
+struct gpio_keys_platform_data gpio_key_info = {
+    .buttons    = gpio_keys,
+    .nbuttons   = ARRAY_SIZE(gpio_keys),
+};
+ 
+struct platform_device keys_gpio = {
+    .name   = "gpio-keys",
+    .id = -1,
+    .dev    = {
+    .platform_data  = &gpio_key_info,
+    },
+};
 
 static short stepper_pru_pins[] = {
     DA850_PRU1_R30_1,
@@ -659,6 +709,14 @@ static __init void omapl138_hawk_init(void)
 	cfgchip3 = __raw_readl(DA8XX_SYSCFG0_VIRT(DA8XX_CFGCHIP3_REG));
 	cfgchip3 |=  BIT(3);
 	__raw_writel(cfgchip3, DA8XX_SYSCFG0_VIRT(DA8XX_CFGCHIP3_REG));
+
+    ret = davinci_cfg_reg_list(button_pins);
+	if (ret)
+		pr_warn("%s: button pins initialization failed: %d\n", __func__, ret);
+    
+    ret = platform_device_register(&keys_gpio);
+	if (ret)
+		pr_warn("%s: gpio key pins device initialization failed!: %d\n", __func__, ret);
 
     ret = davinci_cfg_reg_list(stepper_pru_pins);
 	if (ret)
