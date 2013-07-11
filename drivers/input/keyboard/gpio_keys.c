@@ -699,6 +699,8 @@ static int gpio_keys_probe(struct platform_device *pdev)
 			return PTR_ERR(pdata);
 	}
 
+    pr_err("GPIO KEYS PROBE!!!!!!!!!!!!!!!!!\n");
+
 	ddata = kzalloc(sizeof(struct gpio_keys_drvdata) +
 			pdata->nbuttons * sizeof(struct gpio_button_data),
 			GFP_KERNEL);
@@ -758,6 +760,8 @@ static int gpio_keys_probe(struct platform_device *pdev)
 	}
 
 	device_init_wakeup(&pdev->dev, wakeup);
+
+    pr_err("GPIO KEYS SUCCESS!!!!!!!!!!!\n");
 
 	return 0;
 
