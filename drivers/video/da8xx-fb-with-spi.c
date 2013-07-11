@@ -270,9 +270,9 @@ static struct fb_videomode known_lcd_panels[] = {
 		.yres           = 240,
 		.pixclock       = 7833600,
 		.left_margin    = 30,
-		.right_margin   = 0,
+		.right_margin   = 30,
 		.upper_margin   = 4,
-		.lower_margin   = 1,
+		.lower_margin   = 4,
 		.hsync_len      = 1,
 		.vsync_len      = 1,
 		.sync           = 0,
@@ -419,6 +419,9 @@ static int lcd_ssd2119_spi_init(struct da8xx_fb_par *par) {
   // LCD driver AC setting (R02h)
   ret = ssd2119_spi_write_reg(par, 2, 0x0);
 
+  // LCD orientation
+  ret = ssd2119_spi_write_reg(par, 1, 0x7AEF);
+
   // RAM data write (R22h)
 
   // Display ON
@@ -537,6 +540,8 @@ static void lcd_blit(int load_mode, struct da8xx_fb_par *par)
 		start    = par->dma_start;
 		end      = par->dma_end;
 
+        pr_err("load data\n");
+
 		reg_ras |= LCD_PALETTE_LOAD_MODE(DATA_ONLY);
 		if (lcd_revision == LCD_VERSION_1) {
 			reg_dma |= LCD_V1_END_OF_FRAME_INT_ENA;
@@ -557,6 +562,7 @@ static void lcd_blit(int load_mode, struct da8xx_fb_par *par)
 		start    = par->p_palette_base;
 		end      = start + par->palette_sz - 1;
 
+        pr_err("load_pallette\n");
 		reg_ras |= LCD_PALETTE_LOAD_MODE(PALETTE_ONLY);
 
 		if (lcd_revision == LCD_VERSION_1) {
@@ -808,8 +814,9 @@ static int fb_setcolreg(unsigned regno, unsigned red, unsigned green,
 	if (regno > 255)
 		return 1;
 
-	if (info->fix.visual == FB_VISUAL_DIRECTCOLOR)
+	if (info->fix.visual == FB_VISUAL_DIRECTCOLOR){
 		return 1;
+    }
 
 	if (info->var.bits_per_pixel > 16 && lcd_revision == LCD_VERSION_1)
 		return -EINVAL;
@@ -819,6 +826,8 @@ static int fb_setcolreg(unsigned regno, unsigned red, unsigned green,
 		red = CNVT_TOHW(red, info->var.red.length);
 		green = CNVT_TOHW(green, info->var.green.length);
 		blue = CNVT_TOHW(blue, info->var.blue.length);
+
+        pr_err("truecolor red:%d, green%d, blue:%d rlength:%d, glength:%d, blength:%d\n", red, green, blue, info->var.red.length, info->var.green.length, info->var.blue.length);
 		break;
 	case FB_VISUAL_PSEUDOCOLOR:
 		switch (info->var.bits_per_pixel) {
@@ -870,6 +879,8 @@ static int fb_setcolreg(unsigned regno, unsigned red, unsigned green,
 		v = (red << info->var.red.offset) |
 			(green << info->var.green.offset) |
 			(blue << info->var.blue.offset);
+
+        pr_err("roffset:%d, goffset:%d, boffset:%d\n", info->var.red.offset, info->var.green.offset, info->var.blue.offset);
 
 		switch (info->var.bits_per_pixel) {
 		case 16:
@@ -1372,6 +1383,8 @@ static int da8xx_pan_display(struct fb_var_screeninfo *var,
 	unsigned int start;
 	unsigned long irq_flags;
 
+    pr_err("pan_display x_offset%d, y_offset%d\n", fbi->var.xoffset, fbi->var.yoffset);
+
 	if (var->xoffset != fbi->var.xoffset ||
 			var->yoffset != fbi->var.yoffset) {
 		memcpy(&new_var, &fbi->var, sizeof(new_var));
@@ -1386,6 +1399,8 @@ static int da8xx_pan_display(struct fb_var_screeninfo *var,
 				new_var.yoffset * fix->line_length +
 				new_var.xoffset * fbi->var.bits_per_pixel / 8;
 			end	= start + fbi->var.yres * fix->line_length - 1;
+
+            pr_err("pan_display new_start%d, new_end%d\n", start, end);
 			par->dma_start	= start;
 			par->dma_end	= end;
 			spin_lock_irqsave(&par->lock_for_chan_update,
