@@ -1419,6 +1419,16 @@ static int da8xx_pan_display(struct fb_var_screeninfo *var,
 	return ret;
 }
 
+int nocursor = 1;
+int cfb_cursor(struct fb_info *info, struct fb_cursor *cursor)
+{
+	if (nocursor)
+		return 0;
+	else
+		return -EINVAL;	/* just to force soft_cursor() call */
+}
+
+
 static struct fb_ops da8xx_fb_ops = {
 	.owner = THIS_MODULE,
 	.fb_check_var = fb_check_var,
@@ -1429,6 +1439,7 @@ static struct fb_ops da8xx_fb_ops = {
 	.fb_copyarea = cfb_copyarea,
 	.fb_imageblit = cfb_imageblit,
 	.fb_blank = cfb_blank,
+    .fb_cursor = cfb_cursor,
 };
 
 /* Calculate and return pixel clock period in pico seconds */
@@ -1812,6 +1823,7 @@ static int fb_resume(struct platform_device *dev)
 
 	return 0;
 }
+
 #else
 #define fb_suspend NULL
 #define fb_resume NULL
