@@ -15,6 +15,7 @@
 #include <linux/gpio.h>
 #include <linux/gpio_keys.h>
 #include <linux/input.h>
+#include <linux/rotary_encoder.h>
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/nand.h>
 #include <linux/mtd/partitions.h>
@@ -39,6 +40,30 @@
 
 #define DA850_USB1_VBUS_PIN		GPIO_TO_PIN(2, 9)
 #define DA850_USB1_OC_PIN		GPIO_TO_PIN(2, 8)
+
+#define GPIO_ROTARY_A GPIO_TO_PIN(0,2)
+#define GPIO_ROTARY_B GPIO_TO_PIN(0,7)
+
+static struct rotary_encoder_platform_data encoder_info = {
+    .steps      = 30,
+    .axis       = ABS_X,
+    .relative_axis  = true,
+    .rollover   = false,
+    .gpio_a     = GPIO_ROTARY_A,
+    .gpio_b     = GPIO_ROTARY_B,
+    .inverted_a = 0,
+    .inverted_b = 0,
+    .half_period    = true,
+};
+
+static struct platform_device rotary_encoder = {
+    .name       = "rotary-encoder",
+    .id     = -1,
+    .dev        = {
+        .platform_data = &encoder_info,
+    }
+};
+
 
 #define OPTION_BUTTON   GPIO_TO_PIN(0, 3)
 #define BACK_BUTTON     GPIO_TO_PIN(0, 4)
@@ -717,6 +742,11 @@ static __init void omapl138_hawk_init(void)
     ret = platform_device_register(&keys_gpio);
 	if (ret)
 		pr_warn("%s: gpio key pins device initialization failed!: %d\n", __func__, ret);
+
+
+    ret = platform_device_register(&rotary_encoder);
+	if (ret)
+		pr_warn("%s: rotary encoder device initialization failed!: %d\n", __func__, ret);
 
     ret = davinci_cfg_reg_list(stepper_pru_pins);
 	if (ret)

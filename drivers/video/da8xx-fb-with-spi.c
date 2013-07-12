@@ -417,8 +417,8 @@ static int lcd_ssd2119_spi_init(struct da8xx_fb_par *par) {
   // LCD driver AC setting (R02h)
   ret = ssd2119_spi_write_reg(par, 2, 0x0);
 
-  // LCD orientation
-  ret = ssd2119_spi_write_reg(par, 1, 0x7AEF);
+  // LCD orientation and pixel order
+  ret = ssd2119_spi_write_reg(par, 1, 0x72EF);
 
   // RAM data write (R22h)
 
