@@ -268,7 +268,8 @@ static struct fb_videomode known_lcd_panels[] = {
 		.name           = "SSD2119",
 		.xres           = 320,
 		.yres           = 240,
-		.pixclock       = 7833600,
+		//.pixclock       = 7833600,
+		.pixclock	    = 5000000,
 		.left_margin    = 30,
 		.right_margin   = 30,
 		.upper_margin   = 4,
@@ -389,40 +390,68 @@ static int lcd_ssd2119_spi_init(struct da8xx_fb_par *par) {
   //ssd2119_spi_write_reg(0x0E, 0x21);
 
   // device on but output off: R07h at 0021h
-  ret = ssd2119_spi_write_reg(par, 7, 0x21);
+  //ret = ssd2119_spi_write_reg(par, 7, 0x21);
 
   // turn on the oscillator: R00h at 0001h
   //ssd2119_spi_write_reg(0, 0x01);
 
   // display output on: R07h at 0023h
-  ret = ssd2119_spi_write_reg(par, 7, 0x23);
+  //ret = ssd2119_spi_write_reg(par, 7, 0x23);
 
   // exit sleep mode (R10h at 000h)
-  ret = ssd2119_spi_write_reg(par, 0x10, 0x00);
+  //ret = ssd2119_spi_write_reg(par, 0x10, 0x00);
 
   // wait 30ms
-  mdelay(30);
+  //mdelay(30);
 
   // ??? set R07h at 0033h
-  ret = ssd2119_spi_write_reg(par, 7, 0x33);
+  //ret = ssd2119_spi_write_reg(par, 7, 0x33);
 
 #define LCD_MODE_65K 0x6000
 #define LCD_WMODE_GENERIC 0x0400
 #define LCD_DOTCLOCK_ACTIVE 0x0100
 #define LCD_NOSYNC_DMODE 0x0200
   // entry mode setting (R11h)
-  ret = ssd2119_spi_write_reg(par, 0x11, LCD_MODE_65K + LCD_WMODE_GENERIC + LCD_DOTCLOCK_ACTIVE + LCD_NOSYNC_DMODE);
+  //ret = ssd2119_spi_write_reg(par, 0x11, LCD_MODE_65K + LCD_WMODE_GENERIC + LCD_DOTCLOCK_ACTIVE + LCD_NOSYNC_DMODE);
   
 
   // LCD driver AC setting (R02h)
-  ret = ssd2119_spi_write_reg(par, 2, 0x0);
+  //ret = ssd2119_spi_write_reg(par, 2, 0x0);
 
   // LCD orientation and pixel order
-  ret = ssd2119_spi_write_reg(par, 1, 0x72EF);
+  //ret = ssd2119_spi_write_reg(par, 1, 0x72EF);
 
   // RAM data write (R22h)
 
   // Display ON
+
+    ret = ssd2119_spi_write_reg(par, 0x00, 0x0001); // OSCEN = 1;
+    ret = ssd2119_spi_write_reg(par, 0x10, 0x0000);	// Sleep = 0;
+    ret = ssd2119_spi_write_reg(par, 0x07, 0x0033);	// Display control. CM=0
+    ret = ssd2119_spi_write_reg(par, 0x11, 0x4E70);	// ??
+    ret = ssd2119_spi_write_reg(par, 0x02, 0x0600);	// line inversion
+    ret = ssd2119_spi_write_reg(par, 0x03, 0x6A38);	// VGH/VGL=5/-3
+    ret = ssd2119_spi_write_reg(par, 0x01, 0x72EF);	// Gate lines = 240
+    ret = ssd2119_spi_write_reg(par, 0x28, 0x0006);	// Enable R25, R29 register
+    ret = ssd2119_spi_write_reg(par, 0x12, 0x0999); // sleep mode
+    ret = ssd2119_spi_write_reg(par, 0x26, 0x3800);	// analogue setting
+    ret = ssd2119_spi_write_reg(par, 0x0C, 0x0004);	// VCIX2;
+    ret = ssd2119_spi_write_reg(par, 0x0D, 0x000A);	// VLCD63
+    ret = ssd2119_spi_write_reg(par, 0x0E, 0x2600);	// VCOML
+    ret = ssd2119_spi_write_reg(par, 0x1E, 0x00AF);	// VCOMH
+    ret = ssd2119_spi_write_reg(par, 0x15, 0x0058);	// Entry Mode
+    ret = ssd2119_spi_write_reg(par, 0x30, 0x0000);	// Gamma B control 1
+    ret = ssd2119_spi_write_reg(par, 0x31, 0x0101);	// Gamma B control 2
+    ret = ssd2119_spi_write_reg(par, 0x32, 0x0100);	// Gamma B control 3
+    ret = ssd2119_spi_write_reg(par, 0x33, 0x0305);	// Gamma B control 4
+    ret = ssd2119_spi_write_reg(par, 0x34, 0x0707);	// Gamma B control 5
+    ret = ssd2119_spi_write_reg(par, 0x35, 0x0305);	// Gamma B control 6
+    ret = ssd2119_spi_write_reg(par, 0x36, 0x0707);	// Gamma B control 7
+    ret = ssd2119_spi_write_reg(par, 0x37, 0x0201); // Gamma B control 8
+    ret = ssd2119_spi_write_reg(par, 0x3A, 0x1200);	// Gamma B control 9
+    ret = ssd2119_spi_write_reg(par, 0x3B, 0x0900);	// Gamma B control 10
+    ret = ssd2119_spi_write_reg(par, 0x22, 0x0000);	// write data to RAM
+
 
   return ret;
 
