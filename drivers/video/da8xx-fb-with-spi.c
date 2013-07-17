@@ -268,12 +268,26 @@ static struct fb_videomode known_lcd_panels[] = {
 		.name           = "SSD2119",
 		.xres           = 320,
 		.yres           = 240,
-		//.pixclock       = 7833600,
 		.pixclock	    = 5000000,
 		.left_margin    = 30,
 		.right_margin   = 30,
 		.upper_margin   = 4,
 		.lower_margin   = 4,
+		.hsync_len      = 1,
+		.vsync_len      = 1,
+		.sync           = 0,
+		.flag           = 0,
+	},
+   [4] = {
+		/* AZ display LCD Module */
+		.name           = "HX8238",
+		.xres           = 320,
+		.yres           = 240,
+		.pixclock	    = 5000000,
+		.left_margin    = 20,
+		.right_margin   = 68,
+		.upper_margin   = 4,
+		.lower_margin   = 18,
 		.hsync_len      = 1,
 		.vsync_len      = 1,
 		.sync           = 0,
@@ -381,49 +395,12 @@ static int ssd2119_spi_write_reg(struct da8xx_fb_par *par, u8 reg, u16 val)
 
 static int lcd_ssd2119_spi_init(struct da8xx_fb_par *par) {
 
-  int ret = 0;
-
-  // Power supply setting R03h
-  //ssd2119_spi_write_reg(3, 0x21);
-  //ssd2119_spi_write_reg(0x0C, 0x21);
-  //ssd2119_spi_write_reg(0x0D, 0x21);
-  //ssd2119_spi_write_reg(0x0E, 0x21);
-
-  // device on but output off: R07h at 0021h
-  //ret = ssd2119_spi_write_reg(par, 7, 0x21);
-
-  // turn on the oscillator: R00h at 0001h
-  //ssd2119_spi_write_reg(0, 0x01);
-
-  // display output on: R07h at 0023h
-  //ret = ssd2119_spi_write_reg(par, 7, 0x23);
-
-  // exit sleep mode (R10h at 000h)
-  //ret = ssd2119_spi_write_reg(par, 0x10, 0x00);
-
-  // wait 30ms
-  //mdelay(30);
-
-  // ??? set R07h at 0033h
-  //ret = ssd2119_spi_write_reg(par, 7, 0x33);
+    int ret = 0;
 
 #define LCD_MODE_65K 0x6000
 #define LCD_WMODE_GENERIC 0x0400
 #define LCD_DOTCLOCK_ACTIVE 0x0100
 #define LCD_NOSYNC_DMODE 0x0200
-  // entry mode setting (R11h)
-  //ret = ssd2119_spi_write_reg(par, 0x11, LCD_MODE_65K + LCD_WMODE_GENERIC + LCD_DOTCLOCK_ACTIVE + LCD_NOSYNC_DMODE);
-  
-
-  // LCD driver AC setting (R02h)
-  //ret = ssd2119_spi_write_reg(par, 2, 0x0);
-
-  // LCD orientation and pixel order
-  //ret = ssd2119_spi_write_reg(par, 1, 0x72EF);
-
-  // RAM data write (R22h)
-
-  // Display ON
 
     ret = ssd2119_spi_write_reg(par, 0x00, 0x0001); // OSCEN = 1;
     ret = ssd2119_spi_write_reg(par, 0x10, 0x0000);	// Sleep = 0;
@@ -452,54 +429,53 @@ static int lcd_ssd2119_spi_init(struct da8xx_fb_par *par) {
     ret = ssd2119_spi_write_reg(par, 0x3B, 0x0900);	// Gamma B control 10
     ret = ssd2119_spi_write_reg(par, 0x22, 0x0000);	// write data to RAM
 
-
-  return ret;
+    return ret;
 
 }
 
 static int lcd_ssd2119_shutdown(struct da8xx_fb_par *par){
 
-  int ret = 0;
+    int ret = 0;
 
-  // enter sleep mode: R10H at 0001h
-  ssd2119_spi_write_reg(par, 0x10, 0x01);
+    // enter sleep mode: R10H at 0001h
+    ssd2119_spi_write_reg(par, 0x10, 0x01);
 
-  // halt the operation: R07h at 0000h
-  ssd2119_spi_write_reg(par, 0x07, 0x00);
+    // halt the operation: R07h at 0000h
+    ssd2119_spi_write_reg(par, 0x07, 0x00);
 
-  // wait until VGH < 5V
+    // wait until VGH < 5V
 
-  // remove power from VCI then VDDIO
+    // remove power from VCI then VDDIO
 
-  // display OFF
-  
-  return ret;
+    // display OFF
+
+    return ret;
 }
 
 static int lcd_ssd2119_sleep(struct da8xx_fb_par *par){
 
-  int ret = 0;
+    int ret = 0;
 
-  // enter sleep mode: R10H at 0001h
-  ssd2119_spi_write_reg(par, 0x10, 0x01);
+    // enter sleep mode: R10H at 0001h
+    ssd2119_spi_write_reg(par, 0x10, 0x01);
 
-  // halt the operation: R07h at 0000h
-  ssd2119_spi_write_reg(par, 0x07, 0x00);
+    // halt the operation: R07h at 0000h
+    ssd2119_spi_write_reg(par, 0x07, 0x00);
 
-  return ret;
+    return ret;
 }
 
 static int lcd_ssd2119_wake(struct da8xx_fb_par *par){
   
-  int ret = 0;
+    int ret = 0;
 
-  // enter sleep mode: R10H at 0001h
-  ssd2119_spi_write_reg(par, 0x10, 0x00);
+    // enter sleep mode: R10H at 0001h
+    ssd2119_spi_write_reg(par, 0x10, 0x00);
 
-  // halt the operation: R07h at 0000h
-  ssd2119_spi_write_reg(par, 0x07, 0x33);
+    // halt the operation: R07h at 0000h
+    ssd2119_spi_write_reg(par, 0x07, 0x33);
 
-  return ret;
+    return ret;
 
 }
 
@@ -1008,17 +984,21 @@ static int lcd_init(struct da8xx_fb_par *par, const struct lcd_ctrl_config *cfg,
 	if (ret < 0)
 		return ret;
 
-  ret = ssd2119_spi_init(par);
-  if (ret < 0){
-      pr_err("init error in spi !!\n");
-      return ret;
-  }
- 
-  ret = lcd_ssd2119_spi_init(par);
-  if (ret < 0){
-    pr_err("init error in spi lcd sequence!!\n");
-    return ret;
-  }
+    if (strcmp(panel->name, "SSD2119") == 0) {
+
+      ret = ssd2119_spi_init(par);
+      if (ret < 0){
+          pr_err("init error in spi !!\n");
+          return ret;
+      }
+     
+      ret = lcd_ssd2119_spi_init(par);
+      if (ret < 0){
+        pr_err("init error in spi lcd sequence!!\n");
+        return ret;
+      }
+
+    }
 
 	/* Configure FDD */
 	lcdc_write((lcdc_read(LCD_RASTER_CTRL_REG) & 0xfff00fff) |
