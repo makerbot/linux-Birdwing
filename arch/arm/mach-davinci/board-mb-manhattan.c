@@ -44,6 +44,7 @@
 #define GPIO_ROTARY_A GPIO_TO_PIN(0,2)
 #define GPIO_ROTARY_B GPIO_TO_PIN(0,7)
 
+
 static struct rotary_encoder_platform_data encoder_info = {
     .steps      = 30,
     .axis       = ABS_X,
@@ -254,6 +255,7 @@ static int da850_power_init(void)
 
 #define DA850_LCD_BL_PIN    GPIO_TO_PIN(6, 9)
 #define DA850_LCD_RESET_PIN GPIO_TO_PIN(8, 15)
+#define GPIO_LCD_DISPLAY_TYPE  GPIO_TO_PIN(6, 7)
 
 #ifdef CONFIG_FB_DA8XX
 static short mb_lcd_spi_pins[] = {
@@ -288,6 +290,8 @@ static void da850_panel_power_ctrl(int val)
     pr_warn("switching lcd power to : %d!!!!!!!\n", val);
 }
 
+struct da8xx_lcdc_spi_platform_data *lcd_pdata;
+
 static int da850_lcd_hw_init(void)
 {
 	int status;
@@ -296,12 +300,21 @@ static int da850_lcd_hw_init(void)
 	if (status < 0)
 		return status;
 
-
-    /* pull the reset pin high */
 	status = gpio_request(DA850_LCD_RESET_PIN, "lcd reset\n");
 	if (status < 0)
 		return status;
 
+	status = gpio_request(GPIO_LCD_DISPLAY_TYPE, "lcd type\n");
+	if (status < 0)
+		return status;
+    
+    // 0 level for type pin indicates AZ display
+    if(gpio_get_value(GPIO_LCD_DISPLAY_TYPE) == 0) {
+        lcd_pdata = &az_hx8238_pdata;
+    } else {
+        lcd_pdata = &ssd2119_spi_pdata;
+    }
+        
 	gpio_direction_output(DA850_LCD_BL_PIN, 0);
 	gpio_direction_output(DA850_LCD_RESET_PIN, 0);
 
@@ -706,9 +719,9 @@ static __init void omapl138_hawk_init(void)
 	if (ret)
 		pr_warn("%s: LCDC spi mux setup failed: %d\n", __func__, ret);
 
-	ssd2119_spi_pdata.panel_power_ctrl = da850_panel_power_ctrl,
-    ssd2119_spi_pdata.spi = &lcd_spi_gpio_data;
-	ret = da8xx_register_lcdc_spi(&ssd2119_spi_pdata);
+	lcd_pdata->panel_power_ctrl = da850_panel_power_ctrl,
+    lcd_pdata->spi = &lcd_spi_gpio_data;
+	ret = da8xx_register_lcdc_spi(lcd_pdata);
 #else
     ssd2119_pdata.panel_power_ctrl = da850_panel_power_ctrl,
     pr_info("LCD LIDD: %s \n", ssd2119_pdata.manu_name);

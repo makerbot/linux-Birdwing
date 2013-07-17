@@ -620,6 +620,12 @@ struct da8xx_lcdc_spi_platform_data ssd2119_spi_pdata = {
 	.type		    	= "SSD2119",
 };
 
+struct da8xx_lcdc_spi_platform_data az_hx8238_pdata = {
+	.manu_name	    	= "az",
+	.controller_data	= &lcd_cfg,
+	.type		    	= "HX8238",
+};
+
 struct da8xx_lcdc_platform_data ssd2119_pdata = {
 	.manu_name	    	= "ssd2119",
 	.controller_data	= &lcd_cfg,
