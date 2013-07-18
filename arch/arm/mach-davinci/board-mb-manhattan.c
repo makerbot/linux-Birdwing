@@ -218,7 +218,7 @@ static struct spi_board_info wifi_spi_info[] = {
 	{
 		.modalias		= "spidev",
 		.controller_data	= (void *)GPIO_TO_PIN(4,6),
-		.mode			= SPI_MODE_3,
+		.mode			= SPI_MODE_2,
 		.max_speed_hz		= 30000000,
 		.bus_num		= 2,
 		.chip_select		= 0,
