@@ -1010,6 +1010,8 @@ enum davinci_da850_index {
     DA850_PRU1_R31_23,
     DA850_PRU1_R30_29,
     DA850_PRU1_R31_25,
+    DA850_PRU1_R31_19,
+    
         /* Pins from adc.pins */
     DA850_GPIO5_6,
     DA850_GPIO5_5,
