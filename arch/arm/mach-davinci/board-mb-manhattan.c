@@ -134,6 +134,7 @@ static short stepper_pru_pins[] = {
     DA850_PRU1_R30_9,
     DA850_PRU1_R30_0,
     DA850_GPIO8_13,
+    DA850_PRU1_R31_19,
    -1,
 };
 
@@ -196,7 +197,7 @@ static short wifi_pins[] = {
     DA850_GPIO4_2,
     DA850_GPIO4_3,
     DA850_GPIO4_4,
-    DA850_GPIO5_11,
+    //DA850_GPIO5_11,
     DA850_GPIO4_6,
     DA850_GPIO4_7,
     -1,
