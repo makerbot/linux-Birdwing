@@ -577,6 +577,26 @@ config USB_AUDIO
 	  Say "y" to link the driver statically, or "m" to build a
 	  dynamically linked module called "g_audio".
 
+config USB_G_3DPRINTER
+	tristate "3D Printer Gadget"
+	select USB_LIBCOMPOSITE
+	help
+	  The 3D Printer Gadget channels data between the USB host and a
+	  userspace program driving the print engine. The user space
+	  program reads and writes the device file /dev/g_printer to
+	  receive or send printer data. It can use ioctl calls to
+	  the device file to get or set printer status.
+
+	  This gadget also exposes a Mass Storage Interface to the host to allow
+	  large prints to be copied on to the device's local storage before printing.
+
+	  Say "y" to link the driver statically, or "m" to build a
+	  dynamically linked module called "g_printer".
+
+	  For more information, see Documentation/usb/gadget_printer.txt
+	  which includes sample code for accessing the device file.
+	
+
 config GADGET_UAC1
 	bool "UAC 1.0 (Legacy)"
 	depends on USB_AUDIO
