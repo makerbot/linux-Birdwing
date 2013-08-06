@@ -99,10 +99,8 @@ static struct printer_dev usb_printer_gadget;
  * Instead:  allocate your own, using normal USB-IF procedures.
  */
 
-/* Thanks to NetChip Technologies for donating this product ID.
- */
-#define PRINTER3D_VENDOR_NUM	0x23c1		/* NetChip */
-#define PRINTER3D_PRODUCT_NUM	0x0004		/* Linux-USB Printer Gadget */
+#define PRINTER3D_VENDOR_NUM	0x23c1		/* Makerbot */
+#define PRINTER3D_PRODUCT_NUM	0x0004		/* Temporary product ID */
 
 /* Some systems will want different product identifiers published in the
  * device descriptor, either numbers or strings or both.  These string
