@@ -11,6 +11,18 @@
  *
  */
 
+/*
+ * This driver aims to support video input and ouput devices compliant with the
+ * 'USB Video Class' specification.
+ *
+ * The driver doesn't support the deprecated v4l1 interface. It implements the
+ * mmap capture method only, and doesn't do any image format conversion in
+ * software. If your user-space application doesn't support YUYV or MJPEG, fix
+ * it :-). Please note that the MJPEG data have been stripped from their
+ * Huffman tables (DHT marker), you will need to add it back if your JPEG
+ * codec can't handle MJPEG data.
+ */
+
 #include <linux/atomic.h>
 #include <linux/kernel.h>
 #include <linux/list.h>
@@ -83,27 +95,12 @@ static struct uvc_format_desc uvc_fmts[] = {
 		.fcc		= V4L2_PIX_FMT_UYVY,
 	},
 	{
-		.name		= "Greyscale 8-bit (Y800)",
+		.name		= "Greyscale (8-bit)",
 		.guid		= UVC_GUID_FORMAT_Y800,
 		.fcc		= V4L2_PIX_FMT_GREY,
 	},
 	{
-		.name		= "Greyscale 8-bit (Y8  )",
-		.guid		= UVC_GUID_FORMAT_Y8,
-		.fcc		= V4L2_PIX_FMT_GREY,
-	},
-	{
-		.name		= "Greyscale 10-bit (Y10 )",
-		.guid		= UVC_GUID_FORMAT_Y10,
-		.fcc		= V4L2_PIX_FMT_Y10,
-	},
-	{
-		.name		= "Greyscale 12-bit (Y12 )",
-		.guid		= UVC_GUID_FORMAT_Y12,
-		.fcc		= V4L2_PIX_FMT_Y12,
-	},
-	{
-		.name		= "Greyscale 16-bit (Y16 )",
+		.name		= "Greyscale (16-bit)",
 		.guid		= UVC_GUID_FORMAT_Y16,
 		.fcc		= V4L2_PIX_FMT_Y16,
 	},
@@ -606,6 +603,8 @@ static int uvc_parse_streaming(struct uvc_device *dev,
 		}
 	}
 
+    uvc_printk(KERN_INFO, "buflen: %d, buffer: %d, %d\n", buflen, buffer[0], buffer[1]);
+
 	/* Skip the standard interface descriptors. */
 	while (buflen > 2 && buffer[1] != USB_DT_CS_INTERFACE) {
 		buflen -= buffer[0];
@@ -621,6 +620,7 @@ static int uvc_parse_streaming(struct uvc_device *dev,
 	/* Parse the header descriptor. */
 	switch (buffer[2]) {
 	case UVC_VS_OUTPUT_HEADER:
+        uvc_printk(KERN_INFO, "v4l2 buf type output\n");
 		streaming->type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
 		size = 9;
 		break;
@@ -666,6 +666,7 @@ static int uvc_parse_streaming(struct uvc_device *dev,
 		ret = -ENOMEM;
 		goto error;
 	}
+	uvc_printk(KERN_INFO, "Buffer Link Registered");
 
 	buflen -= buffer[0];
 	buffer += buffer[0];
@@ -673,8 +674,11 @@ static int uvc_parse_streaming(struct uvc_device *dev,
 	_buffer = buffer;
 	_buflen = buflen;
 
+	uvc_printk(KERN_INFO, "format and frame descriptors: buflen:%d, buf1: %d, buf2:%d\n", buflen, _buffer[1], _buffer[2]);
+
 	/* Count the format and frame descriptors. */
 	while (_buflen > 2 && _buffer[1] == USB_DT_CS_INTERFACE) {
+        uvc_printk(KERN_INFO, ": buflen:%d, buf1: %d, buf2:%d\n", buflen, _buffer[1], _buffer[2]);
 		switch (_buffer[2]) {
 		case UVC_VS_FORMAT_UNCOMPRESSED:
 		case UVC_VS_FORMAT_MJPEG:
@@ -718,7 +722,7 @@ static int uvc_parse_streaming(struct uvc_device *dev,
 	}
 
 	if (nformats == 0) {
-		uvc_trace(UVC_TRACE_DESCR, "device %d videostreaming interface "
+		uvc_printk(KERN_INFO, "device %d videostreaming interface "
 			"%d has no supported formats defined.\n",
 			dev->udev->devnum, alts->desc.bInterfaceNumber);
 		goto error;
@@ -729,6 +733,7 @@ static int uvc_parse_streaming(struct uvc_device *dev,
 	format = kzalloc(size, GFP_KERNEL);
 	if (format == NULL) {
 		ret = -ENOMEM;
+        uvc_printk(KERN_INFO, "Format is NULL\n");
 		goto error;
 	}
 
@@ -737,6 +742,8 @@ static int uvc_parse_streaming(struct uvc_device *dev,
 
 	streaming->format = format;
 	streaming->nformats = nformats;
+
+	uvc_printk(KERN_INFO, "Format counted\n");
 
 	/* Parse the format descriptors. */
 	while (buflen > 2 && buffer[1] == USB_DT_CS_INTERFACE) {
@@ -765,6 +772,7 @@ static int uvc_parse_streaming(struct uvc_device *dev,
 		buflen -= buffer[0];
 		buffer += buffer[0];
 	}
+	uvc_printk(KERN_INFO, "buflen: %d\n", buflen);
 
 	if (buflen)
 		uvc_trace(UVC_TRACE_DESCR, "device %d videostreaming interface "
@@ -786,6 +794,7 @@ static int uvc_parse_streaming(struct uvc_device *dev,
 			streaming->maxpsize = psize;
 	}
 
+    uvc_printk(KERN_INFO, "add device stream to list\n");
 	list_add_tail(&streaming->list, &dev->streams);
 	return 0;
 
@@ -920,6 +929,8 @@ static int uvc_parse_standard_control(struct uvc_device *dev,
 	struct usb_host_interface *alts = dev->intf->cur_altsetting;
 	unsigned int i, n, p, len;
 	__u16 type;
+
+    
 
 	switch (buffer[2]) {
 	case UVC_VC_HEADER:
@@ -1562,9 +1573,6 @@ static int uvc_scan_device(struct uvc_device *dev)
 		INIT_LIST_HEAD(&chain->entities);
 		mutex_init(&chain->ctrl_mutex);
 		chain->dev = dev;
-		v4l2_prio_init(&chain->prio);
-
-		term->flags |= UVC_ENTITY_FLAG_DEFAULT;
 
 		if (uvc_scan_chain(chain, term) < 0) {
 			kfree(chain);
@@ -1725,10 +1733,6 @@ static int uvc_register_video(struct uvc_device *dev,
 	vdev->v4l2_dev = &dev->vdev;
 	vdev->fops = &uvc_fops;
 	vdev->release = uvc_release;
-	vdev->prio = &stream->chain->prio;
-	set_bit(V4L2_FL_USE_FH_PRIO, &vdev->flags);
-	if (stream->type == V4L2_BUF_TYPE_VIDEO_OUTPUT)
-		vdev->vfl_dir = VFL_DIR_TX;
 	strlcpy(vdev->name, dev->name, sizeof vdev->name);
 
 	/* Set the driver data before calling video_register_device, otherwise
@@ -1745,11 +1749,6 @@ static int uvc_register_video(struct uvc_device *dev,
 		video_device_release(vdev);
 		return ret;
 	}
-
-	if (stream->type == V4L2_BUF_TYPE_VIDEO_CAPTURE)
-		stream->chain->caps |= V4L2_CAP_VIDEO_CAPTURE;
-	else
-		stream->chain->caps |= V4L2_CAP_VIDEO_OUTPUT;
 
 	atomic_inc(&dev->nstreams);
 	return 0;
@@ -2227,15 +2226,6 @@ static struct usb_device_id uvc_ids[] = {
 	  .bInterfaceSubClass	= 1,
 	  .bInterfaceProtocol	= 0,
 	  .driver_info		= UVC_QUIRK_FIX_BANDWIDTH },
-	/* Ophir Optronics - SPCAM 620U */
-	{ .match_flags		= USB_DEVICE_ID_MATCH_DEVICE
-				| USB_DEVICE_ID_MATCH_INT_INFO,
-	  .idVendor		= 0x0bd3,
-	  .idProduct		= 0x0555,
-	  .bInterfaceClass	= USB_CLASS_VIDEO,
-	  .bInterfaceSubClass	= 1,
-	  .bInterfaceProtocol	= 0,
-	  .driver_info		= UVC_QUIRK_PROBE_MINMAX },
 	/* MT6227 */
 	{ .match_flags		= USB_DEVICE_ID_MATCH_DEVICE
 				| USB_DEVICE_ID_MATCH_INT_INFO,

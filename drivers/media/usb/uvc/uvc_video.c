@@ -1439,26 +1439,6 @@ static void uvc_uninit_video(struct uvc_streaming *stream, int free_buffers)
 }
 
 /*
- * Compute the maximum number of bytes per interval for an endpoint.
- */
-static unsigned int uvc_endpoint_max_bpi(struct usb_device *dev,
-					 struct usb_host_endpoint *ep)
-{
-	u16 psize;
-
-	switch (dev->speed) {
-	case USB_SPEED_SUPER:
-		return ep->ss_ep_comp.wBytesPerInterval;
-	case USB_SPEED_HIGH:
-		psize = usb_endpoint_maxp(&ep->desc);
-		return (psize & 0x07ff) * (1 + ((psize >> 11) & 3));
-	default:
-		psize = usb_endpoint_maxp(&ep->desc);
-		return psize & 0x07ff;
-	}
-}
-
-/*
  * Initialize isochronous URBs and allocate transfer buffers. The packet size
  * is given by the endpoint.
  */
@@ -1470,7 +1450,8 @@ static int uvc_init_video_isoc(struct uvc_streaming *stream,
 	u16 psize;
 	u32 size;
 
-	psize = uvc_endpoint_max_bpi(stream->dev->udev, ep);
+	psize = le16_to_cpu(ep->desc.wMaxPacketSize);
+	psize = (psize & 0x07ff) * (1 + ((psize >> 11) & 3));
 	size = stream->ctrl.dwMaxVideoFrameSize;
 
 	npackets = uvc_alloc_urb_buffers(stream, size, psize, gfp_flags);
@@ -1525,7 +1506,7 @@ static int uvc_init_video_bulk(struct uvc_streaming *stream,
 	u16 psize;
 	u32 size;
 
-	psize = usb_endpoint_maxp(&ep->desc) & 0x7ff;
+	psize = le16_to_cpu(ep->desc.wMaxPacketSize) & 0x07ff;
 	size = stream->ctrl.dwMaxPayloadTransferSize;
 	stream->bulk.max_payload_size = size;
 
@@ -1586,7 +1567,7 @@ static int uvc_init_video(struct uvc_streaming *stream, gfp_t gfp_flags)
 
 	if (intf->num_altsetting > 1) {
 		struct usb_host_endpoint *best_ep = NULL;
-		unsigned int best_psize = UINT_MAX;
+		unsigned int best_psize = 3 * 1024;
 		unsigned int bandwidth;
 		unsigned int uninitialized_var(altsetting);
 		int intfnum = stream->intfnum;
@@ -1614,7 +1595,8 @@ static int uvc_init_video(struct uvc_streaming *stream, gfp_t gfp_flags)
 				continue;
 
 			/* Check if the bandwidth is high enough. */
-			psize = uvc_endpoint_max_bpi(stream->dev->udev, ep);
+			psize = le16_to_cpu(ep->desc.wMaxPacketSize);
+			psize = (psize & 0x07ff) * (1 + ((psize >> 11) & 3));
 			if (psize >= bandwidth && psize <= best_psize) {
 				altsetting = alts->desc.bAlternateSetting;
 				best_psize = psize;
@@ -1755,9 +1737,7 @@ int uvc_video_init(struct uvc_streaming *stream)
 	atomic_set(&stream->active, 0);
 
 	/* Initialize the video buffers queue. */
-	ret = uvc_queue_init(&stream->queue, stream->type, !uvc_no_drop_param);
-	if (ret)
-		return ret;
+	uvc_queue_init(&stream->queue, stream->type, !uvc_no_drop_param);
 
 	/* Alternate setting 0 should be the default, yet the XBox Live Vision
 	 * Cam (and possibly other devices) crash or otherwise misbehave if
@@ -1812,7 +1792,6 @@ int uvc_video_init(struct uvc_streaming *stream)
 	probe->bFormatIndex = format->index;
 	probe->bFrameIndex = frame->bFrameIndex;
 
-	stream->def_format = format;
 	stream->cur_format = format;
 	stream->cur_frame = frame;
 
