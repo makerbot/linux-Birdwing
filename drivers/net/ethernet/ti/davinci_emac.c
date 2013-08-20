@@ -73,6 +73,7 @@ static int debug_level;
 module_param(debug_level, int, 0);
 MODULE_PARM_DESC(debug_level, "DaVinci EMAC debug level (NETIF_MSG bits)");
 
+
 /* Netif debug messages possible */
 #define DAVINCI_EMAC_DEBUG	(NETIF_MSG_DRV | \
 				NETIF_MSG_PROBE | \
@@ -1842,6 +1843,8 @@ static struct emac_platform_data
 	return  pdev->dev.platform_data;
 }
 #endif
+
+
 /**
  * davinci_emac_probe - EMAC device probe
  * @pdev: The DaVinci EMAC device that we are removing
@@ -1983,11 +1986,12 @@ static int davinci_emac_probe(struct platform_device *pdev)
 	ndev->irq = res->start;
 
 	if (!is_valid_ether_addr(priv->mac_addr)) {
-		/* Use random MAC if none passed */
-		eth_hw_addr_random(ndev);
-		memcpy(priv->mac_addr, ndev->dev_addr, ndev->addr_len);
-		dev_warn(&pdev->dev, "using random MAC addr: %pM\n",
-							priv->mac_addr);
+
+        /* Use random MAC if none passed */
+        eth_hw_addr_random(ndev);
+        memcpy(priv->mac_addr, ndev->dev_addr, ndev->addr_len);
+        dev_warn(&pdev->dev, "using random MAC addr: %pM\n",
+                        priv->mac_addr);
 	}
 
 	ndev->netdev_ops = &emac_netdev_ops;
