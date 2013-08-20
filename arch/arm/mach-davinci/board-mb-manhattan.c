@@ -27,6 +27,7 @@
 #include <linux/platform_data/mtd-davinci-aemif.h>
 #include <linux/platform_data/spi-davinci.h>
 #include <linux/platform_data/uio_pruss.h>
+#include <linux/etherdevice.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -447,12 +448,20 @@ static short omapl138_hawk_mii_pins[] __initdata = {
 	DA850_MDIO_D,
 	-1
 };
+
 static __init void omapl138_hawk_config_emac(void)
 {
 	void __iomem *cfgchip3 = DA8XX_SYSCFG0_VIRT(DA8XX_CFGCHIP3_REG);
 	int ret;
 	u32 val;
 	struct davinci_soc_info *soc_info = &davinci_soc_info;
+    char eth[17];
+    int mac_byte_counter;
+    char *eth_ptr;
+    unsigned char mac_addr[6];
+    static char *ptr __initdata = NULL;
+    char mac_bytes[3] = { 0};
+    long temp_long = 0;
 
 	val = __raw_readl(cfgchip3);
 	val &= ~BIT(8);
@@ -467,6 +476,31 @@ static __init void omapl138_hawk_config_emac(void)
 	pr_info("EMAC: MII PHY configured\n");
 
 	soc_info->emac_pdata->phy_id = MANHATTAN_PHY_ID;
+
+    // get mac address
+    ptr = strstr(boot_command_line, "eth=");
+
+    if (ptr) {
+        memcpy(eth, ptr+4, 17*sizeof(char));
+        eth_ptr = eth;
+        for (mac_byte_counter = 0; mac_byte_counter <= 5; mac_byte_counter ++) {
+            mac_bytes[0] = *eth_ptr;
+            mac_bytes[1] = *(eth_ptr + 1);
+            ret = kstrtol(mac_bytes, 16, &temp_long);
+            if (ret) { 
+                pr_warn("Error parsing mac address: %d\n", ret);
+            }else {
+                mac_addr[mac_byte_counter] = (uint8_t)(temp_long);
+            }            
+            //pr_warn( "mac_addr:%d %2x\n", mac_byte_counter, mac_addr[mac_byte_counter] );
+            eth_ptr+=3; /* skip ":" in  eth*/
+        }
+        
+    }
+    if (is_valid_ether_addr(mac_addr)) {
+        //pr_warn("valid ethernet addr received from init\n");
+        memcpy(da8xx_emac_pdata.mac_addr, mac_addr, ETH_ALEN);
+    } 
 
 	ret = da8xx_register_emac();
 	if (ret)
