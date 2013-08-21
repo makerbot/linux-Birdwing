@@ -139,11 +139,11 @@ static short stepper_pru_pins[] = {
 };
 
 static short toolhead_spi_pins[] = {
-	DA850_GPIO2_11, //DA850_SPI1_SOMI,
-	DA850_GPIO2_13, //DA850_SPI1_CLK,
-	DA850_GPIO2_10, //DA850_SPI1_SIMO,
-	DA850_GPIO2_14, //DA850_SPI1_SCS_0,
-	DA850_GPIO1_3, //DA850_SPI1_SCS_5,
+	DA850_SPI1_SOMI, //DA850_GPIO2_11, //DA850_SPI1_SOMI,
+	DA850_SPI1_CLK, //DA850_GPIO2_13, //DA850_SPI1_CLK,
+	DA850_SPI1_SIMO, //DA850_GPIO2_10, //DA850_SPI1_SIMO,
+	DA850_SPI1_SCS_0, //DA850_GPIO2_14, //DA850_SPI1_SCS_0,
+	DA850_SPI1_SCS_5, //DA850_GPIO1_3, //DA850_SPI1_SCS_5,
     DA850_GPIO2_5,
     DA850_GPIO2_7,
     DA850_GPIO6_5,
@@ -175,8 +175,8 @@ static struct platform_device spi1_device = {
 static struct spi_board_info toolhead_spi_info[] = {
 	{
 		.modalias		= "spidev",
-		.controller_data	= (void *)GPIO_TO_PIN(2,14),
-		//.controller_data	= &toolhead_spi_cfg,
+		//.controller_data	= (void *)GPIO_TO_PIN(2,14),
+		.controller_data	= &toolhead_spi_cfg,
 		.mode			= SPI_MODE_3,
 		.max_speed_hz		= 30000000,
 		.bus_num		= 1,
@@ -184,7 +184,8 @@ static struct spi_board_info toolhead_spi_info[] = {
 	},
 	{
 		.modalias		= "spidev",
-		.controller_data	= (void *)GPIO_TO_PIN(1,3),
+		//.controller_data	= (void *)GPIO_TO_PIN(1,3),
+		.controller_data	= &toolhead_spi_cfg,
 		.mode			= SPI_MODE_3,
 		.max_speed_hz		= 30000000,
 		.bus_num		= 1,
@@ -718,7 +719,8 @@ static __init void omapl138_hawk_init(void)
 		pr_warn("%s: spi info registration failed: %d\n", __func__,
 			ret);
 
-    platform_device_register(&spi1_device);
+    ret = da8xx_register_spi_bus(1,2);
+    //platform_device_register(&spi1_device);
 	if (ret)
 		pr_warn("%s: SPI 1 registration failed: %d\n", __func__, ret);
 
