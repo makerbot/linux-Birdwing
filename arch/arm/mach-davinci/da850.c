@@ -663,9 +663,10 @@ static const struct mux_config da850_pins[] = {
     MUX_CFG(DA850,  GPIO8_15,   18, 8,  15, 8,  false)
     /* Pins from toolhead.pins */
     MUX_CFG(DA850,  SPI1_SOMI,  5,  16, 15, 1,  false)
-    MUX_CFG(DA850,  SPI1_SCS_0, 5,  4,  15, 1,  false)
-    MUX_CFG(DA850,  SPI1_CLK,   5,  8,  15, 1,  false)
     MUX_CFG(DA850,  SPI1_SIMO,  5,  20, 15, 1,  false)
+    MUX_CFG(DA850,  SPI1_CLK,   5,  8,  15, 1,  false)
+    MUX_CFG(DA850,  SPI1_SCS_0, 5,  4,  15, 1,  false)
+    MUX_CFG(DA850,  SPI1_SCS_5, 4,  16, 15, 1,  false)
     MUX_CFG(DA850,  GPIO5_12,   11, 12, 15, 8,  false)
     /* Pins for toolhead gpio spi */
     MUX_CFG(DA850,  GPIO2_11,   5,  16, 15, 8,  false)
