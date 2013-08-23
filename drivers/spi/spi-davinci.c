@@ -227,7 +227,6 @@ static void davinci_spi_chipselect(struct spi_device *spi, int value)
 	 * line for the controller
 	 */
 	if (gpio_chipsel) {
-        dev_err(&spi->dev, "gpio chipselect\n");
 		if (value == BITBANG_CS_ACTIVE)
 			gpio_set_value(pdata->chip_sel[chip_sel], 0);
 		else
@@ -238,7 +237,6 @@ static void davinci_spi_chipselect(struct spi_device *spi, int value)
 			spidat1 &= ~(0x1 << chip_sel);
 		}
 
-        dev_err(&spi->dev, "writing SPIDAT: %08x to  %08x \n", spidat1, (int)(dspi->base + SPIDAT1 + 2));
 		iowrite16(spidat1, dspi->base + SPIDAT1 + 2);
 	}
 }
@@ -283,8 +281,6 @@ static int davinci_spi_setup_transfer(struct spi_device *spi,
 	struct davinci_spi_config *spicfg;
 	u8 bits_per_word = 0;
 	u32 hz = 0, spifmt = 0, prescale = 0;
-
-    dev_err(&spi->dev, "setup transfer\n");
 
 	dspi = spi_master_get_devdata(spi->master);
 	spicfg = (struct davinci_spi_config *)spi->controller_data;
@@ -541,8 +537,6 @@ static int davinci_spi_bufs(struct spi_device *spi, struct spi_transfer *t)
 	void *dummy_buf = NULL;
 	struct scatterlist sg_rx, sg_tx;
 
-    dev_err(&spi->dev, "spi bufs function\n");
-
 	dspi = spi_master_get_devdata(spi->master);
 	pdata = dspi->pdata;
 	spicfg = (struct davinci_spi_config *)spi->controller_data;
@@ -573,10 +567,6 @@ static int davinci_spi_bufs(struct spi_device *spi, struct spi_transfer *t)
 		tx_data = dspi->get_tx(dspi);
 		spidat1 &= 0xFFFF0000;
 		spidat1 |= tx_data & 0xFFFF;
-        dev_err(&spi->dev, "reading config register cfg1: %08x \n", ioread32(dspi->base + SPIGCR1));        
-        dev_err(&spi->dev, "reading pins register: %08x \n", ioread32(dspi->base + SPIPC2));        
-        dev_err(&spi->dev, "reading format register: %08x \n", ioread32(dspi->base + SPIFMT1));        
-        dev_err(&spi->dev, "writing SPIDAT: %08x to  %08x \n", spidat1, dspi->base + SPIDAT1);
 		iowrite32(spidat1, dspi->base + SPIDAT1);
 	} else {
 		struct dma_slave_config dma_rx_conf = {
@@ -594,8 +584,6 @@ static int davinci_spi_bufs(struct spi_device *spi, struct spi_transfer *t)
 		struct dma_async_tx_descriptor *rxdesc;
 		struct dma_async_tx_descriptor *txdesc;
 		void *buf;
-
-        dev_err(&spi->dev, "dma transfer\n");
 
 		dummy_buf = kzalloc(t->len, GFP_KERNEL);
 		if (!dummy_buf)
@@ -659,7 +647,6 @@ static int davinci_spi_bufs(struct spi_device *spi, struct spi_transfer *t)
 		dma_async_issue_pending(dspi->dma_tx);
 
 		set_io_bits(dspi->base + SPIINT, SPIINT_DMA_REQ_EN);
-        dev_err(&spi->dev, "done with DMA transfer setup\n");
 	}
 
 	/* Wait for the transfer to complete */
@@ -674,7 +661,6 @@ static int davinci_spi_bufs(struct spi_device *spi, struct spi_transfer *t)
 		}
 	}
 
-    dev_err(&spi->dev, "transfer completed\n");
 	clear_io_bits(dspi->base + SPIINT, SPIINT_MASKALL);
 	if (spicfg->io_type == SPI_IO_TYPE_DMA) {
 		clear_io_bits(dspi->base + SPIINT, SPIINT_DMA_REQ_EN);
@@ -704,9 +690,6 @@ static int davinci_spi_bufs(struct spi_device *spi, struct spi_transfer *t)
 		dev_err(&spi->dev, "SPI data transfer error\n");
 		return -EIO;
 	}
-
-    dev_err(&spi->dev, "transfer finished no errors\n");
-
 
 	return t->len;
 
