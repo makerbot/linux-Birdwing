@@ -405,7 +405,6 @@ static int davinci_spi_setup(struct spi_device *spi)
 	if (!(spi->mode & SPI_NO_CS)) {
 		if ((pdata->chip_sel == NULL) ||
 		    (pdata->chip_sel[spi->chip_select] == SPI_INTERN_CS)){
-            printk(KERN_INFO "spi chipselect not gpio\n");
 			set_io_bits(dspi->base + SPIPC0, 1 << spi->chip_select);
         }
 
@@ -905,7 +904,6 @@ static int davinci_spi_probe(struct platform_device *pdev)
 	if (pdata->chip_sel) {
 		for (i = 0; i < pdata->num_chipselect; i++) {
 			if (pdata->chip_sel[i] != SPI_INTERN_CS){
-                dev_err(&pdev->dev, "pdata chip_sel: %d\n", pdata->chip_sel[i]);
 				gpio_direction_output(pdata->chip_sel[i], 1);
             }
 		}
