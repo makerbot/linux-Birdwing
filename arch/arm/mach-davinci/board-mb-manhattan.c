@@ -143,7 +143,7 @@ static short toolhead_spi_pins[] = {
 	DA850_SPI1_CLK, //DA850_GPIO2_13, //DA850_SPI1_CLK,
 	DA850_SPI1_SIMO, //DA850_GPIO2_10, //DA850_SPI1_SIMO,
 	DA850_SPI1_SCS_0, //DA850_GPIO2_14, //DA850_SPI1_SCS_0,
-	DA850_SPI1_SCS_5, //DA850_GPIO1_3, //DA850_SPI1_SCS_5,
+	DA850_GPIO1_3, //DA850_GPIO1_3, //DA850_SPI1_SCS_5,
     DA850_GPIO2_5,
     DA850_GPIO2_7,
     DA850_GPIO6_5,
@@ -153,10 +153,17 @@ static short toolhead_spi_pins[] = {
     -1,
 };
 
-static struct davinci_spi_config toolhead_spi_cfg = {
-	.io_type	= SPI_IO_TYPE_INTR,
+static struct davinci_spi_config toolhead_spi_cfg[] = {
+	{
+    .io_type	= SPI_IO_TYPE_INTR,
 	.c2tdelay	= 8,
 	.t2cdelay	= 8,
+    },
+	{
+    .io_type	= SPI_IO_TYPE_INTR,
+	.c2tdelay	= 8,
+	.t2cdelay	= 8,
+    }
 };
 
 static struct spi_gpio_platform_data spi1_pdata = {
@@ -172,11 +179,13 @@ static struct platform_device spi1_device = {
 	.dev.platform_data = &spi1_pdata,
 };
 
+static u8 spi1_chip_selects[2] = {0xFF, 19};
+
 static struct spi_board_info toolhead_spi_info[] = {
 	{
 		.modalias		= "spidev",
 		//.controller_data	= (void *)GPIO_TO_PIN(2,14),
-		.controller_data	= &toolhead_spi_cfg,
+		.controller_data	= &toolhead_spi_cfg[0],
 		.mode			= SPI_MODE_3,
 		.max_speed_hz		= 4000000,
 		.bus_num		= 1,
@@ -185,7 +194,7 @@ static struct spi_board_info toolhead_spi_info[] = {
 	{
 		.modalias		= "spidev",
 		//.controller_data	= (void *)GPIO_TO_PIN(1,3),
-		.controller_data	= &toolhead_spi_cfg,
+		.controller_data	= &toolhead_spi_cfg[1],
 		.mode			= SPI_MODE_3,
 		.max_speed_hz		= 4000000,
 		.bus_num		= 1,
@@ -719,6 +728,7 @@ static __init void omapl138_hawk_init(void)
 		pr_warn("%s: spi info registration failed: %d\n", __func__,
 			ret);
 
+    da8xx_spi_pdata[1].chip_sel = spi1_chip_selects;
     ret = da8xx_register_spi_bus(1,2);
     //platform_device_register(&spi1_device);
 	if (ret)

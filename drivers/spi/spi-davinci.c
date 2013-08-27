@@ -219,9 +219,9 @@ static void davinci_spi_chipselect(struct spi_device *spi, int value)
 	pdata = dspi->pdata;
 
 	if (pdata->chip_sel && chip_sel < pdata->num_chipselect &&
-				pdata->chip_sel[chip_sel] != SPI_INTERN_CS)
+				pdata->chip_sel[chip_sel] != SPI_INTERN_CS) {
 		gpio_chipsel = true;
-
+    }
 	/*
 	 * Board specific chip select logic decides the polarity and cs
 	 * line for the controller
@@ -404,8 +404,10 @@ static int davinci_spi_setup(struct spi_device *spi)
 
 	if (!(spi->mode & SPI_NO_CS)) {
 		if ((pdata->chip_sel == NULL) ||
-		    (pdata->chip_sel[spi->chip_select] == SPI_INTERN_CS))
+		    (pdata->chip_sel[spi->chip_select] == SPI_INTERN_CS)){
+            printk(KERN_INFO "spi chipselect not gpio\n");
 			set_io_bits(dspi->base + SPIPC0, 1 << spi->chip_select);
+        }
 
 	}
 
@@ -902,8 +904,10 @@ static int davinci_spi_probe(struct platform_device *pdev)
 	/* initialize chip selects */
 	if (pdata->chip_sel) {
 		for (i = 0; i < pdata->num_chipselect; i++) {
-			if (pdata->chip_sel[i] != SPI_INTERN_CS)
+			if (pdata->chip_sel[i] != SPI_INTERN_CS){
+                dev_err(&pdev->dev, "pdata chip_sel: %d\n", pdata->chip_sel[i]);
 				gpio_direction_output(pdata->chip_sel[i], 1);
+            }
 		}
 	}
 
