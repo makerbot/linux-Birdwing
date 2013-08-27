@@ -1059,7 +1059,13 @@ enum davinci_da850_index {
     DA850_GPIO5_7,
     /* power pins */
     DA850_GPIO3_15,
-
+    /* Pins from gpio.pins */
+    DA850_GPIO2_0,
+    DA850_GPIO3_6,
+    DA850_GPIO3_3,
+    DA850_GPIO3_7,
+    DA850_GPIO3_0,
+    DA850_GPIO0_9,
 };
 
 enum davinci_tnetv107x_index {
