@@ -138,6 +138,17 @@ static short stepper_pru_pins[] = {
    -1,
 };
 
+static short free_gpio_pins[] = {
+    DA850_GPIO2_0,
+    DA850_GPIO2_4,
+    DA850_GPIO3_1,
+    DA850_GPIO3_6,
+    DA850_GPIO3_3,
+    DA850_GPIO3_7,
+    DA850_GPIO3_0,
+    DA850_GPIO0_9,
+};
+
 static short toolhead_spi_pins[] = {
 	DA850_SPI1_SOMI, //DA850_GPIO2_11, //DA850_SPI1_SOMI,
 	DA850_SPI1_CLK, //DA850_GPIO2_13, //DA850_SPI1_CLK,
@@ -749,6 +760,9 @@ static __init void omapl138_hawk_init(void)
 	if (ret)
 		pr_warn("%s: SPI 1 registration failed: %d\n", __func__, ret);
 
+    /* GPIO */
+    ret = davinci_cfg_reg_list(free_gpio_pins);
+        
 	/* LCD  */
 	ret = davinci_cfg_reg_list(da850_lcdcntl_pins);
 	if (ret)
