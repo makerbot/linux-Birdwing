@@ -579,7 +579,6 @@ static int spidev_probe(struct spi_device *spi)
 	int			status;
 	unsigned long		minor;
 
-    dev_err(&spi->dev, "hey I'm probing spidev!!!!\n");
 	/* Allocate driver data */
 	spidev = kzalloc(sizeof(*spidev), GFP_KERNEL);
 	if (!spidev)
@@ -617,7 +616,6 @@ static int spidev_probe(struct spi_device *spi)
 
 	if (status == 0){
 		spi_set_drvdata(spi, spidev);
-        dev_err(&spi->dev, "hey I probed spidev without any errors!!!!\n");
 	} else
 		kfree(spidev);
 
