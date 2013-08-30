@@ -166,15 +166,10 @@ static short toolhead_spi_pins[] = {
 
 static struct davinci_spi_config toolhead_spi_cfg[] = {
 	{
-    .io_type	= SPI_IO_TYPE_INTR,
+    .io_type	= SPI_IO_TYPE_POLL,
 	.c2tdelay	= 8,
 	.t2cdelay	= 8,
     },
-	{
-    .io_type	= SPI_IO_TYPE_INTR,
-	.c2tdelay	= 8,
-	.t2cdelay	= 8,
-    }
 };
 
 static struct spi_gpio_platform_data spi1_pdata = {
@@ -196,7 +191,7 @@ static struct spi_board_info toolhead_spi_info[] = {
 	{
 		.modalias		= "spidev",
 		//.controller_data	= (void *)GPIO_TO_PIN(2,14),
-		.controller_data	= &toolhead_spi_cfg[0],
+		.controller_data	= &toolhead_spi_cfg,
 		.mode			= SPI_MODE_3,
 		.max_speed_hz		= 4000000,
 		.bus_num		= 1,
@@ -205,7 +200,7 @@ static struct spi_board_info toolhead_spi_info[] = {
 	{
 		.modalias		= "spidev",
 		//.controller_data	= (void *)GPIO_TO_PIN(1,3),
-		.controller_data	= &toolhead_spi_cfg[1],
+		.controller_data	= &toolhead_spi_cfg,
 		.mode			= SPI_MODE_3,
 		.max_speed_hz		= 4000000,
 		.bus_num		= 1,
