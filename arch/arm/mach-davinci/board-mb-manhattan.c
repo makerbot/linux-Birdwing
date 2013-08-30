@@ -354,16 +354,20 @@ static int da850_lcd_hw_init(void)
 
 const short mb_manhattan_led_pins[] = {
     DA850_GPIO0_1,
-    DA850_PRU1_R30_24,
+    DA850_GPIO4_0, //DA850_PRU1_R30_24,
     DA850_PRU1_R30_25,
     -1
 };
 
 static struct gpio_led gpio_leds[] = {
     {
-        .name           = "Status LED",
+        .name           = "Kernel_Status",
         .gpio           = GPIO_TO_PIN(0,1),
         .default_trigger= "heartbeat",
+    },
+    {
+        .name           = "Machine_Status",
+        .gpio           = GPIO_TO_PIN(4,0),
     },
 };
 
