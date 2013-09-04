@@ -300,12 +300,14 @@ static int uvc_v4l2_set_format(struct uvc_streaming *stream,
 	struct uvc_frame *frame;
 	int ret;
 
-	if (fmt->type != stream->type)
+	if (fmt->type != stream->type){
 		return -EINVAL;
+    }
 
 	ret = uvc_v4l2_try_format(stream, fmt, &probe, &format, &frame);
-	if (ret < 0)
+	if (ret < 0){
 		return ret;
+    }
 
 	mutex_lock(&stream->mutex);
 
@@ -450,6 +452,7 @@ static int uvc_acquire_privileges(struct uvc_fh *handle)
 	/* Check if the device already has a privileged handle. */
 	if (atomic_inc_return(&handle->stream->active) != 1) {
 		atomic_dec(&handle->stream->active);
+        printk("UVC: device priveledge handle failed");
 		return -EBUSY;
 	}
 

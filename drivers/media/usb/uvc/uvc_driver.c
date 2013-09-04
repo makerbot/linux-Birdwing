@@ -315,6 +315,8 @@ static int uvc_parse_format(struct uvc_device *dev,
 	format->type = buffer[2];
 	format->index = buffer[3];
 
+    printk(KERN_INFO "parsing formats\n");
+
 	switch (buffer[2]) {
 	case UVC_VS_FORMAT_UNCOMPRESSED:
 	case UVC_VS_FORMAT_FRAME_BASED:
@@ -424,7 +426,7 @@ static int uvc_parse_format(struct uvc_device *dev,
 		return -EINVAL;
 	}
 
-	uvc_trace(UVC_TRACE_DESCR, "Found format %s.\n", format->name);
+	printk(KERN_INFO "Found format %s.\n", format->name);
 
 	buflen -= buffer[0];
 	buffer += buffer[0];
@@ -506,7 +508,8 @@ static int uvc_parse_format(struct uvc_device *dev,
 				frame->dwDefaultFrameInterval;
 		}
 
-		uvc_trace(UVC_TRACE_DESCR, "- %ux%u (%u.%u fps)\n",
+		//uvc_trace(UVC_TRACE_DESCR, "- %ux%u (%u.%u fps)\n",
+		printk(KERN_INFO "- %ux%u (%u.%u fps)\n",
 			frame->wWidth, frame->wHeight,
 			10000000/frame->dwDefaultFrameInterval,
 			(100000000/frame->dwDefaultFrameInterval)%10);
@@ -603,7 +606,6 @@ static int uvc_parse_streaming(struct uvc_device *dev,
 		}
 	}
 
-    uvc_printk(KERN_INFO, "buflen: %d, buffer: %d, %d\n", buflen, buffer[0], buffer[1]);
 
 	/* Skip the standard interface descriptors. */
 	while (buflen > 2 && buffer[1] != USB_DT_CS_INTERFACE) {
@@ -666,7 +668,6 @@ static int uvc_parse_streaming(struct uvc_device *dev,
 		ret = -ENOMEM;
 		goto error;
 	}
-	uvc_printk(KERN_INFO, "Buffer Link Registered");
 
 	buflen -= buffer[0];
 	buffer += buffer[0];
@@ -674,11 +675,8 @@ static int uvc_parse_streaming(struct uvc_device *dev,
 	_buffer = buffer;
 	_buflen = buflen;
 
-	uvc_printk(KERN_INFO, "format and frame descriptors: buflen:%d, buf1: %d, buf2:%d\n", buflen, _buffer[1], _buffer[2]);
-
 	/* Count the format and frame descriptors. */
 	while (_buflen > 2 && _buffer[1] == USB_DT_CS_INTERFACE) {
-        uvc_printk(KERN_INFO, ": buflen:%d, buf1: %d, buf2:%d\n", buflen, _buffer[1], _buffer[2]);
 		switch (_buffer[2]) {
 		case UVC_VS_FORMAT_UNCOMPRESSED:
 		case UVC_VS_FORMAT_MJPEG:

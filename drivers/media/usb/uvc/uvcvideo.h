@@ -569,7 +569,7 @@ extern unsigned int uvc_timeout_param;
 #define uvc_trace(flag, msg...) \
 	do { \
 		if (uvc_trace_param & flag) \
-			printk(KERN_DEBUG "uvcvideo: " msg); \
+			printk(KERN_INFO "uvcvideo: " msg); \
 	} while (0)
 
 #define uvc_warn_once(dev, warn, msg...) \

@@ -202,8 +202,10 @@ uvc_v4l2_do_ioctl(struct file *file, unsigned int cmd, void *arg)
 	{
 		struct v4l2_format *fmt = arg;
 
-		if (fmt->type != video->queue.type)
+		if (fmt->type != video->queue.type){
+            printk("format type error %d, %d\n", fmt->thype, video->queue.type);
 			return -EINVAL;
+        }
 
 		return uvc_v4l2_set_format(video, fmt);
 	}
