@@ -461,7 +461,7 @@ static struct platform_device *da850_evm_devices[] = {
 #define DA8XX_AEMIF_CE2CFG_OFFSET	0x10
 #define DA8XX_AEMIF_ASIZE_16BIT		0x1
 
-static short omapl138_hawk_mii_pins[] __initdata = {
+static short mb_manhattan_mii_pins[] __initdata = {
 	DA850_MII_TXEN, DA850_MII_TXCLK, DA850_MII_COL, DA850_MII_TXD_3,
 	DA850_MII_TXD_2, DA850_MII_TXD_1, DA850_MII_TXD_0, DA850_MII_RXER,
 	DA850_MII_CRS, DA850_MII_RXCLK, DA850_MII_RXDV, DA850_MII_RXD_3,
@@ -470,7 +470,7 @@ static short omapl138_hawk_mii_pins[] __initdata = {
 	-1
 };
 
-static __init void omapl138_hawk_config_emac(void)
+static __init void mb_manhattan_config_emac(void)
 {
 	void __iomem *cfgchip3 = DA8XX_SYSCFG0_VIRT(DA8XX_CFGCHIP3_REG);
 	int ret;
@@ -486,7 +486,7 @@ static __init void omapl138_hawk_config_emac(void)
 
 	val = __raw_readl(cfgchip3);
 	val &= ~BIT(8);
-	ret = davinci_cfg_reg_list(omapl138_hawk_mii_pins);
+	ret = davinci_cfg_reg_list(mb_manhattan_mii_pins);
 	if (ret) {
 		pr_warn("%s: CPGMAC/MII mux setup failed: %d\n", __func__, ret);
 		return;
@@ -579,7 +579,7 @@ static struct edma_rsv_info *da850_edma_rsv[2] = {
 };
 
 
-static irqreturn_t omapl138_hawk_usb_ocic_irq(int irq, void *dev_id);
+static irqreturn_t mb_manhattan_usb_ocic_irq(int irq, void *dev_id);
 static da8xx_ocic_handler_t hawk_usb_ocic_handler;
 
 static const short da850_hawk_usb11_pins[] = {
@@ -611,7 +611,7 @@ static int hawk_usb_ocic_notify(da8xx_ocic_handler_t handler)
 	if (handler != NULL) {
 		hawk_usb_ocic_handler = handler;
 
-		error = request_irq(irq, omapl138_hawk_usb_ocic_irq,
+		error = request_irq(irq, mb_manhattan_usb_ocic_irq,
 					IRQF_DISABLED | IRQF_TRIGGER_RISING |
 					IRQF_TRIGGER_FALLING,
 					"OHCI over-current indicator", NULL);
@@ -624,7 +624,7 @@ static int hawk_usb_ocic_notify(da8xx_ocic_handler_t handler)
 	return error;
 }
 
-static struct da8xx_ohci_root_hub omapl138_hawk_usb11_pdata = {
+static struct da8xx_ohci_root_hub mb_manhattan_usb11_pdata = {
 	.set_power      = hawk_usb_set_power,
 	.get_power      = hawk_usb_get_power,
 	.get_oci        = hawk_usb_get_oci,
@@ -633,13 +633,13 @@ static struct da8xx_ohci_root_hub omapl138_hawk_usb11_pdata = {
 	.potpgt         = (3 + 1) / 2,  /* 3 ms max */
 };
 
-static irqreturn_t omapl138_hawk_usb_ocic_irq(int irq, void *dev_id)
+static irqreturn_t mb_manhattan_usb_ocic_irq(int irq, void *dev_id)
 {
-	hawk_usb_ocic_handler(&omapl138_hawk_usb11_pdata, 1);
+	hawk_usb_ocic_handler(&mb_manhattan_usb11_pdata, 1);
 	return IRQ_HANDLED;
 }
 
-static __init void omapl138_hawk_usb_init(void)
+static __init void mb_manhattan_usb_init(void)
 {
 	int ret;
 	u32 cfgchip2;
@@ -682,7 +682,7 @@ static __init void omapl138_hawk_usb_init(void)
 		goto usb11_setup_oc_fail;
 	}
 
-	ret = da8xx_register_usb11(&omapl138_hawk_usb11_pdata);
+	ret = da8xx_register_usb11(&mb_manhattan_usb11_pdata);
 	if (ret) {
 		pr_warn("%s: USB 1.1 registration failed: %d\n", __func__, ret);
 		goto usb11_setup_fail;
@@ -696,24 +696,24 @@ usb11_setup_oc_fail:
 	gpio_free(DA850_USB1_VBUS_PIN);
 }
 
-static struct davinci_uart_config omapl138_hawk_uart_config __initdata = {
+static struct davinci_uart_config mb_manhattan_uart_config __initdata = {
 	.enabled_uarts = 0x7,
 };
 
-static __init void omapl138_hawk_init(void)
+static __init void mb_manhattan_init(void)
 {
 	int ret;
 	u32 cfgchip3;
 
-	davinci_serial_init(&omapl138_hawk_uart_config);
+	davinci_serial_init(&mb_manhattan_uart_config);
 
-	omapl138_hawk_config_emac();
+	mb_manhattan_config_emac();
 
 	ret = da850_register_edma(0);
 	if (ret)
 		pr_warn("%s: EDMA registration failed: %d\n", __func__, ret);
 
-	omapl138_hawk_usb_init();
+	mb_manhattan_usb_init();
 
 	ret = davinci_cfg_reg_list(mb_power_pins);
     if (ret)
@@ -841,25 +841,25 @@ static __init void omapl138_hawk_init(void)
 }
 
 #ifdef CONFIG_SERIAL_8250_CONSOLE
-static int __init omapl138_hawk_console_init(void)
+static int __init mb_manhattan_console_init(void)
 {
 
 	return add_preferred_console("ttyS", 1, "115200");
 }
-console_initcall(omapl138_hawk_console_init);
+console_initcall(mb_manhattan_console_init);
 #endif
 
-static void __init omapl138_hawk_map_io(void)
+static void __init mb_manhattan_map_io(void)
 {
 	da850_init();
 }
 
 MACHINE_START(DAVINCI_MANHATTAN, "Makerbot Controller Manhattan on DaVinci AM18xx")
 	.atag_offset	= 0x100,
-	.map_io		= omapl138_hawk_map_io,
+	.map_io		= mb_manhattan_map_io,
 	.init_irq	= cp_intc_init,
 	.timer		= &davinci_timer,
-	.init_machine	= omapl138_hawk_init,
+	.init_machine	= mb_manhattan_init,
 	.init_late	= davinci_init_late,
 	.dma_zone_size	= SZ_128M,
 	.restart	= da8xx_restart,
