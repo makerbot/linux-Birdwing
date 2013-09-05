@@ -29,6 +29,8 @@
 #include <linux/platform_data/uio_pruss.h>
 #include <linux/etherdevice.h>
 
+#include <linux/makerbot/fast_gpio.h>
+
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
 
@@ -137,6 +139,26 @@ static short stepper_pru_pins[] = {
     DA850_PRU1_R31_19,
    -1,
 };
+
+struct fast_gpio_pin fast_gpio_pins[] = {
+    {
+        .bank = 2,
+        .pin  = 0,
+    },
+}
+
+struct fast_gpio_platform_data gpio_pins_info = {
+    .pins  = fast_gpio_pins,
+    .npins = ARRAY_SIZE(fast_gpio_pins),
+};
+
+struct platform_device fast_gpio = {
+    .name = "fast_gpio",
+    .id = -1,
+    .dev = {
+        .platform_data = &gpio_pins_info,
+    }
+}
 
 static short free_gpio_pins[] = {
     DA850_GPIO2_0,
@@ -761,6 +783,10 @@ static __init void mb_manhattan_init(void)
 
     /* GPIO */
     ret = davinci_cfg_reg_list(free_gpio_pins);
+    ret = platform_device_register(&fast_gpio_device);
+    if(ret) {
+        pr_warn("fast gpio regsitration failed!!\n");
+    }
         
 	/* LCD  */
 	ret = davinci_cfg_reg_list(da850_lcdcntl_pins);
