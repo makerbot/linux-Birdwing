@@ -142,23 +142,23 @@ static short stepper_pru_pins[] = {
 
 struct fast_gpio_pin fast_gpio_pins[] = {
     {
-        .bank = 2,
-        .pin  = 0,
+        .gpio = GPIO_TO_PIN(2,0),
+        .direction = true,
     },
-}
+};
 
 struct fast_gpio_platform_data gpio_pins_info = {
     .pins  = fast_gpio_pins,
     .npins = ARRAY_SIZE(fast_gpio_pins),
 };
 
-struct platform_device fast_gpio = {
+struct platform_device fast_gpio_device = {
     .name = "fast_gpio",
     .id = -1,
     .dev = {
         .platform_data = &gpio_pins_info,
     }
-}
+};
 
 static short free_gpio_pins[] = {
     DA850_GPIO2_0,

@@ -9,9 +9,12 @@
 #include <linux/errno.h>
 #include <linux/mutex.h>
 #include <linux/slab.h>
+#include <linux/gpio.h>
 
 #include <linux/makerbot/fast_gpio.h>
 #include <linux/makerbot/fast_gpio_uapi.h>
+
+#include <asm/uaccess.h>
 
 
 /*
@@ -21,14 +24,12 @@
  * We allocate minor numbers dynamically using a bitmask.
  */
 #define GPIO_MAJOR			    240	/* local assigned */
-#define MINORS			        1	/* ... up to 256 */
-
-static DECLARE_BITMAP(minors, N_GPIO_MINORS);
+#define GPIO_MINOR		        1	/* ... up to 256 */
 
 struct gpiodev_data {
 	dev_t			devt;
 	spinlock_t		spin_lock;
-	struct fast_gpio_platform_device	*pdata;
+	struct fast_gpio_platform_data	*pdata;
 	struct list_head	device_entry;
 
 	/* buffer is NULL unless this device is open (users > 0) */
@@ -40,30 +41,22 @@ struct gpiodev_data {
 static LIST_HEAD(device_list);
 static DEFINE_MUTEX(device_list_lock);
 
-static int gpio_write(struct device *dev, unsigned long arg) {
+static int gpio_write(struct fast_gpio_platform_data *pdata, unsigned long arg) {
 
-    struct gpio_keys_drvdata *ddata = dev_get_drvdata(dev);
-    struct fast_gpio_platform_data *pdata = ddata->pdata;
-
-    gpio_set_value(pdata->pins[0].pin, arg);   
+    gpio_set_value(pdata->pins[0].gpio, arg);   
 }
 
-static int gpio_read(struct device *dev) {
+static int gpio_read(struct fast_gpio_platform_data *pdata) {
 
-    struct gpio_keys_drvdata *ddata = dev_get_drvdata(dev);
-    struct fast_gpio_platform_data *pdata = ddata->pdata;
-    
-    return gpio_get_value(pdata->pins[0].pin);
+    return gpio_get_value(pdata->pins[0].gpio);
 }
 
 static long gpio_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	int			err = 0;
 	int			retval = 0;
-	struct gpio_data	*gpio;
-	struct gpio_device	*gpio_dev;
-	u32			tmp;
-	unsigned		n_ioc;
+	struct gpiodev_data	*gpio;
+    struct fast_gpio_platform_data *pdata;
 
 	/* Check type and command number */
 	if (_IOC_TYPE(cmd) != FAST_GPIO_IOC_MAGIC)
@@ -86,15 +79,15 @@ static long gpio_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	 * we issue this ioctl.
 	 */
 	gpio = filp->private_data;
-	spin_lock_irq(&gpio->spi_lock);
-    if (gpio->gpio_dev && get_device(&gpio->gpio_dev)) {
-        gpio_dev = gpio->gpio_dev;
+	spin_lock_irq(&gpio->spin_lock);
+    if (gpio->pdata) {
+        pdata = gpio->pdata;
     } else {
-        gpio_dev = NULL:
+        pdata = NULL:
     }
 	spin_unlock_irq(&gpio->spin_lock);
 
-	if (gpio_dev == NULL)
+	if (pdata == NULL)
 		return -ESHUTDOWN;
 
 	/* use the buffer lock here for triple duty:
@@ -107,10 +100,10 @@ static long gpio_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	switch (cmd) {
 	/* read requests */
 	case FAST_GPIO_IOC_RD_VALUE:
-		retval = gpio_read(&gpio_dev);
+		retval = gpio_read(pdata);
 		break;
 	case FAST_GPIO_IOC_WR_VALUE:
-		retval = gpio_write(&gpio_dev, arg);
+		retval = gpio_write(pdata, arg);
 		break;
 
 	default:
@@ -123,6 +116,30 @@ static long gpio_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 }
 
 
+int fast_gpio_device_register(struct device *parent) {
+
+    int status;
+
+    /* If we can allocate a minor number, hook up this device.
+     * Reusing minors is fine so long as udev or mdev is working.
+     */
+    mutex_lock(&device_list_lock);
+
+    gpio->devt = MKDEV(GPIO_MAJOR, GPIO_MINOR);
+    dev = device_create(gpio_class, &gpio_dev->dev, gpio->devt,
+                gpio, devname);
+
+    status = IS_ERR(dev) ? PTR_ERR(dev) : 0;
+    if (status == 0) {
+        list_add(&gpio->device_entry, &device_list);
+    }
+    mutex_unlock(&device_list_lock);
+
+    return status;
+    
+}
+
+
 static int gpio_probe(struct platform_device *pdev)
 {
     struct device *dev = &pdev->dev;
@@ -130,7 +147,6 @@ static int gpio_probe(struct platform_device *pdev)
 	struct gpiodev_data	*gpio;
 	int			status;
 	unsigned long		minor;
-    struct device *dev;
     const char *devname = (pdev->id >= 0) ? ("fpgio%s", pdev->id) : "fpgio;
 
 	/* Allocate driver data */
@@ -144,20 +160,7 @@ static int gpio_probe(struct platform_device *pdev)
 	spin_lock_init(&gpio->spin_lock);
 	mutex_init(&gpio->buf_lock);
 
-	/* If we can allocate a minor number, hook up this device.
-	 * Reusing minors is fine so long as udev or mdev is working.
-	 */
-	mutex_lock(&device_list_lock);
-
-    gpio->devt = MKDEV(GPIO_MAJOR, GPIO_MINOR);
-    dev = device_create(gpio_class, &gpio_dev->dev, gpio->devt,
-                gpio, "fgpio");
-
-    status = IS_ERR(dev) ? PTR_ERR(dev) : 0;
-	if (status == 0) {
-		list_add(&gpio->device_entry, &device_list);
-	}
-	mutex_unlock(&device_list_lock);
+    status = fast_gpio_device_register(dev);
 
     if (status != 0) {
         goto fail1;

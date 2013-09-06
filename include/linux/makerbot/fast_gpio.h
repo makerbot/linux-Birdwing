@@ -5,14 +5,14 @@
 
 struct fast_gpio_pin {
 
-    int             gpio;
-    bool            direction;
+    int     gpio;
+    bool    direction;
 };
 
 struct fast_gpio_platform_data {
 
-    struct gpio_pin *pins;
-    int             npins;
+    struct fast_gpio_pin    *pins;
+    int                     npins;
     
 
 };
