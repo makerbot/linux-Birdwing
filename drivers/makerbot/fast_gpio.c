@@ -4,6 +4,7 @@
 #include <linux/ioctl.h>
 #include <linux/fs.h>
 #include <linux/device.h>
+#include <linux/platform_device.h>
 #include <linux/err.h>
 #include <linux/list.h>
 #include <linux/errno.h>
@@ -24,7 +25,9 @@
  * We allocate minor numbers dynamically using a bitmask.
  */
 #define GPIO_MAJOR			    240	/* local assigned */
-#define GPIO_MINOR		        1	/* ... up to 256 */
+#define N_GPIO_MINORS			32	/* ... up to 256 */
+
+static DECLARE_BITMAP(minors, N_GPIO_MINORS);
 
 struct gpiodev_data {
 	dev_t			devt;
@@ -43,7 +46,9 @@ static DEFINE_MUTEX(device_list_lock);
 
 static int gpio_write(struct fast_gpio_platform_data *pdata, unsigned long arg) {
 
+    printk(KERN_INFO "set gpio: %d value: %d\n", pdata->pins[0].gpio, (int)arg);
     gpio_set_value(pdata->pins[0].gpio, arg);   
+    return 0;
 }
 
 static int gpio_read(struct fast_gpio_platform_data *pdata) {
@@ -61,7 +66,7 @@ static long gpio_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	/* Check type and command number */
 	if (_IOC_TYPE(cmd) != FAST_GPIO_IOC_MAGIC)
 		return -ENOTTY;
-
+    
 	/* Check access direction once here; don't repeat below.
 	 * IOC_DIR is from the user perspective, while access_ok is
 	 * from the kernel perspective; so they look reversed.
@@ -83,7 +88,7 @@ static long gpio_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
     if (gpio->pdata) {
         pdata = gpio->pdata;
     } else {
-        pdata = NULL:
+        pdata = NULL;
     }
 	spin_unlock_irq(&gpio->spin_lock);
 
@@ -97,12 +102,16 @@ static long gpio_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	 */
 	mutex_lock(&gpio->buf_lock);
 
+    printk(KERN_INFO "switch cmd: %d", cmd);
+
 	switch (cmd) {
 	/* read requests */
-	case FAST_GPIO_IOC_RD_VALUE:
+ 	case FAST_GPIO_IOC_RD_VALUE:
+        printk(KERN_INFO "read\n");
 		retval = gpio_read(pdata);
 		break;
 	case FAST_GPIO_IOC_WR_VALUE:
+        printk(KERN_INFO "write\n");
 		retval = gpio_write(pdata, arg);
 		break;
 
@@ -115,23 +124,34 @@ static long gpio_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	return retval;
 }
 
+/* The main reason to have this class is to make mdev/udev create the
+ * /dev/fgpio character device nodes exposing our userspace API.
+ * It also simplifies memory management.
+ * this is inialized in the driver init()
+ */
 
-int fast_gpio_device_register(struct device *parent) {
+static struct class *gpio_class;
+
+
+int fast_gpio_device_register(struct gpiodev_data *gpio_data, struct device *dev) {
 
     int status;
+	unsigned long		minor;
 
     /* If we can allocate a minor number, hook up this device.
      * Reusing minors is fine so long as udev or mdev is working.
      */
     mutex_lock(&device_list_lock);
 
-    gpio->devt = MKDEV(GPIO_MAJOR, GPIO_MINOR);
-    dev = device_create(gpio_class, &gpio_dev->dev, gpio->devt,
-                gpio, devname);
+	minor = find_first_zero_bit(minors, N_GPIO_MINORS);
+    gpio_data->devt = MKDEV(GPIO_MAJOR, minor);
+    dev = device_create(gpio_class, dev, gpio_data->devt,
+                gpio_data, "fgpio%lu", minor);
 
     status = IS_ERR(dev) ? PTR_ERR(dev) : 0;
     if (status == 0) {
-        list_add(&gpio->device_entry, &device_list);
+        list_add(&gpio_data->device_entry, &device_list);
+		set_bit(minor, minors);
     }
     mutex_unlock(&device_list_lock);
 
@@ -142,12 +162,10 @@ int fast_gpio_device_register(struct device *parent) {
 
 static int gpio_probe(struct platform_device *pdev)
 {
-    struct device *dev = &pdev->dev;
-    const struct fast_gpio_platform_data *pdata = dev_get_platdata(dev);
+    struct fast_gpio_platform_data *pdata = pdev->dev.platform_data;
 	struct gpiodev_data	*gpio;
 	int			status;
-	unsigned long		minor;
-    const char *devname = (pdev->id >= 0) ? ("fpgio%s", pdev->id) : "fpgio;
+    int i;
 
 	/* Allocate driver data */
 	gpio = kzalloc(sizeof(*gpio), GFP_KERNEL);
@@ -160,7 +178,7 @@ static int gpio_probe(struct platform_device *pdev)
 	spin_lock_init(&gpio->spin_lock);
 	mutex_init(&gpio->buf_lock);
 
-    status = fast_gpio_device_register(dev);
+    status = fast_gpio_device_register(gpio, &pdev->dev);
 
     if (status != 0) {
         goto fail1;
@@ -169,9 +187,12 @@ static int gpio_probe(struct platform_device *pdev)
     platform_set_drvdata(pdev, gpio);
     for (i = 0; i < pdata->npins; i++) {
         
-        gpio_request(pdata->pins.gpio);
-        gpio_set_direction(pdata->pins.direction);
-        gpio_set_value(pdata->pins.gpio);
+        gpio_request(pdata->pins[i].gpio, "gpio");
+        if (pdata->pins[i].direction) {
+            gpio_direction_output(pdata->pins[i].gpio, 0);
+        } else {
+            gpio_direction_input(pdata->pins[i].gpio);
+        }
     }
 
 	return status;
@@ -182,14 +203,14 @@ static int gpio_probe(struct platform_device *pdev)
     return status;
 }
 
-static int gpio_remove(struct gpio_device *gpio_dev)
+static int gpio_remove(struct platform_device *pdev)
 {
-	struct gpio_data *gpio = get_drvdata(&gpio_dev->dev);
+	struct gpiodev_data *gpio = platform_get_drvdata(pdev);
 
 	/* make sure ops on existing fds can abort cleanly */
 	spin_lock_irq(&gpio->spin_lock);
-	gpio->gpio_dev = NULL;
-	dev_set_drvdata(gpio_dev, NULL);
+	gpio->pdata = NULL;
+	platform_set_drvdata(pdev, NULL);
 	spin_unlock_irq(&gpio->spin_lock);
 
 	/* prevent new opens */
@@ -201,24 +222,81 @@ static int gpio_remove(struct gpio_device *gpio_dev)
 		kfree(gpio);
 	mutex_unlock(&device_list_lock);
 
+
 	return 0;
 }
 
-static int gpio_suspend(struct gpio_device *gpio_dev) {
+static unsigned bufsiz = 4;
+static int gpio_open(struct inode *inode, struct file *filp)
+{
+	struct gpiodev_data	*gpio_data;
+	int			status = -ENXIO;
 
+	mutex_lock(&device_list_lock);
 
-    return 0;
+	list_for_each_entry(gpio_data, &device_list, device_entry) {
+		if (gpio_data->devt == inode->i_rdev) {
+			status = 0;
+			break;
+		}
+	}
+	if (status == 0) {
+		if (!gpio_data->buffer) {
+			gpio_data->buffer = kmalloc(bufsiz, GFP_KERNEL);
+			if (!gpio_data->buffer) {
+				printk("FASTGPIO open/ENOMEM\n");
+				status = -ENOMEM;
+			}
+		}
+		if (status == 0) {
+			gpio_data->users++;
+			filp->private_data = gpio_data;
+			nonseekable_open(inode, filp);
+		}
+	} else
+		pr_debug("fast gpio: nothing for minor %d\n", iminor(inode));
+
+	mutex_unlock(&device_list_lock);
+	return status;
 }
 
-static int gpio_probe(struct gpio_device *gpio_dev) {
+static int gpio_release(struct inode *inode, struct file *filp)
+{
+	struct gpiodev_data	*gpio_data;
+	int			status = 0;
 
+	mutex_lock(&device_list_lock);
+	gpio_data = filp->private_data;
+	filp->private_data = NULL;
 
-    return 0;
+	/* last close? */
+	gpio_data->users--;
+	if (!gpio_data->users) {
+		int		dofree;
+
+		kfree(gpio_data->buffer);
+		gpio_data->buffer = NULL;
+
+		/* ... after we unbound from the underlying device? */
+		spin_lock_irq(&gpio_data->spin_lock);
+		dofree = (gpio_data->pdata == NULL);
+		spin_unlock_irq(&gpio_data->spin_lock);
+
+		if (dofree)
+			kfree(gpio_data);
+	}
+	mutex_unlock(&device_list_lock);
+
+	return status;
 }
+
+
 
 static const struct file_operations gpio_fops = {
 	.owner =	THIS_MODULE,
 	.unlocked_ioctl = gpio_ioctl,
+	.open =		gpio_open,
+	.release =	gpio_release,
 };
 
 static struct platform_driver gpio_driver = {
@@ -228,19 +306,10 @@ static struct platform_driver gpio_driver = {
 	},
 	.probe =	gpio_probe,
 	.remove =	gpio_remove,
-    .suspend =  gpio_suspend,
-    .resume =   gpio_resume,
 
 };
 
 /*-------------------------------------------------------------------------*/
-
-/* The main reason to have this class is to make mdev/udev create the
- * /dev/fgpio character device nodes exposing our userspace API.
- * It also simplifies memory management.
- */
-
-static struct class *gpio_class;
 
 static int __init gpio_init(void)
 {
@@ -272,7 +341,7 @@ module_init(gpio_init);
 
 static void __exit gpio_exit(void)
 {
-	spi_unregister_driver(&gpio_driver);
+	platform_driver_unregister(&gpio_driver);
 	class_destroy(gpio_class);
 	unregister_chrdev(GPIO_MAJOR, gpio_driver.driver.name);
 }
