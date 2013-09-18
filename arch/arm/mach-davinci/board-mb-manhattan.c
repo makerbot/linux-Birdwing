@@ -9,6 +9,8 @@
  * version 2. This program is licensed "as is" without any warranty of
  * any kind, whether express or implied.
  */
+
+
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/console.h>
@@ -28,6 +30,8 @@
 #include <linux/platform_data/spi-davinci.h>
 #include <linux/platform_data/uio_pruss.h>
 #include <linux/etherdevice.h>
+#include <linux/wl12xx.h>
+#include <linux/wireless.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -115,6 +119,123 @@ struct platform_device keys_gpio = {
     },
 };
 
+//=========Wireless config====================================
+
+
+#define WLAN_EN GPIO_TO_PIN(5, 8)
+#define WLAN_IRQ GPIO_TO_PIN(5, 14)
+
+struct wl12xx_platform_data mb_wireless_data = {
+		.wlan_enable_gpio = WLAN_EN,
+		.irq = -1,
+		.board_ref_clock	= WL12XX_REFCLOCK_38,
+		.platform_quirks	= WL12XX_PLATFORM_QUIRK_EDGE_IRQ,
+};
+
+//TODO figure out where this happens
+static struct pinmux_config mb_wireless_pin_mux[] = {
+
+};
+
+static void wl12xx_set_power(int index, bool power_on)
+{
+	static bool power_state;
+
+	pr_debug("Powering %s wl12xx", power_on ? "on" : "off");
+
+	if (power_on == power_state)
+		return;
+	power_state = power_on;
+
+	if (power_on) {
+		/* Power up sequence required for wl127x devices */
+		//FIXME this is different in the AM335x board
+		//mdelay(70);
+		//gpio_set_value(mb_wireless_data.wlan_enable_gpio, 1);
+		//mdelay(70);
+		gpio_set_value(WLAN_EN, 1);
+		usleep_range(15000, 15000);
+		gpio_set_value(WLAN_EN, 0);
+		usleep_range(1000, 1000);
+		gpio_set_value(WLAN_EN, 1);
+		msleep(70);
+	} else {
+		//gpio_set_value(mb_wireless_data.wlan_enable_gpio, 0);
+		gpio_set_value(WLAN_EN, 0);
+	}
+}
+
+static struct davinci_mmc_config mb_wireless_mmc_config = {
+	.set_power	= wl12xx_set_power,
+	.wires		= 4,
+	.max_freq	= 25000000,
+	.caps		= MMC_CAP_4_BIT_DATA | MMC_CAP_NONREMOVABLE |MMC_CAP_POWER_OFF_CARD,
+	.version	= MMC_CTLR_VERSION_2,
+	//non-removable?
+	//voltage values?
+};
+
+static const short mb_wireless_pins[] __initconst = {
+	DA850_MMCSD0_DAT_0, DA850_MMCSD0_DAT_1, DA850_MMCSD0_DAT_2,
+	DA850_MMCSD0_DAT_3, DA850_MMCSD0_CLK, DA850_MMCSD0_CMD,
+	DA850_GPIO5_8, DA850_GPIO5_14,
+	-1
+};
+
+static __init int da850_wl12xx_init(void)
+{
+	//struct device *dev;
+	//struct platform_data *pdata ?
+	int ret;
+
+	//FIXME different order from beaglebone
+	//if(wl12xx_set_platform_data(&mb_wireless_data))
+	//	pr_err("%s
+
+	ret = davinci_cfg_reg_list(mb_wireless_pins);
+	if (ret) {
+		pr_err("wl12xx/mmc mux setup failed: %d\n", ret);
+		goto exit;
+	}
+
+	ret = da850_register_mmcsd0(&mb_wireless_mmc_config);
+	if (ret) {
+		pr_err("wl12xx/mmc registration failed: %d\n", ret);
+		goto exit;
+	}
+
+	ret = gpio_request_one(WLAN_EN, GPIOF_OUT_INIT_LOW, "wl12xx_en");
+	if (ret) {
+		pr_err("Could not request wl12xx enable gpio: %d\n", ret);
+		goto exit;
+	}
+
+	ret = gpio_request_one(WLAN_IRQ, GPIOF_IN, "wl12xx_irq");
+	if (ret) {
+		pr_err("Could not request wl12xx irq gpio: %d\n", ret);
+		goto free_wlan_en;
+	}
+
+	mb_wireless_data.irq = gpio_to_irq(DA850_WLAN_IRQ);
+
+	ret = wl12xx_set_platform_data(&mb_wireless_data);
+	if (ret) {
+		pr_err("Could not set wl12xx data: %d\n", ret);
+		goto free_wlan_irq;
+	}
+
+	return 0;
+
+free_wlan_irq:
+	gpio_free(WLAN_IRQ);
+
+free_wlan_en:
+	gpio_free(WLAN_EN);
+
+exit:
+	return ret;
+}
+
 static short stepper_pru_pins[] = {
     DA850_PRU1_R30_1,
     DA850_PRU1_R30_8,
@@ -137,6 +258,8 @@ static short stepper_pru_pins[] = {
     DA850_PRU1_R31_19,
    -1,
 };
+
+//TODO this needs to be updated
 
 static short free_gpio_pins[] = {
     DA850_GPIO2_0,
@@ -209,16 +332,6 @@ static struct spi_board_info toolhead_spi_info[] = {
 };
 
 
-static short wifi_pins[] = {
-    DA850_GPIO4_2,
-    DA850_GPIO4_3,
-    DA850_GPIO4_4,
-    //DA850_GPIO5_11,
-    DA850_GPIO4_6,
-    DA850_GPIO4_7,
-    -1,
-};
-
 static struct spi_gpio_platform_data spi2_pdata = {
 	.miso		= GPIO_TO_PIN(4,3),
 	.mosi		= GPIO_TO_PIN(4,4),
@@ -232,16 +345,6 @@ static struct platform_device spi2_device = {
 	.dev.platform_data = &spi2_pdata,
 };
 
-static struct spi_board_info wifi_spi_info[] = {
-	{
-		.modalias		= "spidev",
-		.controller_data	= (void *)GPIO_TO_PIN(4,6),
-		.mode			= SPI_MODE_2,
-		.max_speed_hz		= 30000000,
-		.bus_num		= 2,
-		.chip_select		= 0,
-	},
-};
 
 #define DA850_12V_POWER_PIN  GPIO_TO_PIN(3,15)
 
@@ -346,14 +449,14 @@ static int da850_lcd_hw_init(void)
 	return 0;
 }
 
-
+//TODO this needs to be updated
 const short mb_manhattan_led_pins[] = {
     DA850_GPIO0_1,
     DA850_GPIO4_0, //DA850_PRU1_R30_24,
     DA850_PRU1_R30_25,
     -1
 };
-
+//TODO this needs to be updated
 static struct gpio_led gpio_leds[] = {
     {
         .name           = "Kernel_Status",
