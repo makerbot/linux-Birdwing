@@ -44,8 +44,8 @@
 #define DA850_USB1_VBUS_PIN		GPIO_TO_PIN(2, 9)
 #define DA850_USB1_OC_PIN		GPIO_TO_PIN(2, 8)
 
-#define GPIO_ROTARY_A GPIO_TO_PIN(5,6)
-#define GPIO_ROTARY_B GPIO_TO_PIN(5,9)
+#define GPIO_ROTARY_A GPIO_TO_PIN(0,2)
+#define GPIO_ROTARY_B GPIO_TO_PIN(0,7)
 
 
 static struct rotary_encoder_platform_data encoder_info = {
@@ -69,19 +69,19 @@ static struct platform_device rotary_encoder = {
 };
 
 
-#define OPTION_BUTTON   GPIO_TO_PIN(5, 12)
-#define BACK_BUTTON     GPIO_TO_PIN(5, 0)
-#define SELECT_BUTTON   GPIO_TO_PIN(5, 3)
+#define OPTION_BUTTON   GPIO_TO_PIN(0, 3)
+#define BACK_BUTTON     GPIO_TO_PIN(0, 4)
+#define SELECT_BUTTON   GPIO_TO_PIN(0, 0)
 
 static short button_pins[] = {
-    DA850_GPIO5_12,
-    DA850_GPIO5_0,
-    DA850_GPIO5_6,
-    DA850_GPIO5_9,
-    DA850_GPIO5_3,
-    -1,
+    DA850_GPIO0_0,
+    DA850_GPIO0_2,
+    DA850_GPIO0_3,
+    DA850_GPIO0_4,
+    DA850_GPIO0_5,
+    DA850_GPIO0_6,
+    DA850_GPIO0_7,
 };
-
 
 static struct gpio_keys_button gpio_keys[] = {
         {
@@ -118,36 +118,71 @@ struct platform_device keys_gpio = {
 };
 
 static short stepper_pru_pins[] = {
-    DA850_PRU0_R30_23,
-    DA850_PRU0_R30_22,
-    DA850_PRU0_R30_24,
-    DA850_PRU0_R30_25,
-    DA850_GPIO0_13,
-    DA850_GPIO3_12,
-    DA850_PRU0_R30_20,
-    DA850_PRU0_R30_19,
-    DA850_PRU0_R30_17,
-    DA850_PRU0_R30_16,
-    DA850_GPIO0_12,
-    DA850_GPIO2_3,
-    DA850_PRU0_R30_21,
-    DA850_PRU0_R30_5,
-    DA850_PRU0_R30_4,
-    DA850_GPIO2_4,
-    DA850_GPIO5_4,
+    DA850_PRU1_R30_1,
+    DA850_PRU1_R30_8,
+    DA850_PRU1_R30_3,
+    DA850_PRU1_R30_6,
+    DA850_PRU1_R30_11,
+    DA850_GPIO8_14,
+    DA850_PRU1_R30_22,
+    DA850_PRU1_R30_15,
+    DA850_PRU1_R30_21,
+    DA850_PRU1_R30_20,
+    DA850_PRU1_R30_16,
+    DA850_GPIO5_15,
+    DA850_PRU1_R30_18,
+    DA850_PRU1_R30_29,
+    DA850_PRU1_R30_17,
+    DA850_PRU1_R30_9,
+    DA850_PRU1_R30_0,
+    DA850_GPIO8_13,
+    DA850_PRU1_R31_19,
    -1,
 };
 
+struct fast_gpio_pin fast_gpio_pins[] = {
+    {
+        .gpio = GPIO_TO_PIN(2,0),
+        .direction = true,
+    },
+};
+
+struct fast_gpio_platform_data gpio_pins_info = {
+    .pins  = fast_gpio_pins,
+    .npins = ARRAY_SIZE(fast_gpio_pins),
+};
+
+struct platform_device fast_gpio_device = {
+    .name = "fast_gpio",
+    .id = -1,
+    .dev = {
+        .platform_data = &gpio_pins_info,
+    }
+};
+
+static short free_gpio_pins[] = {
+    DA850_GPIO2_0,
+    DA850_GPIO2_4,
+    DA850_GPIO3_1,
+    DA850_GPIO3_6,
+    DA850_GPIO3_3,
+    DA850_GPIO3_7,
+    DA850_GPIO3_0,
+    DA850_GPIO0_9,
+};
 
 static short toolhead_spi_pins[] = {
 	DA850_SPI1_SOMI, //DA850_GPIO2_11, //DA850_SPI1_SOMI,
 	DA850_SPI1_CLK, //DA850_GPIO2_13, //DA850_SPI1_CLK,
 	DA850_SPI1_SIMO, //DA850_GPIO2_10, //DA850_SPI1_SIMO,
 	DA850_SPI1_SCS_0, //DA850_GPIO2_14, //DA850_SPI1_SCS_0,
-    DA850_PRU0_R31_10,
-    DA850_GPIO2_12,
+	DA850_GPIO1_3, //DA850_GPIO1_3, //DA850_SPI1_SCS_5,
+    DA850_GPIO2_5,
+    DA850_GPIO2_7,
     DA850_GPIO6_5,
     DA850_GPIO6_11,
+    DA850_GPIO0_15,
+    DA850_GPIO1_15,
     -1,
 };
 
@@ -177,22 +212,63 @@ static u8 spi1_chip_selects[2] = {0xFF, 19};
 static struct spi_board_info toolhead_spi_info[] = {
 	{
 		.modalias		= "spidev",
+		//.controller_data	= (void *)GPIO_TO_PIN(2,14),
 		.controller_data	= &toolhead_spi_cfg,
 		.mode			= SPI_MODE_3,
 		.max_speed_hz		= 1600000,
 		.bus_num		= 1,
 		.chip_select		= 0,
 	},
+	{
+		.modalias		= "spidev",
+		//.controller_data	= (void *)GPIO_TO_PIN(1,3),
+		.controller_data	= &toolhead_spi_cfg,
+		.mode			= SPI_MODE_3,
+		.max_speed_hz		= 1600000,
+		.bus_num		= 1,
+		.chip_select		= 1,
+	},
 };
 
 
-#define DA850_12V_POWER_PIN  GPIO_TO_PIN(0,8)
+static short wifi_pins[] = {
+    DA850_GPIO4_2,
+    DA850_GPIO4_3,
+    DA850_GPIO4_4,
+    //DA850_GPIO5_11,
+    DA850_GPIO4_6,
+    DA850_GPIO4_7,
+    -1,
+};
+
+static struct spi_gpio_platform_data spi2_pdata = {
+	.miso		= GPIO_TO_PIN(4,3),
+	.mosi		= GPIO_TO_PIN(4,4),
+	.sck        = GPIO_TO_PIN(4,7),
+    .num_chipselect = 1,
+};
+
+static struct platform_device spi2_device = {
+	.name		= "spi_gpio",
+	.id		= 2,
+	.dev.platform_data = &spi2_pdata,
+};
+
+static struct spi_board_info wifi_spi_info[] = {
+	{
+		.modalias		= "spidev",
+		.controller_data	= (void *)GPIO_TO_PIN(4,6),
+		.mode			= SPI_MODE_2,
+		.max_speed_hz		= 30000000,
+		.bus_num		= 2,
+		.chip_select		= 0,
+	},
+};
+
+#define DA850_12V_POWER_PIN  GPIO_TO_PIN(3,15)
 
 static short mb_power_pins[] = {
-  DA850_GPIO0_8,
-  DA850_GPIO1_2,
-  DA850_GPIO0_6,
-  DA850_GPIO0_5,
+  DA850_GPIO3_15,
   -1,
 };
 
@@ -212,22 +288,21 @@ static int da850_power_init(void)
 
 	gpio_direction_output(DA850_12V_POWER_PIN, 0);
 
-    da850_12V_power_control(1);
+    da850_12V_power_control(0);
 
 	return 0;
 }
 
-#define DA850_LCD_BL_PIN    GPIO_TO_PIN(8, 10)
-#define DA850_LCD_RESET_PIN GPIO_TO_PIN(6, 3)
-#define GPIO_LCD_DISPLAY_TYPE  GPIO_TO_PIN(4, 0)
+#define DA850_LCD_BL_PIN    GPIO_TO_PIN(6, 9)
+#define DA850_LCD_RESET_PIN GPIO_TO_PIN(8, 15)
+#define GPIO_LCD_DISPLAY_TYPE  GPIO_TO_PIN(6, 7)
 
-static short mb_lcd_pins[] = {
-    DA850_GPIO6_4,
-    DA850_GPIO6_2,
-    DA850_GPIO6_1,
-    DA850_GPIO6_3,
-    DA850_GPIO8_10,
-    DA850_GPIO4_0,
+#ifdef CONFIG_FB_DA8XX
+static short mb_lcd_spi_pins[] = {
+  DA850_GPIO6_3,
+  DA850_GPIO6_13,
+  DA850_GPIO6_7,
+  DA850_GPIO6_8,
   -1,
 };
 
@@ -235,6 +310,13 @@ static struct da8xx_spi_pin_data lcd_spi_gpio_data = {
     .sck = GPIO_TO_PIN(6, 13),
     .sdi = GPIO_TO_PIN(6, 3),
     .cs = GPIO_TO_PIN(6, 8),
+};
+#endif
+
+static short mb_lcd_power_pins[] = {
+    DA850_GPIO6_9,
+    DA850_GPIO8_15,
+    -1,
 };
 
 static void da850_panel_power_ctrl(int val)
@@ -288,17 +370,21 @@ static int da850_lcd_hw_init(void)
 
 
 const short mb_manhattan_led_pins[] = {
-    DA850_GPIO6_14,
-    DA850_PRU0_R30_14,
-    DA850_PRU0_R30_13, 
+    DA850_GPIO0_1,
+    DA850_GPIO4_0, //DA850_PRU1_R30_24,
+    DA850_PRU1_R30_25,
     -1
 };
 
 static struct gpio_led gpio_leds[] = {
     {
         .name           = "Kernel_Status",
-        .gpio           = GPIO_TO_PIN(6,14),
+        .gpio           = GPIO_TO_PIN(0,1),
         .default_trigger= "heartbeat",
+    },
+    {
+        .name           = "Machine_Status",
+        .gpio           = GPIO_TO_PIN(4,0),
     },
 };
 
@@ -679,22 +765,54 @@ static __init void mb_manhattan_init(void)
     //platform_device_register(&spi1_device);
 	if (ret)
 		pr_warn("%s: SPI 1 registration failed: %d\n", __func__, ret);
+
+    /* WIFI */
+	ret = davinci_cfg_reg_list(wifi_pins);
+	if (ret)
+		pr_warn("%s: Toolhead spi mux setup failed: %d\n", __func__, ret);
+
+	ret = spi_register_board_info(wifi_spi_info,
+				      ARRAY_SIZE(wifi_spi_info));
+	if (ret)
+		pr_warn("%s: spi info registration failed: %d\n", __func__,
+			ret);
+
+    platform_device_register(&spi2_device);
+	if (ret)
+		pr_warn("%s: SPI 1 registration failed: %d\n", __func__, ret);
+
+    /* GPIO */
+    ret = davinci_cfg_reg_list(free_gpio_pins);
+    ret = platform_device_register(&fast_gpio_device);
+    if(ret) {
+        pr_warn("fast gpio regsitration failed!!\n");
+    }
         
 	/* LCD  */
 	ret = davinci_cfg_reg_list(da850_lcdcntl_pins);
 	if (ret)
 		pr_warn("%s: LCDC mux setup failed: %d\n", __func__, ret);
 
-    ret = davinci_cfg_reg_list(mb_lcd_pins);
+    ret = davinci_cfg_reg_list(mb_lcd_power_pins);
 	if (ret)
 		pr_warn("%s: LCD pins initialization failed: %d\n", __func__, ret);
 	ret = da850_lcd_hw_init();
 	if (ret)
 		pr_warn("%s: LCD initialization failed: %d\n", __func__, ret);
 
+#ifdef CONFIG_FB_DA8XX
+	ret = davinci_cfg_reg_list(mb_lcd_spi_pins);
+	if (ret)
+		pr_warn("%s: LCDC spi mux setup failed: %d\n", __func__, ret);
+
 	lcd_pdata->panel_power_ctrl = da850_panel_power_ctrl,
     lcd_pdata->spi = &lcd_spi_gpio_data;
 	ret = da8xx_register_lcdc_spi(lcd_pdata);
+#else
+    ssd2119_pdata.panel_power_ctrl = da850_panel_power_ctrl,
+    pr_info("LCD LIDD: %s \n", ssd2119_pdata.manu_name);
+    ret = da8xx_register_lcdc_lidd(&ssd2119_pdata);
+#endif //FB_DA8XX_LIDD
 	if (ret)
 		pr_warn("%s: LCDC registration failed: %d\n", __func__, ret);
 
