@@ -792,7 +792,7 @@ enum davinci_da850_index {
 	DA850_RTCK,
 	DA850_RESETOUT,
 	/* Pins from lcd.pins */
-	DA850_LCD_AC_ENB_CS,
+	DA850_NLCD_AC_ENB_CS,
 	DA850_LCD_VSYNC,
 	DA850_LCD_HSYNC,
 	DA850_LCD_PCLK,

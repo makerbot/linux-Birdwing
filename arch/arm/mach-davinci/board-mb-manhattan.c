@@ -131,16 +131,16 @@ struct platform_device keys_gpio = {
 #define WLAN_IRQ GPIO_TO_PIN(5, 14)
 
 struct wl12xx_platform_data mb_wireless_data = {
-		.wlan_enable_gpio = WLAN_EN,
+		//.wlan_enable_gpio = WLAN_EN,
 		.irq = -1,
 		.board_ref_clock	= WL12XX_REFCLOCK_38,
 		.platform_quirks	= WL12XX_PLATFORM_QUIRK_EDGE_IRQ,
 };
 
 //TODO figure out where this happens
-static struct pinmux_config mb_wireless_pin_mux[] = {
-
-};
+//static struct pinmux_config mb_wireless_pin_mux[] = {
+//
+//};
 //I believe these two do the same function.
 static const short mb_wireless_pins[] __initconst = {
 	DA850_MMCSD0_DAT_0,
@@ -202,33 +202,37 @@ static __init int da850_wl12xx_init(void)
 	//FIXME different order from beaglebone, don't think it matters though
 	//if(wl12xx_set_platform_data(&mb_wireless_data))
 	//	pr_err("%s
-
+	pr_warn(">>WL1271: Start Pin Mux\n");
 	ret = davinci_cfg_reg_list(mb_wireless_pins);
 	if (ret) {
 		pr_err("wl12xx/mmc mux setup failed: %d\n", ret);
 		goto exit;
 	}
 
-	ret = da850_register_mmcsd0(&mb_wireless_mmc_config);
+	pr_warn(">>WL1271: MMC Register\n");
+	ret = da8xx_register_mmcsd0(&mb_wireless_mmc_config);
 	if (ret) {
 		pr_err("wl12xx/mmc registration failed: %d\n", ret);
 		goto exit;
 	}
 
+	pr_warn(">>WL1271: WLAN Enable GPIO\n");
 	ret = gpio_request_one(WLAN_EN, GPIOF_OUT_INIT_LOW, "wl12xx_en");
 	if (ret) {
 		pr_err("Could not request wl12xx enable gpio: %d\n", ret);
 		goto exit;
 	}
 
+	pr_warn(">>WL1271: WLAN IRQ register\n");
 	ret = gpio_request_one(WLAN_IRQ, GPIOF_IN, "wl12xx_irq");
 	if (ret) {
 		pr_err("Could not request wl12xx irq gpio: %d\n", ret);
 		goto free_wlan_en;
 	}
 
-	mb_wireless_data.irq = gpio_to_irq(DA850_WLAN_IRQ);
+	mb_wireless_data.irq = gpio_to_irq(DA850_GPIO5_14);
 
+	pr_warn(">>WL1271: Set Platform data\n");
 	ret = wl12xx_set_platform_data(&mb_wireless_data);
 	if (ret) {
 		pr_err("Could not set wl12xx data: %d\n", ret);
@@ -329,18 +333,20 @@ static struct davinci_spi_config toolhead_spi_cfg[] = {
     },
 };
 
-static struct spi_gpio_platform_data spi1_pdata = {
-	.miso		= GPIO_TO_PIN(2, 11),
-	.mosi		= GPIO_TO_PIN(2, 10),
-	.sck        = GPIO_TO_PIN(2, 13),
-    .num_chipselect = 1, 		//only 1 CS in the RevC
-};
-
-static struct platform_device spi1_device = {
-	.name		= "spi_gpio",
-	.id		= 1,
-	.dev.platform_data = &spi1_pdata,
-};
+//FIXME This goes to nothing...I think
+//static struct spi_gpio_platform_data spi1_pdata = {
+//	.miso		= GPIO_TO_PIN(2, 11),
+//	.mosi		= GPIO_TO_PIN(2, 10),
+//	.sck        = GPIO_TO_PIN(2, 13),
+//    .num_chipselect = 1, 		//only 1 CS in the RevC
+//};
+//
+////FIXME This doesn't get inited
+//static struct platform_device spi1_device = {
+//	.name		= "spi_gpio",
+//	.id		= 1,
+//	.dev.platform_data = &spi1_pdata,
+//};
 
 //FIXME not sure what this is supposed to be
 //FIXME should only be 1 SCS

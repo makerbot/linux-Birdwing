@@ -486,7 +486,7 @@ static const struct mux_config da850_pins[] = {
 		MUX_CFG(DA850,	RTCK,	19,	28,	15,	1,	false)
 		MUX_CFG(DA850,	RESETOUT,	13,	0,	15,	1,	false)
 		/* Pins from lcd.pins */
-		MUX_CFG(DA850,	LCD_AC_ENB_CS,	19,	24,	15,	2,	false)
+		MUX_CFG(DA850,	NLCD_AC_ENB_CS,	19,	24,	15,	2,	false)
 		MUX_CFG(DA850,	LCD_VSYNC,	19,	4,	15,	2,	false)
 		MUX_CFG(DA850,	LCD_HSYNC,	19,	0,	15,	2,	false)
 		MUX_CFG(DA850,	LCD_PCLK,	18,	24,	15,	2,	false)
@@ -615,10 +615,11 @@ const short da850_i2c0_pins[] __initconst = {
 	-1
 };
 
-const short da850_i2c1_pins[] __initconst = {
-	DA850_I2C1_SCL, DA850_I2C1_SDA,
-	-1
-};
+//Not used
+//const short da850_i2c1_pins[] __initconst = {
+//	DA850_I2C1_SCL, DA850_I2C1_SDA,
+//	-1
+//};
 
 const short da850_lcdcntl_pins[] __initconst = {
 	DA850_LCD_D_0, DA850_LCD_D_1, DA850_LCD_D_2, DA850_LCD_D_3,
@@ -629,25 +630,26 @@ const short da850_lcdcntl_pins[] __initconst = {
 	-1
 };
 
-const short da850_vpif_capture_pins[] __initdata = {
-	DA850_VPIF_DIN0, DA850_VPIF_DIN1, DA850_VPIF_DIN2, DA850_VPIF_DIN3,
-	DA850_VPIF_DIN4, DA850_VPIF_DIN5, DA850_VPIF_DIN6, DA850_VPIF_DIN7,
-	DA850_VPIF_DIN8, DA850_VPIF_DIN9, DA850_VPIF_DIN10, DA850_VPIF_DIN11,
-	DA850_VPIF_DIN12, DA850_VPIF_DIN13, DA850_VPIF_DIN14, DA850_VPIF_DIN15,
-	DA850_VPIF_CLKIN0, DA850_VPIF_CLKIN1, DA850_VPIF_CLKIN2,
-	DA850_VPIF_CLKIN3,
-	-1
-};
-
-const short da850_vpif_display_pins[] __initdata = {
-	DA850_VPIF_DOUT0, DA850_VPIF_DOUT1, DA850_VPIF_DOUT2, DA850_VPIF_DOUT3,
-	DA850_VPIF_DOUT4, DA850_VPIF_DOUT5, DA850_VPIF_DOUT6, DA850_VPIF_DOUT7,
-	DA850_VPIF_DOUT8, DA850_VPIF_DOUT9, DA850_VPIF_DOUT10,
-	DA850_VPIF_DOUT11, DA850_VPIF_DOUT12, DA850_VPIF_DOUT13,
-	DA850_VPIF_DOUT14, DA850_VPIF_DOUT15, DA850_VPIF_CLKO2,
-	DA850_VPIF_CLKO3,
-	-1
-};
+//Not used die
+//const short da850_vpif_capture_pins[] __initdata = {
+//	DA850_VPIF_DIN0, DA850_VPIF_DIN1, DA850_VPIF_DIN2, DA850_VPIF_DIN3,
+//	DA850_VPIF_DIN4, DA850_VPIF_DIN5, DA850_VPIF_DIN6, DA850_VPIF_DIN7,
+//	DA850_VPIF_DIN8, DA850_VPIF_DIN9, DA850_VPIF_DIN10, DA850_VPIF_DIN11,
+//	DA850_VPIF_DIN12, DA850_VPIF_DIN13, DA850_VPIF_DIN14, DA850_VPIF_DIN15,
+//	DA850_VPIF_CLKIN0, DA850_VPIF_CLKIN1, DA850_VPIF_CLKIN2,
+//	DA850_VPIF_CLKIN3,
+//	-1
+//};
+//
+//const short da850_vpif_display_pins[] __initdata = {
+//	DA850_VPIF_DOUT0, DA850_VPIF_DOUT1, DA850_VPIF_DOUT2, DA850_VPIF_DOUT3,
+//	DA850_VPIF_DOUT4, DA850_VPIF_DOUT5, DA850_VPIF_DOUT6, DA850_VPIF_DOUT7,
+//	DA850_VPIF_DOUT8, DA850_VPIF_DOUT9, DA850_VPIF_DOUT10,
+//	DA850_VPIF_DOUT11, DA850_VPIF_DOUT12, DA850_VPIF_DOUT13,
+//	DA850_VPIF_DOUT14, DA850_VPIF_DOUT15, DA850_VPIF_CLKO2,
+//	DA850_VPIF_CLKO3,
+//	-1
+//};
 
 /* FIQ are pri 0-1; otherwise 2-7, with 7 lowest priority */
 static u8 da850_default_priorities[DA850_N_CP_INTC_IRQ] = {
@@ -1079,9 +1081,9 @@ int __init da850_register_pm(struct platform_device *pdev)
 	int ret;
 	struct davinci_pm_config *pdata = pdev->dev.platform_data;
 
-	ret = davinci_cfg_reg(DA850_RTC_ALARM);
-	if (ret)
-		return ret;
+//	ret = davinci_cfg_reg(DA850_RTC_ALARM);
+//	if (ret)
+//		return ret;
 
 	pdata->ddr2_ctlr_base = da8xx_get_mem_ctlr();
 	pdata->deepsleep_reg = DA8XX_SYSCFG1_VIRT(DA8XX_DEEPSLEEP_REG);
