@@ -789,7 +789,11 @@ static const struct mux_config da850_pins[] = {
     MUX_CFG(DA850,  GPIO6_14,   13, 4,  15, 8,  false)
     /* buttons */
     MUX_CFG(DA850,  GPIO5_9,    11, 24, 15, 8,  false)
-
+    /* Pins from wifi.pins */
+    MUX_CFG(DA850,  GPIO5_8,    11, 28, 15, 8,  false)
+    MUX_CFG(DA850,  GPIO5_14,   11, 4,  15, 8,  false)
+    /* Pins from usb.pins */
+    MUX_CFG(DA850,  GPIO6_12,   13, 12, 15, 8,  false)
 
 #endif
 };

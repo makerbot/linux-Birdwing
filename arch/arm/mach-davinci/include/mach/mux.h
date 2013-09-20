@@ -1097,6 +1097,11 @@ enum davinci_da850_index {
     DA850_GPIO6_14,
     /* buttons */
     DA850_GPIO5_9,
+    /* Pins from wifi.pins */
+    DA850_GPIO5_8,
+    DA850_GPIO5_14,
+    /* usb */
+    DA850_GPIO6_12,
 
 };
 
