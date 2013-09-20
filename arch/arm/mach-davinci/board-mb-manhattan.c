@@ -612,59 +612,6 @@ static __init void mb_manhattan_config_emac(void)
 		pr_warn("%s: EMAC registration failed: %d\n", __func__, ret);
 }
 
-//====================DMA Configuration=================================
-//FIXME I think these can be removed
-/*
- * The following EDMA channels/slots are not being used by drivers (for
- * example: Timer, GPIO, UART events etc) on da850/omap-l138 EVM/Hawkboard,
- * hence they are being reserved for codecs on the DSP side.
- */
-
-
-static const s16 da850_dma0_rsv_chans[][2] = {
-	/* (offset, number) */
-	{ 8,  6},
-	{24,  4},
-	{30,  2},
-	{-1, -1}
-};
-
-static const s16 da850_dma0_rsv_slots[][2] = {
-	/* (offset, number) */
-	{ 8,  6},
-	{24,  4},
-	{30, 50},
-	{-1, -1}
-};
-
-static const s16 da850_dma1_rsv_chans[][2] = {
-	/* (offset, number) */
-	{ 0, 28},
-	{30,  2},
-	{-1, -1}
-};
-
-static const s16 da850_dma1_rsv_slots[][2] = {
-	/* (offset, number) */
-	{ 0, 28},
-	{30, 90},
-	{-1, -1}
-};
-
-static struct edma_rsv_info da850_edma_cc0_rsv = {
-	.rsv_chans	= da850_dma0_rsv_chans,
-	.rsv_slots	= da850_dma0_rsv_slots,
-};
-
-static struct edma_rsv_info da850_edma_cc1_rsv = {
-	.rsv_chans	= da850_dma1_rsv_chans,
-	.rsv_slots	= da850_dma1_rsv_slots,
-};
-
-static struct edma_rsv_info *da850_edma_rsv[2] = {
-	&da850_edma_cc0_rsv,
-	&da850_edma_cc1_rsv,
-};
 
 //====================USB Configuration=================================
 
