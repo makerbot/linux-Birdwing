@@ -27,8 +27,7 @@
  * 0 otherwise.
  *
  */
-#define IS_ENABLED(option) \
-	(config_enabled(option) || config_enabled(option##_MODULE))
+#define IS_ENABLED(option) (config_enabled(option) || config_enabled(option##_MODULE))
 
 /*
  * IS_BUILTIN(CONFIG_FOO) evaluates to 1 if CONFIG_FOO is set to 'y', 0
