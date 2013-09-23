@@ -364,6 +364,17 @@ static struct da8xx_spi_pin_data lcd_spi_gpio_data = {
     .cs = GPIO_TO_PIN(6, 1),
 };
 
+static short interface_i2c_pins[] = {
+	DA850_I2C0_SDA,
+	DA850_I2C0_SCL,
+    -1,
+};
+
+static struct davinci_i2c_platform_data mb_i2c0_pdata = {
+	.bus_freq	= 400,	/* kHz */
+	.bus_delay	= 0,	/* usec */
+};
+
 //TODO Need LCD backlight control / PWM here
 
 static void da850_panel_power_ctrl(int val)
@@ -808,6 +819,15 @@ static __init void mb_manhattan_init(void)
 	ret = da8xx_register_lcdc_spi(lcd_pdata);
 	if (ret)
 		pr_warn("%s: LCDC registration failed: %d\n", __func__, ret);
+
+    ret = davinci_cfg_reg_list(interface_i2c_pins);		//Configure LCD power / config pins
+	if (ret)
+		pr_warn("%s: LCD i2c pins initialization failed: %d\n", __func__, ret);
+
+    ret = da8xx_register_i2c(0, &mb_i2c0_pdata);
+	if (ret)
+		pr_warn("%s: LCD i2c driver initialization failed: %d\n", __func__, ret);
+
 
 	/*Watchdog*/
 	ret = da8xx_register_watchdog();							//Register the watchdog
