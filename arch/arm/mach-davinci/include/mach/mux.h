@@ -1102,6 +1102,9 @@ enum davinci_da850_index {
     DA850_GPIO5_14,
     /* usb */
     DA850_GPIO6_12,
+    /* Pins from chamber_heater.pins */
+    DA850_GPIO2_2,
+
 
 };
 
