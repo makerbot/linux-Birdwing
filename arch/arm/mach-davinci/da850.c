@@ -781,7 +781,7 @@ static const struct mux_config da850_pins[] = {
     MUX_CFG(DA850,  GPIO0_8,    0,  28, 15, 8,  false)
     MUX_CFG(DA850,  GPIO1_2,    4,  20, 15, 8,  false) 
     /* lcd */
-    MUX_CFG(DA850,   GPIO6_4,    19, 8,  15, 8,  false)
+    MUX_CFG(DA850,  GPIO6_4,    19, 8,  15, 8,  false)
     MUX_CFG(DA850,  GPIO6_2,    19, 16, 15, 8,  false)
     MUX_CFG(DA850,  GPIO6_1,    19, 20, 15, 8,  false)
     MUX_CFG(DA850,  GPIO8_10,   18, 28, 15, 8,  false)
@@ -794,6 +794,9 @@ static const struct mux_config da850_pins[] = {
     MUX_CFG(DA850,  GPIO5_14,   11, 4,  15, 8,  false)
     /* Pins from usb.pins */
     MUX_CFG(DA850,  GPIO6_12,   13, 12, 15, 8,  false)
+    /* Pins from chamber_heater.pins */
+    MUX_CFG(DA850,  GPIO2_2,    6,  20, 15, 8,  false)
+
 
 #endif
 };
