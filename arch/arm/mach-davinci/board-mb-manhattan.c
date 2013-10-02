@@ -324,28 +324,16 @@ static struct i2c_gpio_platform_data power_monitor_i2c_gpio_pdata = {
     //.udelay               = 2,
 };
 
-static struct i2c_board_info power_monitor_i2c_info[] = {   //TODO: Look up in the kernel
+static struct i2c_board_info power_monitor_i2c_info[] = {
     {
         I2C_BOARD_INFO("power_monitor_12_i2c", 0x40),
-        .platform_data = &power_monitor_i2c_gpio_pdata,
-    },
-    {
-        I2C_BOARD_INFO("power_monitor_5_i2c", 0x41),
         .platform_data = &power_monitor_i2c_gpio_pdata,
     },
 };
 
 static struct platform_device power_monitor_12v_gpio_i2c_device = {
     .name                 = "i2c-gpio",
-    .id                   = 0,
-    .dev                  =
-    {
-        .platform_data    = &power_monitor_i2c_gpio_pdata,
-    },
-};
-static struct platform_device power_monitor_5v_gpio_i2c_device = {
-    .name                 = "i2c-gpio",
-    .id                   = 1,
+    .id                   = 3,
     .dev                  =
     {
         .platform_data    = &power_monitor_i2c_gpio_pdata,
@@ -354,7 +342,6 @@ static struct platform_device power_monitor_5v_gpio_i2c_device = {
 
 static struct platform_device *power_monitor_devices[] __initdata = {
     &power_monitor_12v_gpio_i2c_device,
-    &power_monitor_5v_gpio_i2c_device,
 };
 
 
