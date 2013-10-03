@@ -88,6 +88,9 @@ struct lcd_sync_arg {
 	int pulse_width;
 };
 
+struct platform_device;
+int mb_serializer_compat_init(struct platform_device *device);
+
 /* ioctls */
 #define FBIOGET_CONTRAST	_IOR('F', 1, int)
 #define FBIOPUT_CONTRAST	_IOW('F', 2, int)
