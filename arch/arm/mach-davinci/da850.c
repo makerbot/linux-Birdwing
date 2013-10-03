@@ -759,6 +759,42 @@ static const struct mux_config da850_pins[] = {
     MUX_CFG(DA850,  GPIO3_0,    8,  28, 15, 8,  false)
     MUX_CFG(DA850,  GPIO0_9,    0,  24, 15, 8,  false)
 
+    /* Manhattan revC */
+    /* toolhead */
+    MUX_CFG(DA850,  PRU0_R31_10,    15, 28, 15, 0,  false)
+    /* stepper */
+    MUX_CFG(DA850,  PRU0_R30_23,    18, 16, 15, 1,  false)
+    MUX_CFG(DA850,  PRU0_R30_22,    18, 20, 15, 1,  false)
+    MUX_CFG(DA850,  PRU0_R30_24,    18, 12, 15, 1,  false)
+    MUX_CFG(DA850,  PRU0_R30_25,    18, 8,  15, 1,  false)
+    MUX_CFG(DA850,  PRU0_R30_20,    0,  0,  15, 4,  false)
+    MUX_CFG(DA850,  PRU0_R30_19,    0,  4,  15, 4,  false)
+    MUX_CFG(DA850,  PRU0_R30_17,    2,  0,  15, 4,  false)
+    MUX_CFG(DA850,  PRU0_R30_16,    0,  24, 15, 2,  false)
+    MUX_CFG(DA850,  GPIO2_3,    6,  16, 15, 8,  false)
+    MUX_CFG(DA850,  PRU0_R30_21,    11, 8,  15, 2,  false)
+    MUX_CFG(DA850,  PRU0_R30_5, 6,  0,  15, 4,  false)
+    MUX_CFG(DA850,  PRU0_R30_4, 6,  4,  15, 4,  false)
+    MUX_CFG(DA850,  PRU0_R30_14,    15, 12, 15, 8,  false)
+    MUX_CFG(DA850,  PRU0_R30_13,    15, 16, 15, 8,  false)
+    /* power */
+    MUX_CFG(DA850,  GPIO0_8,    0,  28, 15, 8,  false)
+    MUX_CFG(DA850,  GPIO1_2,    4,  20, 15, 8,  false) 
+    /* lcd */
+    MUX_CFG(DA850,   GPIO6_4,    19, 8,  15, 8,  false)
+    MUX_CFG(DA850,  GPIO6_2,    19, 16, 15, 8,  false)
+    MUX_CFG(DA850,  GPIO6_1,    19, 20, 15, 8,  false)
+    MUX_CFG(DA850,  GPIO8_10,   18, 28, 15, 8,  false)
+    /* Pins from status_led.pins */
+    MUX_CFG(DA850,  GPIO6_14,   13, 4,  15, 8,  false)
+    /* buttons */
+    MUX_CFG(DA850,  GPIO5_9,    11, 24, 15, 8,  false)
+    /* Pins from wifi.pins */
+    MUX_CFG(DA850,  GPIO5_8,    11, 28, 15, 8,  false)
+    MUX_CFG(DA850,  GPIO5_14,   11, 4,  15, 8,  false)
+    /* Pins from usb.pins */
+    MUX_CFG(DA850,  GPIO6_12,   13, 12, 15, 8,  false)
+
 #endif
 };
 
