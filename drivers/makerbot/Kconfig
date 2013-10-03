@@ -1,0 +1,13 @@
+#
+# Misc strange devices
+#
+
+menu "Makerbot"
+
+config FAST_GPIO
+    tristate "fast gpio"
+	depends on GPIOLIB
+    help
+        Makerbot custom driver for fast gpio access
+
+endmenu

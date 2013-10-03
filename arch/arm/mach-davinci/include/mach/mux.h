@@ -1066,6 +1066,43 @@ enum davinci_da850_index {
     DA850_GPIO3_7,
     DA850_GPIO3_0,
     DA850_GPIO0_9,
+
+    /* Manhattan RevC  */
+    /* toolhead*/
+    DA850_PRU0_R31_10,
+    /* Pins from motors.pins */
+    DA850_PRU0_R30_23,
+    DA850_PRU0_R30_22,
+    DA850_PRU0_R30_24,
+    DA850_PRU0_R30_25,
+    DA850_PRU0_R30_20,
+    DA850_PRU0_R30_19,
+    DA850_PRU0_R30_17,
+    DA850_PRU0_R30_16,
+    DA850_GPIO2_3,
+    DA850_PRU0_R30_21,
+    DA850_PRU0_R30_5,
+    DA850_PRU0_R30_4,
+    DA850_PRU0_R30_14,
+    DA850_PRU0_R30_13,
+    /* power pins */
+    DA850_GPIO0_8,
+    DA850_GPIO1_2,
+    /* lcd */
+    DA850_GPIO6_4,
+    DA850_GPIO6_2,
+    DA850_GPIO6_1,
+    DA850_GPIO8_10,
+    /* led */
+    DA850_GPIO6_14,
+    /* buttons */
+    DA850_GPIO5_9,
+    /* Pins from wifi.pins */
+    DA850_GPIO5_8,
+    DA850_GPIO5_14,
+    /* usb */
+    DA850_GPIO6_12,
+
 };
 
 enum davinci_tnetv107x_index {
