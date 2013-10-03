@@ -1373,6 +1373,7 @@ static struct davinci_soc_info davinci_soc_info_da850 = {
 	.emac_pdata		= &da8xx_emac_pdata,
 	.sram_dma		= DA8XX_SHARED_RAM_BASE,
 	.sram_len		= SZ_128K,
+    .lcdc_dev       = NULL,
 };
 
 void __init da850_init(void)
