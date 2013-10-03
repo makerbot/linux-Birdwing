@@ -665,7 +665,9 @@ int __init da8xx_register_lcdc_lidd(struct da8xx_lcdc_platform_data *pdata)
 
 int __init da8xx_register_lcdc_spi(struct da8xx_lcdc_spi_platform_data *pdata)
 {
+	struct davinci_soc_info *soc_info = &davinci_soc_info;
 	da8xx_lcdc_device.dev.platform_data = pdata;
+    soc_info->lcdc_dev = &da8xx_lcdc_device;
 	return platform_device_register(&da8xx_lcdc_device);
 }
 

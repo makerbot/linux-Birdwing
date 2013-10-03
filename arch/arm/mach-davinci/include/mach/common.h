@@ -77,6 +77,7 @@ struct davinci_soc_info {
 	struct emac_platform_data	*emac_pdata;
 	dma_addr_t			sram_dma;
 	unsigned			sram_len;
+    struct platform_device *lcdc_dev;
 };
 
 extern struct davinci_soc_info davinci_soc_info;
