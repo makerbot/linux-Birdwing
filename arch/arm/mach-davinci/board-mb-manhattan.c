@@ -96,18 +96,21 @@ static struct gpio_keys_button gpio_keys[] = {
             .gpio = OPTION_BUTTON,
             .desc = "Option",
             .type = EV_KEY,
+            //.active_low = 1,
         },
         {
             .code = KEY_BACKSPACE,
             .gpio = BACK_BUTTON,
             .desc = "Back",
             .type = EV_KEY,
+            //.active_low = 1,
         },
         {
             .code = KEY_SPACE,
             .gpio = SELECT_BUTTON,
             .desc = "Select",
             .type = EV_KEY,
+            //.active_low = 1,
         },
 };
  

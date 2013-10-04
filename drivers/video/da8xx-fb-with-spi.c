@@ -359,15 +359,18 @@ static void ssd2119_spi_send_packet(struct da8xx_spi_pin_data * spi, u8 data, u8
 
 }
 
-static int ssd2119_spi_init(struct da8xx_lcdc_spi_platform_data *pdata){
+static int ssd2119_spi_init(struct da8xx_spi_pin_data *spi){
  
     int ret = -1;
  
-    if (pdata->spi){
+    if (spi){
+        ret = gpio_request(spi->cs, "lcd_cs");
+        ret = gpio_request(spi->sdi, "lcd_sdi");
+        ret = gpio_request(spi->sck, "lcd_sck");
  
-        ret = gpio_direction_output(pdata->spi->cs, 1);
-        ret = gpio_direction_output(pdata->spi->sdi, 1);
-        ret = gpio_direction_output(pdata->spi->sck, 1);
+        ret = gpio_direction_output(spi->cs, 1);
+        ret = gpio_direction_output(spi->sdi, 1);
+        ret = gpio_direction_output(spi->sck, 1);
     }
     return ret;
 }
@@ -394,7 +397,7 @@ static int ssd2119_spi_write_reg(struct da8xx_spi_pin_data *spi, u8 reg, u16 val
 }
 
 
-static int lcd_ssd2119_spi_init(struct da8xx_lcdc_spi_platform_data *pdata) {
+static int lcd_ssd2119_spi_init(struct da8xx_spi_pin_data *spi) {
 
     int ret = 0;
 
@@ -403,32 +406,31 @@ static int lcd_ssd2119_spi_init(struct da8xx_lcdc_spi_platform_data *pdata) {
 #define LCD_DOTCLOCK_ACTIVE 0x0100
 #define LCD_NOSYNC_DMODE 0x0200
 
-    ret = ssd2119_spi_write_reg(pdata->spi, 0x00, 0x0001); // OSCEN = 1;
-    ret = ssd2119_spi_write_reg(pdata->spi, 0x10, 0x0000);	// Sleep = 0;
-    ret = ssd2119_spi_write_reg(pdata->spi, 0x07, 0x0033);	// Display control. CM=0
-    ret = ssd2119_spi_write_reg(pdata->spi, 0x11, 0x4E70);	// ??
-    ret = ssd2119_spi_write_reg(pdata->spi, 0x02, 0x0600);	// line inversion
-    ret = ssd2119_spi_write_reg(pdata->spi, 0x03, 0x6A38);	// VGH/VGL=5/-3
-    ret = ssd2119_spi_write_reg(pdata->spi, 0x01, 0x72EF);	// Gate lines = 240
-    ret = ssd2119_spi_write_reg(pdata->spi, 0x28, 0x0006);	// Enable R25, R29 register
-    ret = ssd2119_spi_write_reg(pdata->spi, 0x12, 0x0999); // sleep mode
-    ret = ssd2119_spi_write_reg(pdata->spi, 0x26, 0x3800);	// analogue setting
-    ret = ssd2119_spi_write_reg(pdata->spi, 0x0C, 0x0004);	// VCIX2;
-    ret = ssd2119_spi_write_reg(pdata->spi, 0x0D, 0x000A);	// VLCD63
-    ret = ssd2119_spi_write_reg(pdata->spi, 0x0E, 0x2600);	// VCOML
-    ret = ssd2119_spi_write_reg(pdata->spi, 0x1E, 0x00AF);	// VCOMH
-    ret = ssd2119_spi_write_reg(pdata->spi, 0x15, 0x0058);	// Entry Mode
-    ret = ssd2119_spi_write_reg(pdata->spi, 0x30, 0x0000);	// Gamma B control 1
-    ret = ssd2119_spi_write_reg(pdata->spi, 0x31, 0x0101);	// Gamma B control 2
-    ret = ssd2119_spi_write_reg(pdata->spi, 0x32, 0x0100);	// Gamma B control 3
-    ret = ssd2119_spi_write_reg(pdata->spi, 0x33, 0x0305);	// Gamma B control 4
-    ret = ssd2119_spi_write_reg(pdata->spi, 0x34, 0x0707);	// Gamma B control 5
-    ret = ssd2119_spi_write_reg(pdata->spi, 0x35, 0x0305);	// Gamma B control 6
-    ret = ssd2119_spi_write_reg(pdata->spi, 0x36, 0x0707);	// Gamma B control 7
-    ret = ssd2119_spi_write_reg(pdata->spi, 0x37, 0x0201); // Gamma B control 8
-    ret = ssd2119_spi_write_reg(pdata->spi, 0x3A, 0x1200);	// Gamma B control 9
-    ret = ssd2119_spi_write_reg(pdata->spi, 0x3B, 0x0900);	// Gamma B control 10
-    ret = ssd2119_spi_write_reg(pdata->spi, 0x22, 0x0000);	// write data to RAM
+    ret = ssd2119_spi_write_reg(spi, 0x00, 0x0001); // OSCEN = 1;
+    ret = ssd2119_spi_write_reg(spi, 0x10, 0x0000);	// Sleep = 0;
+    ret = ssd2119_spi_write_reg(spi, 0x07, 0x0033);	// Display control. CM=0
+    ret = ssd2119_spi_write_reg(spi, 0x11, 0x4E70);	// ??
+    ret = ssd2119_spi_write_reg(spi, 0x02, 0x0600);	// line inversion
+    ret = ssd2119_spi_write_reg(spi, 0x03, 0x6A38);	// VGH/VGL=5/-3
+    ret = ssd2119_spi_write_reg(spi, 0x01, 0x72EF);	// Gate lines = 240
+    ret = ssd2119_spi_write_reg(spi, 0x28, 0x0006);	// Enable R25, R29 register
+    ret = ssd2119_spi_write_reg(spi, 0x12, 0x0999); // sleep mode
+    ret = ssd2119_spi_write_reg(spi, 0x26, 0x3800);	// analogue setting
+    ret = ssd2119_spi_write_reg(spi, 0x0C, 0x0004);	// VCIX2;
+    ret = ssd2119_spi_write_reg(spi, 0x0E, 0x2600);	// VCOML
+    ret = ssd2119_spi_write_reg(spi, 0x1E, 0x00AF);	// VCOMH
+    ret = ssd2119_spi_write_reg(spi, 0x15, 0x0058);	// Entry Mode
+    ret = ssd2119_spi_write_reg(spi, 0x30, 0x0000);	// Gamma B control 1
+    ret = ssd2119_spi_write_reg(spi, 0x31, 0x0101);	// Gamma B control 2
+    ret = ssd2119_spi_write_reg(spi, 0x32, 0x0100);	// Gamma B control 3
+    ret = ssd2119_spi_write_reg(spi, 0x33, 0x0305);	// Gamma B control 4
+    ret = ssd2119_spi_write_reg(spi, 0x34, 0x0707);	// Gamma B control 5
+    ret = ssd2119_spi_write_reg(spi, 0x35, 0x0305);	// Gamma B control 6
+    ret = ssd2119_spi_write_reg(spi, 0x36, 0x0707);	// Gamma B control 7
+    ret = ssd2119_spi_write_reg(spi, 0x37, 0x0201); // Gamma B control 8
+    ret = ssd2119_spi_write_reg(spi, 0x3A, 0x1200);	// Gamma B control 9
+    ret = ssd2119_spi_write_reg(spi, 0x3B, 0x0900);	// Gamma B control 10
+    ret = ssd2119_spi_write_reg(spi, 0x22, 0x0000);	// write data to RAM
 
     return ret;
 
@@ -439,15 +441,16 @@ int mb_serializer_compat_init(struct platform_device *device)
 	struct da8xx_lcdc_spi_platform_data *fb_pdata;
     int ret = 0;
     if (device) {
-			fb_pdata = device->dev.platform_data;
+        fb_pdata = device->dev.platform_data;
+        //fb_pdata->panel_power_ctrl(1);
 
-        ret = ssd2119_spi_init(fb_pdata);
+        ret = ssd2119_spi_init(fb_pdata->spi);
         if (ret < 0){
             pr_err("init error in spi !!\n");
             return ret;
         }
 
-        ret = lcd_ssd2119_spi_init(fb_pdata);
+        ret = lcd_ssd2119_spi_init(fb_pdata->spi);
         if (ret < 0){
             pr_err("init error in spi lcd sequence!!\n");
             return ret;
@@ -455,6 +458,24 @@ int mb_serializer_compat_init(struct platform_device *device)
     }
     return ret;
 }
+
+int mb_serializer_compat_par_init(struct da8xx_fb_par *par)
+{
+    int ret = 0;
+    ret = ssd2119_spi_init(par->spi);
+    if (ret < 0){
+        pr_err("init error in spi !!\n");
+        return ret;
+    }
+
+    ret = lcd_ssd2119_spi_init(par->spi);
+    if (ret < 0){
+        pr_err("init error in spi lcd sequence!!\n");
+        return ret;
+    }
+    return ret;
+}
+
 
 
 static int lcd_ssd2119_shutdown(struct da8xx_fb_par *par){
@@ -1363,6 +1384,10 @@ static int cfb_blank(int blank, struct fb_info *info)
 
 		if (par->panel_power_ctrl)
 			par->panel_power_ctrl(1);
+
+        msleep(10);
+        mb_serializer_compat_par_init(par);
+        
 		break;
 	case FB_BLANK_NORMAL:
 	case FB_BLANK_VSYNC_SUSPEND:
