@@ -1249,6 +1249,8 @@ unknown:
 		 * in config 0, etc.
 		 */
 		switch (ctrl->bRequestType & USB_RECIP_MASK) {
+			struct usb_composite_driver	*composite;
+			struct usb_vendor_request	*v;
 		case USB_RECIP_INTERFACE:
 			if (!cdev->config || intf >= MAX_CONFIG_INTERFACES)
 				break;
@@ -1264,6 +1266,25 @@ unknown:
 			if (&f->list == &cdev->config->functions)
 				f = NULL;
 			break;
+		case USB_RECIP_DEVICE:
+			/* Non core control requests issued direcly to the
+			 * device need to be vendor defined
+			 */
+			if ((ctrl->bRequestType & USB_TYPE_MASK) !=
+							USB_TYPE_VENDOR)
+				break;
+			/* TODO: support host to device requests */
+			if (!(ctrl->bRequestType & USB_DIR_IN))
+				break;
+			composite = cdev->driver;
+			if (!composite->vendor_requests)
+				break;
+			for (v = composite->vendor_requests[0]; v; ++v) {
+				if (v->bRequest != ctrl->bRequest)
+					continue;
+				value = v->callback(cdev, req->buf, ctrl);
+				goto done;
+			}
 		}
 
 		if (f && f->setup)

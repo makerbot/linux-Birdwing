@@ -54,6 +54,20 @@
 
 #define USB_MS_TO_HS_INTERVAL(x)	(ilog2((x * 1000 / 125)) + 1)
 struct usb_configuration;
+struct usb_composite_dev;
+
+/**
+ * struct usb_vendor_request - describes a vendor specified request
+ * @bRequest: the bRequest value to respond to in the USB setup packet.
+ * @callback: the function that handles the request.  Currently only
+ *	device to host is supported, so the function needs to store its
+ *	N byte reponse at the second argument and return N.
+ */
+struct usb_vendor_request {
+	u8	bRequest;
+	int	(*callback)(struct usb_composite_dev *, void *,
+			const struct usb_ctrlrequest *);
+};
 
 /**
  * struct usb_function - describes one function of a configuration
@@ -269,6 +283,7 @@ enum {
  *	and language IDs provided in control requests. Note: The first entries
  *	are predefined. The first entry that may be used is
  *	USB_GADGET_FIRST_AVAIL_IDX
+ * @vendor_requests: Table of installed vendor specified request callbacks.
  * @max_speed: Highest speed the driver supports.
  * @needs_serial: set to 1 if the gadget needs userspace to provide
  * 	a serial number.  If one is not provided, warning will be printed.
@@ -299,6 +314,7 @@ struct usb_composite_driver {
 	const char				*name;
 	const struct usb_device_descriptor	*dev;
 	struct usb_gadget_strings		**strings;
+	struct usb_vendor_request		**vendor_requests;
 	enum usb_device_speed			max_speed;
 	unsigned		needs_serial:1;
 

@@ -427,13 +427,16 @@ setup_rx_reqs(struct printer_dev *dev)
 		req->length = USB_BUFSIZE;
 		req->complete = rx_complete;
 
+		/* Note that although we have interrupts off, usb_ep_queue might
+		 * have data ready to go and directly call rx_complete.
+		 */
+		list_add(&req->list, &dev->rx_reqs_active);
 		error = usb_ep_queue(dev->out_ep, req, GFP_ATOMIC);
 		if (error) {
 			DBG(dev, "rx submit --> %d\n", error);
+			list_del_init(&req->list);
 			list_add(&req->list, &dev->rx_reqs);
 			break;
-		} else {
-			list_add(&req->list, &dev->rx_reqs_active);
 		}
 	}
 }
@@ -661,14 +664,17 @@ printer_write(struct file *fd, const char __user *buf, size_t len, loff_t *ptr)
 			return -EAGAIN;
 		}
 
+		/* Note that although we have interrupts off, usb_ep_queue might
+		 * have data ready to go and directly call rx_complete.
+		 */
+		list_add(&req->list, &dev->tx_reqs_active);
 		if (usb_ep_queue(dev->in_ep, req, GFP_ATOMIC)) {
+			list_del_init(&req->list);
 			list_add(&req->list, &dev->tx_reqs);
 			spin_unlock_irqrestore(&dev->lock, flags);
 			mutex_unlock(&dev->lock_printer_io);
 			return -EAGAIN;
 		}
-
-		list_add(&req->list, &dev->tx_reqs_active);
 
 	}
 
@@ -885,7 +891,7 @@ static void printer_soft_reset(struct printer_dev *dev)
 	}
 
 	while (likely(!(list_empty(&dev->rx_reqs_active)))) {
-		req = container_of(dev->rx_buffers.next, struct usb_request,
+		req = container_of(dev->rx_reqs_active.next, struct usb_request,
 				list);
 		list_del_init(&req->list);
 		list_add(&req->list, &dev->rx_reqs);

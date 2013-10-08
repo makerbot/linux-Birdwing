@@ -1923,7 +1923,7 @@ musb_init_controller(struct device *dev, int nIrq, void __iomem *ctrl)
 	if (status < 0)
 		goto fail3;
 
-    dev_err(dev, "nr_endpoints: \n", musb->nr_endpoints);
+    dev_err(dev, "nr_endpoints: %d\n", musb->nr_endpoints);
 
 	setup_timer(&musb->otg_timer, musb_otg_timer_func, (unsigned long) musb);
 
