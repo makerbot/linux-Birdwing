@@ -51,8 +51,8 @@
 //========================Rotary & UI Buttons===============================
 
 //Updated for Rev C
-#define GPIO_ROTARY_A GPIO_TO_PIN(5,6)
-#define GPIO_ROTARY_B GPIO_TO_PIN(5,9)
+#define GPIO_ROTARY_A GPIO_TO_PIN(5,9)
+#define GPIO_ROTARY_B GPIO_TO_PIN(5,6)
 
 
 static struct rotary_encoder_platform_data encoder_info = {
@@ -96,18 +96,21 @@ static struct gpio_keys_button gpio_keys[] = {
             .gpio = OPTION_BUTTON,
             .desc = "Option",
             .type = EV_KEY,
+            //.active_low = 1,
         },
         {
             .code = KEY_BACKSPACE,
             .gpio = BACK_BUTTON,
             .desc = "Back",
             .type = EV_KEY,
+            //.active_low = 1,
         },
         {
             .code = KEY_SPACE,
             .gpio = SELECT_BUTTON,
             .desc = "Select",
             .type = EV_KEY,
+            //.active_low = 1,
         },
 };
  
@@ -264,7 +267,7 @@ static short stepper_pru_pins[] = {
     DA850_PRU0_R30_19,	//y dir
     DA850_PRU0_R30_17,	//y en
     DA850_PRU0_R30_16,	//y vref
-    DA850_GPIO2_9,		//y load
+    DA850_GPIO0_12,		//y load
 
     DA850_PRU0_R30_21,	//z step
     DA850_PRU0_R30_5,	//z dir
@@ -306,6 +309,18 @@ static struct spi_board_info toolhead_spi_info[] = {
 		.bus_num			= 1,
 		.chip_select		= 0,
 	},
+};
+
+//====================Chamber Heater===============================
+
+static short chamber_heater_pins[] = {
+    DA850_GPIO0_7,
+    DA850_GPIO2_2,
+    DA850_GPIO3_4,
+    DA850_GPIO3_2,
+    DA850_GPIO5_5,
+    DA850_GPIO2_5,
+    -1,
 };
 
 //====================12V Control=================================
@@ -359,7 +374,7 @@ static short mb_lcd_pins[] = {
 };
 
 static struct da8xx_spi_pin_data lcd_spi_gpio_data = {
-    .sck = GPIO_TO_PIN(6, 1),
+    .sck = GPIO_TO_PIN(6, 2),
     .sdi = GPIO_TO_PIN(6, 4),
     .cs = GPIO_TO_PIN(6, 1),
 };
@@ -408,9 +423,9 @@ static int da850_lcd_hw_init(void)
     
     // 0 level for type pin indicates AZ display
     if(gpio_get_value(GPIO_LCD_DISPLAY_TYPE) == 0) {
-        lcd_pdata = &az_hx8238_pdata;		//TODO check this
+        lcd_pdata = &az_hx8238_pdata;	
     } else {
-        lcd_pdata = &ssd2119_spi_pdata;		//TODO check this
+        lcd_pdata = &ssd2119_spi_pdata;	
     }
         
 	gpio_direction_output(DA850_LCD_BL_PIN, 0);
@@ -420,7 +435,7 @@ static int da850_lcd_hw_init(void)
 	da850_panel_power_ctrl(0);
 
 	/* Switch on panel power and backlight */
-	da850_panel_power_ctrl(1);
+	//da850_panel_power_ctrl(1);
 
 
 	return 0;
@@ -799,6 +814,10 @@ static __init void mb_manhattan_init(void)
 
 
 	//TODO Chamber Heater SPI
+	ret = davinci_cfg_reg_list(chamber_heater_pins);		//Configure Chamber heater pins
+    if (ret)
+       pr_warn("%s: Chamber heater pins registration failed: %d\n", __func__, ret);
+    
 
         
 	/* LCD  */
@@ -868,9 +887,9 @@ static __init void mb_manhattan_init(void)
 	if (ret)
 		pr_warn("%s: stepper pins initialization failed: %d\n", __func__, ret);
 
-    // Disable pull-ups on MS2/Sense inputs on the steppers (CP19 & CP30 in PUPD_ENA reg)
+    // Disable pull-ups on MS2/Sense inputs on the steppers (CP0 & CP16 in PUPD_ENA reg)
     // default pull up configuration: 0xC3FFFFFF
-	__raw_writel(0xBFF7FFFF,  ioremap(DA8XX_PUPD_ENA, SZ_1K) );
+	__raw_writel(0xCFFEFFFE,  ioremap(DA8XX_PUPD_ENA, SZ_1K) );
 
 	/* Register PRUSS device */
 	da8xx_register_uio_pruss();
