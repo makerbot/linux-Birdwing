@@ -377,19 +377,22 @@ static int ssd2119_spi_init(struct da8xx_spi_pin_data *spi){
 
 static int ssd2119_spi_write_reg(struct da8xx_spi_pin_data *spi, u8 reg, u16 val)
 {
-	
+    int i;	
+
 	if (spi){
 
         //printk("spi reg: %d val: %d \n", reg, val);    
+        // the registers don't seem to get written reliably so we send them 3 times
+        for (i = 0; i < 3; i++) {
+            // transfer command code
+            ssd2119_spi_send_packet(spi, reg, 0);
 
-        // transfer command code
-        ssd2119_spi_send_packet(spi, reg, 0);
+            // transfer first data byte
+            ssd2119_spi_send_packet(spi, (val >> 8) & 0xFF, 1);
 
-        // transfer first data byte
-        ssd2119_spi_send_packet(spi, (val >> 8) & 0xFF, 1);
-
-        //transfer second data byte
-        ssd2119_spi_send_packet(spi, val & 0xFF, 1);
+            //transfer second data byte
+            ssd2119_spi_send_packet(spi, val & 0xFF, 1);
+        }
 
         return 0;
   }
@@ -442,7 +445,7 @@ int mb_serializer_compat_init(struct platform_device *device)
     int ret = 0;
     if (device) {
         fb_pdata = device->dev.platform_data;
-        //fb_pdata->panel_power_ctrl(1);
+        fb_pdata->panel_power_ctrl(1);
 
         ret = ssd2119_spi_init(fb_pdata->spi);
         if (ret < 0){
@@ -462,6 +465,7 @@ int mb_serializer_compat_init(struct platform_device *device)
 int mb_serializer_compat_par_init(struct da8xx_fb_par *par)
 {
     int ret = 0;
+    par->panel_power_ctrl(1);
     ret = ssd2119_spi_init(par->spi);
     if (ret < 0){
         pr_err("init error in spi !!\n");
@@ -1382,8 +1386,8 @@ static int cfb_blank(int blank, struct fb_info *info)
 	case FB_BLANK_UNBLANK:
 		lcd_enable_raster();
 
-		if (par->panel_power_ctrl)
-			par->panel_power_ctrl(1);
+		//if (par->panel_power_ctrl)
+		//	par->panel_power_ctrl(1);
 
         msleep(10);
         mb_serializer_compat_par_init(par);
@@ -1597,7 +1601,7 @@ static int fb_probe(struct platform_device *device)
 	par->pxl_clk = lcdc_info->pixclock;
 	if (fb_pdata->panel_power_ctrl) {
 		par->panel_power_ctrl = fb_pdata->panel_power_ctrl;
-		par->panel_power_ctrl(1);
+		//par->panel_power_ctrl(1);
 	}
   if (fb_pdata->spi){
     par->spi = fb_pdata->spi;

@@ -51,8 +51,8 @@
 //========================Rotary & UI Buttons===============================
 
 //Updated for Rev C
-#define GPIO_ROTARY_A GPIO_TO_PIN(5,6)
-#define GPIO_ROTARY_B GPIO_TO_PIN(5,9)
+#define GPIO_ROTARY_A GPIO_TO_PIN(5,9)
+#define GPIO_ROTARY_B GPIO_TO_PIN(5,6)
 
 
 static struct rotary_encoder_platform_data encoder_info = {
@@ -435,7 +435,7 @@ static int da850_lcd_hw_init(void)
 	da850_panel_power_ctrl(0);
 
 	/* Switch on panel power and backlight */
-	da850_panel_power_ctrl(1);
+	//da850_panel_power_ctrl(1);
 
 
 	return 0;
