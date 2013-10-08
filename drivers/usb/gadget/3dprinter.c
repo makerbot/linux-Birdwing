@@ -224,19 +224,32 @@ static const struct usb_descriptor_header *otg_desc[] = {
 
 /*-------------------------------------------------------------------------*/
 
+/* Custom non standard descriptors for WCID */
+
+/*struct*/
+
+/*-------------------------------------------------------------------------*/
+
 /* descriptors that are built on-demand */
 
 static char				product_desc [40] = DRIVER_DESC;
 static char				serial_num [40] = "1";
 static char				pnp_string [1024] =
 	"XXMFG:linux;MDL:g_3dprinter;CLS:PRINTER;SN:1;";
+static char				wcid_str [10] = "MSFT100 ";
+/* Note that the trailing space is actually a bMS_VendorCode of 0x20 */
 
+/* The address where windows looks for its OS string descriptor */
+#define WCID_STRING_IDX 0xEE
+/* The index in strings of the above */
+#define WCID_TAB_IDX 3
 
 /* static strings, in UTF-8 */
 static struct usb_string		strings [] = {
 	[USB_GADGET_MANUFACTURER_IDX].s = "",
 	[USB_GADGET_PRODUCT_IDX].s = product_desc,
 	[USB_GADGET_SERIAL_IDX].s =	serial_num,
+	[WCID_TAB_IDX].s = wcid_str,
 	{  }		/* end of list */
 };
 
@@ -282,6 +295,22 @@ printer_req_free(struct usb_ep *ep, struct usb_request *req)
 
 /*-------------------------------------------------------------------------*/
 
+/* Return <0 for broken lists.  Not foolproof, but pretty good.
+static int list_size(struct list_head *head)
+{
+	unsigned int count = 0;
+	struct list_head *pos, *n;
+	if (!head->next || head->next == LIST_POISON1) return -2;
+	for (pos=head, n=pos->next; n!=head; pos=n, n=pos->next) {
+		if (!n->next || n->next == LIST_POISON1) return -2;
+		if (n->prev != pos) return -1;
+		count++;
+	}
+	if (n->prev != pos) return -1;
+	return count;
+}
+*/
+
 static void rx_complete(struct usb_ep *ep, struct usb_request *req)
 {
 	struct printer_dev	*dev = ep->driver_data;
@@ -290,7 +319,7 @@ static void rx_complete(struct usb_ep *ep, struct usb_request *req)
 
 	spin_lock_irqsave(&dev->lock, flags);
 
-	list_del_init(&req->list);	/* Remode from Active List */
+	list_del_init(&req->list);	/* Remove from Active List */
 
 	switch (status) {
 
@@ -428,13 +457,17 @@ setup_rx_reqs(struct printer_dev *dev)
 		req->length = USB_BUFSIZE;
 		req->complete = rx_complete;
 
+		/* Note that although we have interrupts off, usb_ep_queue might
+		 * have data ready to go and directly call rx_complete.
+		 */
+		list_add(&req->list, &dev->rx_reqs_active);
 		error = usb_ep_queue(dev->out_ep, req, GFP_ATOMIC);
+
 		if (error) {
 			DBG(dev, "rx submit --> %d\n", error);
+			list_del_init(&req->list);
 			list_add(&req->list, &dev->rx_reqs);
 			break;
-		} else {
-			list_add(&req->list, &dev->rx_reqs_active);
 		}
 	}
 }
@@ -662,14 +695,17 @@ printer_write(struct file *fd, const char __user *buf, size_t len, loff_t *ptr)
 			return -EAGAIN;
 		}
 
+		/* Note that although we have interrupts off, usb_ep_queue might
+		 * have data ready to go and directly call rx_complete.
+		 */
+		list_add(&req->list, &dev->tx_reqs_active);
 		if (usb_ep_queue(dev->in_ep, req, GFP_ATOMIC)) {
+			list_del_init(&req->list);
 			list_add(&req->list, &dev->tx_reqs);
 			spin_unlock_irqrestore(&dev->lock, flags);
 			mutex_unlock(&dev->lock_printer_io);
 			return -EAGAIN;
 		}
-
-		list_add(&req->list, &dev->tx_reqs_active);
 
 	}
 
@@ -886,7 +922,7 @@ static void printer_soft_reset(struct printer_dev *dev)
 	}
 
 	while (likely(!(list_empty(&dev->rx_reqs_active)))) {
-		req = container_of(dev->rx_buffers.next, struct usb_request,
+		req = container_of(dev->rx_reqs_active.next, struct usb_request,
 				list);
 		list_del_init(&req->list);
 		list_add(&req->list, &dev->rx_reqs);
@@ -1235,6 +1271,7 @@ static int __init printer_bind_config(struct usb_configuration *c)
 			}
 			return -ENOMEM;
 		}
+		INIT_LIST_HEAD(&req->list);
 		list_add(&req->list, &dev->rx_reqs);
 	}
 
@@ -1287,6 +1324,11 @@ static int __init printer_bind(struct usb_composite_dev *cdev)
 	device_desc.iManufacturer = strings[USB_GADGET_MANUFACTURER_IDX].id;
 	device_desc.iProduct = strings[USB_GADGET_PRODUCT_IDX].id;
 	device_desc.iSerialNumber = strings[USB_GADGET_SERIAL_IDX].id;
+
+	/* usb_string_ids_tab assigned us a perfectly nice descriptor index
+	   guaranteed not to collide with anything else.  But we have to use
+	   a specific index for WCID: */
+	strings[WCID_TAB_IDX].id = WCID_STRING_IDX;
 
 	ret = usb_add_config(cdev, &printer_cfg_driver, printer_bind_config);
 	if (ret)
