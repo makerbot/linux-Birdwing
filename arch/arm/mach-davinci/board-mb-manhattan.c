@@ -32,6 +32,8 @@
 #include <linux/etherdevice.h>
 #include <linux/wl12xx.h>
 #include <linux/wireless.h>
+#include <linux/pwm.h>
+#include <linux/leds_pwm.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -149,8 +151,8 @@ static const short mb_wireless_pins[] __initconst = {
 	DA850_MMCSD0_DAT_3,
 	DA850_MMCSD0_CLK,
 	DA850_MMCSD0_CMD,
-	DA850_GPIO5_8,
-	DA850_GPIO5_14,
+	DA850_GPIO5_8,			//WLAN Enable
+	DA850_GPIO5_14,			//WLAN IRQ
 	-1
 };
 
@@ -410,6 +412,7 @@ static short mb_lcd_spi_pins[] = {
   -1,
 };
 
+
 static struct da8xx_spi_pin_data lcd_spi_gpio_data = {
     .sck = GPIO_TO_PIN(6, 1),
     .sdi = GPIO_TO_PIN(6, 4),
@@ -424,6 +427,27 @@ static short mb_lcd_power_pins[] = {
 };
 
 //TODO Need LCD backlight control / PWM here
+static struct led_pwm mb_lcd_backlight[] = {
+	{
+		.name		= "LCD Backlight",
+		.pwm_id		= 1,
+		.max_brightness	= 255,			//TODO check this, should be ok
+		.pwm_period_ns	= 7 812 500,	//7msec? sure.
+	},
+};
+
+static struct led_pwm_platform_data mb_lcd_backlight_data = {
+	.num_leds	= ARRAY_SIZE(mb_lcd_backlight),
+	.leds		= mb_lcd_backlight,
+};
+
+static struct platform_device mb_lcd_backlight_pwm_platform = {
+	.name	= "backlight_pwm",
+	.id	= -1,
+	.dev	= {
+		.platform_data = &mb_lcd_backlight_data,
+	},
+};
 
 static void da850_panel_power_ctrl(int val)
 {
