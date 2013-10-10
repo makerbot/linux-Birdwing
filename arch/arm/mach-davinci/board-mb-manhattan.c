@@ -32,6 +32,7 @@
 #include <linux/etherdevice.h>
 #include <linux/wl12xx.h>
 #include <linux/wireless.h>
+#include <linux/led_pwm.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
