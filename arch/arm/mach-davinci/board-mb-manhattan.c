@@ -370,10 +370,10 @@ static short mb_lcd_pins[] = {
 	-1,
 };
 
-static short mb_lcd_backlight_pins[] = {
-	DA850_GPIO8_10,		//LCD Backlight
-	-1,
-};
+//static short mb_lcd_backlight_pins[] = {
+//	DA850_GPIO8_10,		//LCD Backlight
+//	-1,
+//};
 
 static short interface_i2c_pins[] = {
 	DA850_I2C0_SDA,
@@ -396,28 +396,21 @@ static struct davinci_i2c_platform_data mb_i2c0_pdata = {
 };
 
 //FIXME is this going to cause an issue with the GPIO LED below?
-static struct gpio_led mb_lcd_pwm_led[] = {
-	{
-		.name 			= "backlight_pwm_led",
-		.gpio 			= LCD_BACKLIGHT,
-		.default_trigger	= "timer",
-		.default_state 		= 0,		//default to off state
-		//.pwm_period_ns = 10000000, //10ms = 100hz
-	},
-};
-
-static struct gpio_led_platform_data mb_lcd_pwm_data = {
-	.num_leds = ARRAY_SIZE(mb_lcd_pwm_led),
-	.leds = mb_lcd_pwm_led,
-};
-
-static struct platform_device mb_lcd_pwm = {
-	.name = "LCD_pwm",
-	.id = 	-1,
-	.dev = 	{
-		.platform_data = &mb_lcd_pwm_data,
-		},
-};
+//static struct gpio_led mb_lcd_pwm_led[] = {
+//};
+//
+//static struct gpio_led_platform_data mb_lcd_pwm_data = {
+//	.num_leds = ARRAY_SIZE(mb_lcd_pwm_led),
+//	.leds = mb_lcd_pwm_led,
+//};
+//
+//static struct platform_device mb_lcd_pwm = {
+//	.name = "LCD_pwm",
+//	.id = 	-1,
+//	.dev = 	{
+//		.platform_data = &mb_lcd_pwm_data,
+//		},
+//};
 
 static void da850_panel_power_ctrl(int val)
 {
@@ -436,15 +429,15 @@ static int da850_lcd_hw_init(void)
 {
 	int status;
 
-	pr_info("LCD pinmux backlight\n");
-	status = davinci_cfg_reg_list(mb_lcd_backlight_pins);
-	if (status < 0)
-		return status;
-
-	pr_info("LCD register backlight\n");
-	status = platform_device_register(&mb_lcd_pwm);
-	if (status < 0)
-		return status;
+//	pr_info("LCD pinmux backlight\n");
+//	status = davinci_cfg_reg_list(mb_lcd_backlight_pins);
+//	if (status < 0)
+//		return status;
+//
+//	pr_info("LCD register backlight\n");
+//	status = platform_device_register(&mb_lcd_pwm);
+//	if (status < 0)
+//		return status;
 
 //	gpio_direction_output(LCD_BACKLIGHT, 0);
 
@@ -481,6 +474,7 @@ static int da850_lcd_hw_init(void)
 
 const short mb_manhattan_led_pins[] = {
 	DA850_GPIO6_14,		//Status LED
+	DA850_GPIO8_10,		//LCD Backlight
 	DA850_PRU0_R30_14,	//PRU LED0
 	DA850_PRU0_R30_13,	//PRU LED1
     -1
@@ -489,10 +483,19 @@ const short mb_manhattan_led_pins[] = {
 
 static struct gpio_led gpio_leds[] = {
 	{
-	.name           = "Kernel_Status",
-	.gpio           = GPIO_TO_PIN(6,14),
-	.default_trigger= "heartbeat",
-    },
+		.name           = "Kernel_Status",
+		.gpio           = GPIO_TO_PIN(6,14),
+		.default_trigger= "heartbeat",
+	 },
+
+	{
+		.name 			= "backlight_pwm_led",
+		.gpio 			= LCD_BACKLIGHT,
+		.default_trigger	= "timer",
+		.default_state 		= 0,		//default to off state
+		//.pwm_period_ns = 10000000, //10ms = 100hz
+	},
+
 };
 
 static struct gpio_led_platform_data gpio_led_info = {
