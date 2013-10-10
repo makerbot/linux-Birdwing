@@ -114,12 +114,12 @@ static struct gpio_keys_button gpio_keys[] = {
             //.active_low = 1,
         },
 };
- 
+
 struct gpio_keys_platform_data gpio_key_info = {
     .buttons    = gpio_keys,
     .nbuttons   = ARRAY_SIZE(gpio_keys),
 };
- 
+
 struct platform_device keys_gpio = {
     .name   = "gpio-keys",
     .id = -1,
@@ -133,18 +133,14 @@ struct platform_device keys_gpio = {
 #define WLAN_EN GPIO_TO_PIN(5, 8)
 #define WLAN_IRQ GPIO_TO_PIN(5, 14)
 
+//Platform struct set up
 struct wl12xx_platform_data mb_wireless_data = {
-		//.wlan_enable_gpio = WLAN_EN,
 		.irq = -1,
 		.board_ref_clock	= WL12XX_REFCLOCK_38,
 		.platform_quirks	= WL12XX_PLATFORM_QUIRK_EDGE_IRQ,
 };
 
-//TODO figure out where this happens - M. Sterling
-//static struct pinmux_config mb_wireless_pin_mux[] = {
-//
-//};
-//I believe these two do the same function.
+//Pin mux
 static const short mb_wireless_pins[] __initconst = {
 	DA850_MMCSD0_DAT_0,
 	DA850_MMCSD0_DAT_1,
@@ -156,6 +152,7 @@ static const short mb_wireless_pins[] __initconst = {
 	DA850_GPIO5_14,
 	-1
 };
+
 
 static void wl12xx_set_power(int index, bool power_on)
 {
@@ -169,18 +166,17 @@ static void wl12xx_set_power(int index, bool power_on)
 
 	if (power_on) {
 		/* Power up sequence required for wl127x devices */
-		//FIXME this is different in the AM335x board
-		//mdelay(70);
-		//gpio_set_value(mb_wireless_data.wlan_enable_gpio, 1);
-		//mdelay(70);
+		mdelay(70);
 		gpio_set_value(WLAN_EN, 1);
-		usleep_range(15000, 15000);
-		gpio_set_value(WLAN_EN, 0);
-		usleep_range(1000, 1000);
-		gpio_set_value(WLAN_EN, 1);
-		msleep(70);
+		mdelay(70);
+		//Note this power up sequence was for older chips (1251?) that had a power up issue
+		//gpio_set_value(WLAN_EN, 1);
+		//usleep_range(15000, 15000);
+		//gpio_set_value(WLAN_EN, 0);
+		//usleep_range(1000, 1000);
+		//gpio_set_value(WLAN_EN, 1);
+		//msleep(70);
 	} else {
-		//gpio_set_value(mb_wireless_data.wlan_enable_gpio, 0);
 		gpio_set_value(WLAN_EN, 0);
 	}
 }
@@ -191,51 +187,44 @@ static struct davinci_mmc_config mb_wireless_mmc_config = {
 	.max_freq	= 25000000,
 	.caps		= MMC_CAP_4_BIT_DATA | MMC_CAP_NONREMOVABLE |MMC_CAP_POWER_OFF_CARD,
 	.version	= MMC_CTLR_VERSION_2,
-	//FIXME non-removable?
-	//FIXME voltage values?
 };
 
 
 static __init int da850_wl12xx_init(void)
 {
-	//struct device *dev;
-	//struct platform_data *pdata ?
 	int ret;
 
-	//FIXME different order from beaglebone, don't think it matters though
-	//if(wl12xx_set_platform_data(&mb_wireless_data))
-	//	pr_err("%s
-	pr_warn(">>WL1271: Start Pin Mux\n");
+	pr_warn("wl12xx: Start Pin Mux\n");
 	ret = davinci_cfg_reg_list(mb_wireless_pins);
 	if (ret) {
 		pr_err("wl12xx/mmc mux setup failed: %d\n", ret);
 		goto exit;
 	}
 
-	pr_warn(">>WL1271: MMC Register\n");
+	pr_warn("wl12xx: MMC Register\n");
 	ret = da8xx_register_mmcsd0(&mb_wireless_mmc_config);
 	if (ret) {
 		pr_err("wl12xx/mmc registration failed: %d\n", ret);
 		goto exit;
 	}
 
-	pr_warn(">>WL1271: WLAN Enable GPIO\n");
+	pr_warn("wl12xx: WLAN Enable GPIO\n");
 	ret = gpio_request_one(WLAN_EN, GPIOF_OUT_INIT_LOW, "wl12xx_en");
 	if (ret) {
 		pr_err("Could not request wl12xx enable gpio: %d\n", ret);
 		goto exit;
 	}
 
-	pr_warn(">>WL1271: WLAN IRQ register\n");
+	pr_warn("wl12xx: WLAN IRQ register\n");
 	ret = gpio_request_one(WLAN_IRQ, GPIOF_IN, "wl12xx_irq");
 	if (ret) {
 		pr_err("Could not request wl12xx irq gpio: %d\n", ret);
 		goto free_wlan_en;
 	}
 
-	mb_wireless_data.irq = gpio_to_irq(DA850_GPIO5_14);
+	mb_wireless_data.irq = gpio_to_irq(WLAN_IRQ);
 
-	pr_warn(">>WL1271: Set Platform data\n");
+	pr_warn("wl12xx: Set Platform data\n");
 	ret = wl12xx_set_platform_data(&mb_wireless_data);
 	if (ret) {
 		pr_err("Could not set wl12xx data: %d\n", ret);
@@ -262,18 +251,18 @@ static short stepper_pru_pins[] = {
     DA850_PRU0_R30_22,	//x dir
     DA850_PRU0_R30_24,	//x en
     DA850_PRU0_R30_25,	//x vref
-    DA850_GPIO0_13,		//x load
+    DA850_GPIO0_13,	//x load
 
     DA850_PRU0_R30_20,	//y step
     DA850_PRU0_R30_19,	//y dir
     DA850_PRU0_R30_17,	//y en
     DA850_PRU0_R30_16,	//y vref
-    DA850_GPIO0_12,		//y load
+    DA850_GPIO0_12,	//y load
 
     DA850_PRU0_R30_21,	//z step
     DA850_PRU0_R30_5,	//z dir
     DA850_PRU0_R30_4,	//z en
-    DA850_GPIO2_4,		//z load
+    DA850_GPIO2_4,	//z load
 
    -1,
 };
@@ -286,28 +275,28 @@ static short toolhead_spi_pins[] = {
 	DA850_SPI1_CLK, 	//TH CLK
 	DA850_SPI1_SIMO, 	//TH SIMO
 	DA850_SPI1_SCS_0, 	//TH SCS0
-    DA850_PRU0_R31_10,	//TH EXP0 
-    DA850_GPIO2_12,		//TH EXP1
-    DA850_GPIO6_5,		//TH0 5V on
-    DA850_GPIO6_11,		//TH0 12V on
+    	DA850_PRU0_R31_10,	//TH EXP0
+    	DA850_GPIO2_12,		//TH EXP1
+    	DA850_GPIO6_5,		//TH0 5V on
+    	DA850_GPIO6_11,		//TH0 12V on
     -1,
 };
 
 static struct davinci_spi_config toolhead_spi_cfg[] = {
 	{
-    .io_type	= SPI_IO_TYPE_POLL,
-	.c2tdelay	= 8,
-	.t2cdelay	= 8,
+    		.io_type	= SPI_IO_TYPE_POLL,
+		.c2tdelay	= 8,
+		.t2cdelay	= 8,
     },
 };
 
 static struct spi_board_info toolhead_spi_info[] = {
 	{
-		.modalias			= "spidev",
+		.modalias		= "spidev",
 		.controller_data	= &toolhead_spi_cfg,
-		.mode				= SPI_MODE_3,
+		.mode			= SPI_MODE_3,
 		.max_speed_hz		= 1600000,
-		.bus_num			= 1,
+		.bus_num		= 1,
 		.chip_select		= 0,
 	},
 };
@@ -315,13 +304,13 @@ static struct spi_board_info toolhead_spi_info[] = {
 //====================Chamber Heater===============================
 
 static short chamber_heater_pins[] = {
-    DA850_GPIO0_7,
-    DA850_GPIO2_2,
-    DA850_GPIO3_4,
-    DA850_GPIO3_2,
-    DA850_GPIO5_5,
-    DA850_GPIO2_5,
-    -1,
+	DA850_GPIO0_7,	//Chamber heater CLK
+	DA850_GPIO2_2,	//Chamber heater CS
+	DA850_GPIO3_4,	//Chamber heater MISO
+	DA850_GPIO3_2,	//Chamber heater SOMI
+	DA850_GPIO5_5,	//Chamber heater reserved 0
+	DA850_GPIO2_5,	//Chamber heater reserved 1
+	-1,
 };
 
 //====================12V Control=================================
@@ -329,13 +318,12 @@ static short chamber_heater_pins[] = {
 #define DA850_12V_POWER_PIN  GPIO_TO_PIN(0,8)
 
 static short mb_power_pins[] = {
-  DA850_GPIO0_8,  //12V Power
-  DA850_GPIO1_2,  //Power SB Button 
-  DA850_GPIO0_6,  //Power monitor SDA
-  DA850_GPIO0_5,  //Power monitor SCL
-  -1,
+	DA850_GPIO0_8,  	//12V Power
+	DA850_GPIO1_2,  	//Power SB Button
+	DA850_GPIO0_6,  	//Power monitor SDA
+	DA850_GPIO0_5,  	//Power monitor SCL
+	-1,
 };
-
 
 static void da850_12V_power_control(int val)
 {
@@ -353,64 +341,107 @@ static int da850_power_init(void)
 
 	gpio_direction_output(DA850_12V_POWER_PIN, 0);
 
-    da850_12V_power_control(1);
+	da850_12V_power_control(1);
 
 	return 0;
 }
 
 //====================LCD Configuration=================================
 
-#define DA850_LCD_BL_PIN    GPIO_TO_PIN(8, 10)
-#define DA850_LCD_RESET_PIN GPIO_TO_PIN(6, 3)
-#define GPIO_LCD_DISPLAY_TYPE  GPIO_TO_PIN(4, 0)
+#define	LCD_BACKLIGHT		GPIO_TO_PIN(8, 10)
+#define LCD_RESET		GPIO_TO_PIN(6, 3)
+#define LCD_DISPLAY_TYPE	GPIO_TO_PIN(4, 0)
+#define LCD_CLK			GPIO_TO_PIN(6, 2)
+#define LCD_CS			GPIO_TO_PIN(6, 1)
+#define LCD_SIMO		GPIO_TO_PIN(6, 4)
 
-static short mb_lcd_pins[] = {
-  DA850_GPIO6_4,		//LCD SIMO
-  DA850_GPIO6_2,		//LCD SCK
-  DA850_GPIO8_10,		//LCD Backlight
-  DA850_GPIO6_3,		//LCD Reset
-  DA850_GPIO6_1,		//LCD SCS
-  DA850_GPIO4_0,        //LCD Detect Type
-  -1,
+//Pin mux
+static short mb_lcd_spi_pins[] = {
+	DA850_GPIO6_4,		//LCD SIMO
+	DA850_GPIO6_2,		//LCD SCK
+	DA850_GPIO6_1,		//LCD SCS
+	-1,
 };
 
-static struct da8xx_spi_pin_data lcd_spi_gpio_data = {
-    .sck = GPIO_TO_PIN(6, 2),
-    .sdi = GPIO_TO_PIN(6, 4),
-    .cs = GPIO_TO_PIN(6, 1),
+static short mb_lcd_pins[] = {
+	DA850_GPIO6_3,		//LCD Reset
+	DA850_GPIO4_0,        	//LCD Detect Type
+	-1,
+};
+
+static short mb_lcd_backlight_pins[] = {
+	DA850_GPIO8_10,		//LCD Backlight
+	-1,
 };
 
 static short interface_i2c_pins[] = {
 	DA850_I2C0_SDA,
 	DA850_I2C0_SCL,
-    -1,
+	-1,
 };
+
+//Platform data set up
+static struct da8xx_spi_pin_data lcd_spi_gpio_data = {
+	.sck = LCD_CLK,
+	.sdi = LCD_SIMO,
+	.cs = LCD_CS,
+};
+
+struct da8xx_lcdc_spi_platform_data *lcd_pdata;
 
 static struct davinci_i2c_platform_data mb_i2c0_pdata = {
 	.bus_freq	= 400,	/* kHz */
 	.bus_delay	= 0,	/* usec */
 };
 
-//TODO Need LCD backlight control / PWM here
+//FIXME is this going to cause an issue with the GPIO LED below?
+static struct gpio_led mb_lcd_pwm_led[] = {
+	{
+		.name 			= "backlight_pwm_led",
+		.gpio 			= LCD_BACKLIGHT,
+		.default_trigger	= "timer",
+		.default_state 		= LED_GPIO_DEFSTATE_OFF,
+		//.pwm_period_ns = 10000000, //10ms = 100hz
+	},
+};
+
+static struct gpio_led_platform_data mb_lcd_pwm_data = {
+	.num_leds = ARRAY_SIZE(mb_lcd_pwm_led),
+	.leds = mb_lcd_pwm_led,
+};
+
+static struct platform_device mb_lcd_pwm = {
+	.name = "LCD_pwm",
+	.id = 	-1,
+	.dev = 	{
+		.platform_data = &mb_lcd_pwm_data,
+		},
+};
 
 static void da850_panel_power_ctrl(int val)
 {
 	/* lcd backlight */
-	gpio_set_value(DA850_LCD_BL_PIN, val);
+	//TODO set this timer value appropriately
+	//gpio_set_value(LCD_BACKLIGHT, val);
 
-    /* lcd_reset */
-    gpio_set_value(DA850_LCD_RESET_PIN, val);
+	/* lcd_reset */
+	gpio_set_value(LCD_RESET, val);
 
-    pr_warn("switching lcd power to : %d\n", val);
+	pr_warn("switching lcd power to : %d\n", val);
 }
 
-struct da8xx_lcdc_spi_platform_data *lcd_pdata;
 
 static int da850_lcd_hw_init(void)
 {
 	int status;
 
-	status = gpio_request(DA850_LCD_BL_PIN, "lcd backlight\n");
+	pr_info("LCD pinmux backlight\n");
+	status = davinci_cfg_reg_list(mb_lcd_backlight_pins);
+	if (status < 0)
+		return status;
+
+	pr_info("LCD register backlight\n");
+	status = platform_device_register(&mb_lcd_pwm);
 	if (status < 0)
 		return status;
 
