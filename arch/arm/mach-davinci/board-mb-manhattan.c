@@ -32,6 +32,7 @@
 #include <linux/etherdevice.h>
 #include <linux/wl12xx.h>
 #include <linux/wireless.h>
+#include <linux/i2c-gpio.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -322,6 +323,42 @@ static short chamber_heater_pins[] = {
     DA850_GPIO2_5,
     -1,
 };
+
+//====================Power monitor I2C===========================
+static short power_monitor_i2c_pins[] = {
+    DA850_GPIO0_5,        // POWER_SCL
+    DA850_GPIO0_6,        // POWER_SDA
+    -1,
+};
+
+static struct i2c_gpio_platform_data power_monitor_i2c_gpio_pdata = {
+    .sda_pin                = GPIO_TO_PIN(0, 6),   // POWER_SDA
+    .scl_pin                = GPIO_TO_PIN(0, 5),   // POWER_SCL
+    //.sda_is_open_drain    = 1,
+    //.scl_is_open_drain    = 1,
+    //.udelay               = 2,
+};
+
+static struct i2c_board_info power_monitor_i2c_info[] = {
+    {
+        I2C_BOARD_INFO("power_monitor_12_i2c", 0x40),
+        .platform_data = &power_monitor_i2c_gpio_pdata,
+    },
+};
+
+static struct platform_device power_monitor_12v_gpio_i2c_device = {
+    .name                 = "i2c-gpio",
+    .id                   = 3,
+    .dev                  =
+    {
+        .platform_data    = &power_monitor_i2c_gpio_pdata,
+    },
+};
+
+static struct platform_device *power_monitor_devices[] __initdata = {
+    &power_monitor_12v_gpio_i2c_device,
+};
+
 
 //====================12V Control=================================
 
@@ -812,6 +849,18 @@ static __init void mb_manhattan_init(void)
     if (ret)
        pr_warn("%s: SPI 1 registration failed: %d\n", __func__, ret);
 
+    /*Power monitor I2C*/
+        ret = davinci_cfg_reg_list(power_monitor_i2c_pins);
+        if (ret)
+            pr_warn("%s: Power monitor I2C mux setup failed: %d\n", __func__, ret);
+
+        ret = i2c_register_board_info(3, power_monitor_i2c_info, ARRAY_SIZE(power_monitor_i2c_info));
+        if (ret)
+            pr_warn("%s: i2c info registration failed: %d\n", __func__, ret);
+
+        ret = platform_add_devices(power_monitor_devices, ARRAY_SIZE(power_monitor_devices));
+        if (ret)
+            pr_warn("%s: i2c platform add devices failed: %d\n", __func__, ret);
 
 	//TODO Chamber Heater SPI
 	ret = davinci_cfg_reg_list(chamber_heater_pins);		//Configure Chamber heater pins
