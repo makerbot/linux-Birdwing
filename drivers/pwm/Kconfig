@@ -157,7 +157,7 @@ config  PWM_TIEHRPWM
 
 config  PWM_TIPWMSS
 	bool
-	depends on SOC_AM33XX && (PWM_TIEHRPWM || PWM_TIECAP)
+	depends on (SOC_AM33XX || ARCH_DAVINCI_DA850) && (PWM_TIEHRPWM || PWM_TIECAP)
 	help
 	  PWM Subsystem driver support for AM33xx SOC.
 
