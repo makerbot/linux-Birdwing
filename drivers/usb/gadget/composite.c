@@ -1283,7 +1283,7 @@ unknown:
 				if (v->bRequest != ctrl->bRequest)
 					continue;
 				value = v->callback(cdev, req->buf, ctrl);
-				goto done;
+				goto respond;
 			}
 		}
 
@@ -1300,6 +1300,7 @@ unknown:
 		goto done;
 	}
 
+respond:
 	/* respond with data transfer before status phase? */
 	if (value >= 0 && value != USB_GADGET_DELAYED_STATUS) {
 		req->length = value;

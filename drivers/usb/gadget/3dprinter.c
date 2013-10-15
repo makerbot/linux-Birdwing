@@ -95,20 +95,10 @@ static struct printer_dev usb_printer_gadget;
 
 /*-------------------------------------------------------------------------*/
 
-/* DO NOT REUSE THESE IDs with a protocol-incompatible driver!!  Ever!!
- * Instead:  allocate your own, using normal USB-IF procedures.
- */
-
 #define PRINTER3D_VENDOR_NUM	0x23c1		/* Makerbot */
-#define PRINTER3D_PRODUCT_NUM	0x0004		/* Temporary product ID */
 
-/* Some systems will want different product identifiers published in the
- * device descriptor, either numbers or strings or both.  These string
- * parameters are in UTF-8 (superset of ASCII's 7 bit characters).
- */
-
-module_param_named(iSerialNum, coverwrite.serial_number, charp, S_IRUGO);
-MODULE_PARM_DESC(iSerialNum, "1");
+/* This is a placeholder ID that MUST be overwritten with a module parameter */
+#define PRINTER3D_PRODUCT_NUM	0xFFFF
 
 static char *iPNPstring;
 module_param(iPNPstring, charp, S_IRUGO);
@@ -224,9 +214,106 @@ static const struct usb_descriptor_header *otg_desc[] = {
 
 /*-------------------------------------------------------------------------*/
 
-/* Custom non standard descriptors for WCID */
+/* Custom non standard descriptors for WCID.  This will have to be refactored
+ * if we actually want more than one interface for our composite device.
+ */
 
-/*struct*/
+/**
+ * struct ms_compat_id_header - common header for MS os descriptors
+ * @dwLength: The total length of this header and all descriptors that follow.
+ * @bcdVersion: The decriptor version number.
+ *	Set to 0x100, the only version supported here.
+ * @wIndex: The descriptor index, which must be 0x0004
+ * @bCount: The number of descriptors following the header.
+ * @reserved: Must be set to zero.
+ */
+
+struct ms_compat_id_header {
+	__le32		dwLength;
+	__le16		bcdVersion;
+	__le16		wIndex;
+	__u8		bCount;
+	__u8		reserved[7];
+} __attribute__ ((packed));
+
+/**
+ * struct ms_compat_id_descriptor - specify per-interface windows drivers
+ * @bFirstInterfaceNumber: The interface which uses this descriptor's driver.
+ * @reserved1: Must be set to 0x01.
+ * @compatibleID: An ASCII string containing the windows ID of the driver
+ *	to be used.  Max length of 7 characters, pad with \0.
+ * @subCompatibleID: Some drivers require an ASCII sub ID.  When required,
+ *	same rules as the ID.  Otherwise, should be all \0.
+ * @reserved: Must be set to zero.
+ */
+
+struct ms_compat_id_descriptor {
+	__u8		bFirstInterfaceNumber;
+	__u8		reserved1;
+	char		compatibleID[8];
+	char		subCompatibleID[8];
+	__u8		reserved[6];
+} __attribute__ ((packed));
+
+/* A full descriptor for a one interface system */
+struct ms_compat_id_full {
+	struct ms_compat_id_header	header;
+	struct ms_compat_id_descriptor	descriptor;
+} __attribute__ ((packed));
+
+/* A descrptor to select the winusb driver */
+static struct ms_compat_id_full wcid_desc = {
+	.header = {
+		.dwLength = cpu_to_le32(sizeof(wcid_desc)),
+		.bcdVersion = cpu_to_le16(0x100),
+		.wIndex = cpu_to_le16(0x0004),
+		.bCount = 1,
+	},
+	.descriptor = {
+		.bFirstInterfaceNumber = 0,
+		.reserved1 = 1,
+		.compatibleID = "WINUSB",
+	},
+};
+
+static int wcid_callback(struct usb_composite_dev *dev, void *buf,
+		const struct usb_ctrlrequest *ctrl)
+{
+	u16	w_index = le16_to_cpu(ctrl->wIndex);
+	u16	w_length = le16_to_cpu(ctrl->wLength);
+	int	value;
+
+	if (w_index != 0x0004) return -EOPNOTSUPP;
+	value = min(w_length, (u16) sizeof(wcid_desc));
+	memcpy(buf, &wcid_desc, value);
+	return value;
+}
+
+static struct usb_vendor_request wcid_vendor_req = {
+	.bRequest	= 0x20,
+	.callback	= wcid_callback
+};
+
+static struct usb_vendor_request *vendor_requests[] = {
+	&wcid_vendor_req,
+	NULL
+};
+
+/* Note that the trailing space is actually a bMS_VendorCode of 0x20 */
+static char				wcid_str [10] = "MSFT100 ";
+
+/* The address where windows looks for its OS string descriptor */
+#define WCID_STR_IDX 0xEE
+
+static struct usb_string		ms_os_strings [] = {
+	{.s = wcid_str, .id = WCID_STR_IDX},
+	{  }		/* end of list */
+};
+
+static struct usb_gadget_strings	ms_os_stringtab_dev = {
+	.language	= 0,		/* windows' default language */
+	.strings	= ms_os_strings,
+};
 
 /*-------------------------------------------------------------------------*/
 
@@ -236,20 +323,12 @@ static char				product_desc [40] = DRIVER_DESC;
 static char				serial_num [40] = "1";
 static char				pnp_string [1024] =
 	"XXMFG:linux;MDL:g_3dprinter;CLS:PRINTER;SN:1;";
-static char				wcid_str [10] = "MSFT100 ";
-/* Note that the trailing space is actually a bMS_VendorCode of 0x20 */
-
-/* The address where windows looks for its OS string descriptor */
-#define WCID_STRING_IDX 0xEE
-/* The index in strings of the above */
-#define WCID_TAB_IDX 3
 
 /* static strings, in UTF-8 */
 static struct usb_string		strings [] = {
 	[USB_GADGET_MANUFACTURER_IDX].s = "",
 	[USB_GADGET_PRODUCT_IDX].s = product_desc,
 	[USB_GADGET_SERIAL_IDX].s =	serial_num,
-	[WCID_TAB_IDX].s = wcid_str,
 	{  }		/* end of list */
 };
 
@@ -260,6 +339,7 @@ static struct usb_gadget_strings	stringtab_dev = {
 
 static struct usb_gadget_strings *dev_strings[] = {
 	&stringtab_dev,
+	&ms_os_stringtab_dev,
 	NULL,
 };
 
@@ -1325,11 +1405,6 @@ static int __init printer_bind(struct usb_composite_dev *cdev)
 	device_desc.iProduct = strings[USB_GADGET_PRODUCT_IDX].id;
 	device_desc.iSerialNumber = strings[USB_GADGET_SERIAL_IDX].id;
 
-	/* usb_string_ids_tab assigned us a perfectly nice descriptor index
-	   guaranteed not to collide with anything else.  But we have to use
-	   a specific index for WCID: */
-	strings[WCID_TAB_IDX].id = WCID_STRING_IDX;
-
 	ret = usb_add_config(cdev, &printer_cfg_driver, printer_bind_config);
 	if (ret)
 		return ret;
@@ -1338,12 +1413,13 @@ static int __init printer_bind(struct usb_composite_dev *cdev)
 }
 
 static __refdata struct usb_composite_driver printer_driver = {
-	.name           = shortname,
-	.dev            = &device_desc,
-	.strings        = dev_strings,
-	.max_speed      = USB_SPEED_HIGH,
-	.bind		= printer_bind,
-	.unbind		= printer_unbind,
+	.name           	= shortname,
+	.dev            	= &device_desc,
+	.strings        	= dev_strings,
+	.vendor_requests	= vendor_requests,
+	.max_speed      	= USB_SPEED_HIGH,
+	.bind			= printer_bind,
+	.unbind			= printer_unbind,
 };
 
 static int __init
