@@ -1389,7 +1389,7 @@ static int cfb_blank(int blank, struct fb_info *info)
 		//if (par->panel_power_ctrl)
 		//	par->panel_power_ctrl(1);
 
-        msleep(10);
+        msleep(100);
         mb_serializer_compat_par_init(par);
         
 		break;
