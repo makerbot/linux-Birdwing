@@ -511,34 +511,60 @@ static struct platform_device leds_gpio = {
 
 //====================NAND Flash Configuration=================================
 
+#define SZ_400M 0x19000000
+#define SZ_5M   0x00500000
 static struct mtd_partition da850_evm_nandflash_partition[] = {
 	{
 		.name		= "u-boot env",
 		.offset		= 0,
 		.size		= SZ_1M,
-		.mask_flags	= MTD_WRITEABLE,
-	 },
-	{
-		.name		= "UBL",
-		.offset		= MTDPART_OFS_APPEND,
-		.size		= SZ_1M,
-		.mask_flags	= MTD_WRITEABLE,
-	},
-	{
-		.name		= "u-boot",
-		.offset		= 6 * SZ_1M,
-		.size		= SZ_1M,
-		.mask_flags	= MTD_WRITEABLE,
-	},
-	{
-		.name		= "kernel",
-		.offset		= 0x1000000,
-		.size		= SZ_4M,
 		.mask_flags	= 0,
 	},
 	{
-		.name		= "filesystem",
-		.offset		= 0x1500000,
+		.name		= "UBL",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= SZ_5M,
+		.mask_flags	= MTD_WRITEABLE, //readonly
+	},
+	{
+		.name		= "u-boot",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= SZ_5M,
+		.mask_flags	= MTD_WRITEABLE,
+	},
+	{
+		.name		= "u-boot env backup",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= SZ_5M,
+		.mask_flags	= MTD_WRITEABLE,
+	},
+	{
+		.name		= "kernel one",
+		.offset		= 0x1000000,
+		.size		= SZ_8M,
+		.mask_flags	= MTD_WRITEABLE,
+	},
+	{
+		.name		= "kernel two",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= SZ_8M,
+		.mask_flags	= 0,
+	},
+	{
+		.name		= "root filesystem one",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= SZ_400M,
+		.mask_flags	= 0,
+	},
+	{
+		.name		= "root filesystem two",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= SZ_400M,
+		.mask_flags	= 0,
+	},
+	{
+		.name		= "user filesystem",
+		.offset		= MTDPART_OFS_APPEND,
 		.size		= MTDPART_SIZ_FULL,
 		.mask_flags	= 0,
 	},
