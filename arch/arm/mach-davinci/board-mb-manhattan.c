@@ -511,7 +511,7 @@ static struct platform_device leds_gpio = {
 
 //====================NAND Flash Configuration=================================
 
-#define SZ_400M 0x19000000
+#define SZ_416M 0x1A000000
 #define SZ_5M   0x00500000
 static struct mtd_partition da850_evm_nandflash_partition[] = {
 	{
@@ -542,7 +542,7 @@ static struct mtd_partition da850_evm_nandflash_partition[] = {
 		.name		= "kernel one",
 		.offset		= 0x1000000,
 		.size		= SZ_8M,
-		.mask_flags	= MTD_WRITEABLE,
+		.mask_flags	= 0,
 	},
 	{
 		.name		= "kernel two",
@@ -553,13 +553,13 @@ static struct mtd_partition da850_evm_nandflash_partition[] = {
 	{
 		.name		= "root filesystem one",
 		.offset		= MTDPART_OFS_APPEND,
-		.size		= SZ_400M,
+		.size		= SZ_416M,
 		.mask_flags	= 0,
 	},
 	{
 		.name		= "root filesystem two",
 		.offset		= MTDPART_OFS_APPEND,
-		.size		= SZ_400M,
+		.size		= SZ_416M,
 		.mask_flags	= 0,
 	},
 	{
