@@ -32,8 +32,8 @@
 #include <linux/etherdevice.h>
 #include <linux/wl12xx.h>
 #include <linux/wireless.h>
-#include <linux/i2c-gpio.h>
 #include <linux/leds.h>
+//#include <linux/led_pwm.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -314,42 +314,6 @@ static short chamber_heater_pins[] = {
 	-1,
 };
 
-//====================Power monitor I2C===========================
-static short power_monitor_i2c_pins[] = {
-    DA850_GPIO0_5,        // POWER_SCL
-    DA850_GPIO0_6,        // POWER_SDA
-    -1,
-};
-
-static struct i2c_gpio_platform_data power_monitor_i2c_gpio_pdata = {
-    .sda_pin                = GPIO_TO_PIN(0, 6),   // POWER_SDA
-    .scl_pin                = GPIO_TO_PIN(0, 5),   // POWER_SCL
-    //.sda_is_open_drain    = 1,
-    //.scl_is_open_drain    = 1,
-    //.udelay               = 2,
-};
-
-static struct i2c_board_info power_monitor_i2c_info[] = {
-    {
-        I2C_BOARD_INFO("power_monitor_12_i2c", 0x40),
-        .platform_data = &power_monitor_i2c_gpio_pdata,
-    },
-};
-
-static struct platform_device power_monitor_12v_gpio_i2c_device = {
-    .name                 = "i2c-gpio",
-    .id                   = 3,
-    .dev                  =
-    {
-        .platform_data    = &power_monitor_i2c_gpio_pdata,
-    },
-};
-
-static struct platform_device *power_monitor_devices[] __initdata = {
-    &power_monitor_12v_gpio_i2c_device,
-};
-
-
 //====================12V Control=================================
 
 #define DA850_12V_POWER_PIN  GPIO_TO_PIN(0,8)
@@ -392,15 +356,26 @@ static int da850_power_init(void)
 #define LCD_CS			GPIO_TO_PIN(6, 1)
 #define LCD_SIMO		GPIO_TO_PIN(6, 4)
 
-static short mb_lcd_pins[] = {
-	DA850_GPIO6_3,		//LCD Reset
-    DA850_GPIO4_0,      //LCD Detect Type
-	DA850_GPIO8_10,		//LCD Backlight
+//Pin mux
+static short mb_lcd_spi_pins[] = {
 	DA850_GPIO6_4,		//LCD SIMO
 	DA850_GPIO6_2,		//LCD SCK
 	DA850_GPIO6_1,		//LCD SCS
 	-1,
 };
+
+static short mb_lcd_pins[] = {
+	DA850_GPIO6_3,		//LCD Reset
+	DA850_GPIO4_0,        	//LCD Detect Type
+	DA850_GPIO8_10,		//LCD Backlight (GPIO)
+	DA850_GPIO6_14,		//Status LED
+	-1,
+};
+
+//static short mb_lcd_backlight_pins[] = {
+//	DA850_GPIO8_10,		//LCD Backlight
+//	-1,
+//};
 
 static short interface_i2c_pins[] = {
 	DA850_I2C0_SDA,
@@ -418,14 +393,32 @@ static struct da8xx_spi_pin_data lcd_spi_gpio_data = {
 struct da8xx_lcdc_spi_platform_data *lcd_pdata;
 
 static struct davinci_i2c_platform_data mb_i2c0_pdata = {
-	.bus_freq	= 100,	/* kHz */
+	.bus_freq	= 400,	/* kHz */
 	.bus_delay	= 0,	/* usec */
 };
+
+//FIXME is this going to cause an issue with the GPIO LED below?
+//static struct gpio_led mb_lcd_pwm_led[] = {
+//};
+//
+//static struct gpio_led_platform_data mb_lcd_pwm_data = {
+//	.num_leds = ARRAY_SIZE(mb_lcd_pwm_led),
+//	.leds = mb_lcd_pwm_led,
+//};
+//
+//static struct platform_device mb_lcd_pwm = {
+//	.name = "LCD_pwm",
+//	.id = 	-1,
+//	.dev = 	{
+//		.platform_data = &mb_lcd_pwm_data,
+//		},
+//};
 
 static void da850_panel_power_ctrl(int val)
 {
 	/* lcd backlight */
-	gpio_set_value(LCD_BACKLIGHT, val);
+	//TODO set this timer value appropriately
+	//gpio_set_value(LCD_BACKLIGHT, val);
 
 	/* lcd_reset */
 	gpio_set_value(LCD_RESET, val);
@@ -437,6 +430,27 @@ static void da850_panel_power_ctrl(int val)
 static int da850_lcd_hw_init(void)
 {
 	int status;
+
+//	pr_info("LCD pinmux backlight\n");
+//	status = davinci_cfg_reg_list(mb_lcd_backlight_pins);
+//	if (status < 0)
+//		return status;
+//
+//	pr_info("LCD register backlight\n");
+//	status = platform_device_register(&mb_lcd_pwm);
+//	if (status < 0)
+//		return status;
+
+//	gpio_direction_output(LCD_BACKLIGHT, 0);
+	pr_info("LCD: register LED1\n");
+	status = gpio_request(GPIO_TO_PIN(6,14), "LED1\n");
+	if(status < 0)
+		return status;
+
+	pr_info("LCD: register backlight\n");
+	status = gpio_request(LCD_BACKLIGHT, "lcd backlight\n");
+	if(status < 0)
+		return status;
 
 	gpio_direction_output(LCD_BACKLIGHT, 0);
 
@@ -472,8 +486,7 @@ static int da850_lcd_hw_init(void)
 //====================LED Indicator Configuration=================================
 
 const short mb_manhattan_led_pins[] = {
-	DA850_GPIO6_14,		//Status LED
-	DA850_GPIO8_10,		//LCD Backlight
+	//DA850_GPIO8_10,		//LCD Backlight
 	DA850_PRU0_R30_14,	//PRU LED0
 	DA850_PRU0_R30_13,	//PRU LED1
     -1
@@ -487,13 +500,13 @@ static struct gpio_led gpio_leds[] = {
 		.default_trigger= "heartbeat",
 	 },
 
-	{
-		.name 			= "backlight_pwm_led",
-		.gpio 			= LCD_BACKLIGHT,
-		.default_trigger	= "timer",
-		.default_state 		= 0,		//default to off state
-		//.pwm_period_ns = 10000000, //10ms = 100hz
-	},
+	//{
+	//	.name 			= "backlight_pwm_led",
+	//	.gpio 			= LCD_BACKLIGHT,
+	//	.default_trigger	= "timer",
+	//	.default_state 		= 0,		//default to off state
+	//	//.pwm_period_ns = 10000000, //10ms = 100hz
+	//},
 
 };
 
@@ -512,60 +525,34 @@ static struct platform_device leds_gpio = {
 
 //====================NAND Flash Configuration=================================
 
-#define SZ_416M 0x1A000000
-#define SZ_5M   0x00500000
 static struct mtd_partition da850_evm_nandflash_partition[] = {
 	{
 		.name		= "u-boot env",
 		.offset		= 0,
 		.size		= SZ_1M,
-		.mask_flags	= 0,
-	},
+		.mask_flags	= MTD_WRITEABLE,
+	 },
 	{
 		.name		= "UBL",
 		.offset		= MTDPART_OFS_APPEND,
-		.size		= SZ_5M,
-		.mask_flags	= MTD_WRITEABLE, //readonly
+		.size		= SZ_1M,
+		.mask_flags	= MTD_WRITEABLE,
 	},
 	{
 		.name		= "u-boot",
-		.offset		= MTDPART_OFS_APPEND,
-		.size		= SZ_5M,
+		.offset		= 6 * SZ_1M,
+		.size		= SZ_1M,
 		.mask_flags	= MTD_WRITEABLE,
 	},
 	{
-		.name		= "u-boot env backup",
-		.offset		= MTDPART_OFS_APPEND,
-		.size		= SZ_5M,
-		.mask_flags	= MTD_WRITEABLE,
-	},
-	{
-		.name		= "kernel one",
+		.name		= "kernel",
 		.offset		= 0x1000000,
-		.size		= SZ_8M,
+		.size		= SZ_4M,
 		.mask_flags	= 0,
 	},
 	{
-		.name		= "kernel two",
-		.offset		= MTDPART_OFS_APPEND,
-		.size		= SZ_8M,
-		.mask_flags	= 0,
-	},
-	{
-		.name		= "root filesystem one",
-		.offset		= MTDPART_OFS_APPEND,
-		.size		= SZ_416M,
-		.mask_flags	= 0,
-	},
-	{
-		.name		= "root filesystem two",
-		.offset		= MTDPART_OFS_APPEND,
-		.size		= SZ_416M,
-		.mask_flags	= 0,
-	},
-	{
-		.name		= "user filesystem",
-		.offset		= MTDPART_OFS_APPEND,
+		.name		= "filesystem",
+		.offset		= 0x1500000,
 		.size		= MTDPART_SIZ_FULL,
 		.mask_flags	= 0,
 	},
@@ -672,30 +659,29 @@ static __init void mb_manhattan_config_emac(void)
 
 	soc_info->emac_pdata->phy_id = MANHATTAN_PHY_ID;
 
-    // get mac address
-    ptr = strstr(boot_command_line, "eth=");
+	// get mac address
+	ptr = strstr(boot_command_line, "eth=");
 
-    if (ptr) {
-        memcpy(eth, ptr+4, 17*sizeof(char));
+	if (ptr) {
+		memcpy(eth, ptr+4, 17*sizeof(char));
         eth_ptr = eth;
         for (mac_byte_counter = 0; mac_byte_counter <= 5; mac_byte_counter ++) {
             mac_bytes[0] = *eth_ptr;
             mac_bytes[1] = *(eth_ptr + 1);
             ret = kstrtol(mac_bytes, 16, &temp_long);
-            if (ret) { 
+            if (ret) {
                 pr_warn("Error parsing mac address: %d\n", ret);
             }else {
                 mac_addr[mac_byte_counter] = (uint8_t)(temp_long);
-            }            
+            }
             //pr_warn( "mac_addr:%d %2x\n", mac_byte_counter, mac_addr[mac_byte_counter] );
             eth_ptr+=3; /* skip ":" in  eth*/
         }
-        
     }
     if (is_valid_ether_addr(mac_addr)) {
         //pr_warn("valid ethernet addr received from init\n");
         memcpy(da8xx_emac_pdata.mac_addr, mac_addr, ETH_ALEN);
-    } 
+    }
 
 	ret = da8xx_register_emac();
 	if (ret)
@@ -872,22 +858,9 @@ static __init void mb_manhattan_init(void)
 	if (ret)
 		pr_warn("%s: spi info registration failed: %d\n", __func__, ret);
 
-    ret = da8xx_register_spi_bus(1,1);
-    if (ret)
-       pr_warn("%s: SPI 1 registration failed: %d\n", __func__, ret);
-
-    /*Power monitor I2C*/
-    ret = davinci_cfg_reg_list(power_monitor_i2c_pins);
-    if (ret)
-        pr_warn("%s: Power monitor I2C mux setup failed: %d\n", __func__, ret);
-
-    ret = i2c_register_board_info(3, power_monitor_i2c_info, ARRAY_SIZE(power_monitor_i2c_info));
-    if (ret)
-        pr_warn("%s: i2c info registration failed: %d\n", __func__, ret);
-
-    ret = platform_add_devices(power_monitor_devices, ARRAY_SIZE(power_monitor_devices));
-    if (ret)
-        pr_warn("%s: i2c platform add devices failed: %d\n", __func__, ret);
+	ret = da8xx_register_spi_bus(1,1);
+	if (ret)
+		pr_warn("%s: SPI 1 registration failed: %d\n", __func__, ret);
 
 	//TODO Chamber Heater SPI
 	ret = davinci_cfg_reg_list(chamber_heater_pins);		//Configure Chamber heater pins
@@ -909,7 +882,6 @@ static __init void mb_manhattan_init(void)
 
 	lcd_pdata->panel_power_ctrl = da850_panel_power_ctrl,		//Tell kernel what function to use for power control
 	lcd_pdata->spi = &lcd_spi_gpio_data;						//Tell the kerenl which spi to use
-	
 	ret = da8xx_register_lcdc_spi(lcd_pdata);
 	if (ret)
 		pr_warn("%s: LCDC registration failed: %d\n", __func__, ret);
@@ -928,13 +900,13 @@ static __init void mb_manhattan_init(void)
 		pr_warn("%s: watchdog registration failed: %d\n", __func__, ret);
 
 	/*LEDs*/
-	ret = davinci_cfg_reg_list(mb_manhattan_led_pins);			//Configure LED pins
-	if (ret)
-		pr_warn("mb_manhattan_init: LED pinmux failed: %d\n", ret);
-
-    	ret = platform_device_register(&leds_gpio);						//Register LED pin
-	if (ret)
-		pr_warn("da850_evm_init: led device initialization failed: %d\n", ret);
+//	ret = davinci_cfg_reg_list(mb_manhattan_led_pins);			//Configure LED pins
+//	if (ret)
+//		pr_warn("mb_manhattan_init: LED pinmux failed: %d\n", ret);
+//
+//  	ret = platform_device_register(&leds_gpio);						//Register LED pin
+//	if (ret)
+//		pr_warn("da850_evm_init: led device initialization failed: %d\n", ret);
 
 	/* Setup alternate events on the PRUs */
 	cfgchip3 = __raw_readl(DA8XX_SYSCFG0_VIRT(DA8XX_CFGCHIP3_REG));		//Read from one of the base registers
