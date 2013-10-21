@@ -432,7 +432,7 @@ static struct led_pwm mb_lcd_backlight[] = {
 		.name		= "LCD Backlight",
 		.pwm_id		= 1,
 		.max_brightness	= 255,			//TODO check this, should be ok
-		.pwm_period_ns	= 7 812 500,	//7msec? sure.
+		.pwm_period_ns	= 7812500,	//7msec? sure.
 	},
 };
 
