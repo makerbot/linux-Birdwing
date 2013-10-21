@@ -276,16 +276,16 @@ static short toolhead_spi_pins[] = {
 	DA850_SPI1_CLK, 	//TH CLK
 	DA850_SPI1_SIMO, 	//TH SIMO
 	DA850_SPI1_SCS_0, 	//TH SCS0
-    	DA850_PRU0_R31_10,	//TH EXP0
-    	DA850_GPIO2_12,		//TH EXP1
-    	DA850_GPIO6_5,		//TH0 5V on
-    	DA850_GPIO6_11,		//TH0 12V on
+    DA850_PRU0_R31_10,	//TH EXP0
+    DA850_GPIO2_12,		//TH EXP1
+    DA850_GPIO6_5,		//TH0 5V on
+    DA850_GPIO6_11,		//TH0 12V on
     -1,
 };
 
 static struct davinci_spi_config toolhead_spi_cfg[] = {
 	{
-    		.io_type	= SPI_IO_TYPE_POLL,
+        .io_type	= SPI_IO_TYPE_POLL,
 		.c2tdelay	= 8,
 		.t2cdelay	= 8,
     },
@@ -439,11 +439,6 @@ static int da850_lcd_hw_init(void)
 {
 	int status;
 
-	pr_info("LCD: register LED1\n");
-	status = gpio_request(GPIO_TO_PIN(6,14), "LED1\n");
-	if(status < 0)
-		return status;
-
 	pr_info("LCD: register backlight\n");
 	status = gpio_request(LCD_BACKLIGHT, "lcd backlight\n");
 	if(status < 0)
@@ -513,34 +508,60 @@ static struct platform_device leds_gpio = {
 
 //====================NAND Flash Configuration=================================
 
+#define SZ_416M 0x1A000000
+#define SZ_5M   0x00500000
 static struct mtd_partition da850_evm_nandflash_partition[] = {
 	{
 		.name		= "u-boot env",
 		.offset		= 0,
 		.size		= SZ_1M,
-		.mask_flags	= MTD_WRITEABLE,
-	 },
-	{
-		.name		= "UBL",
-		.offset		= MTDPART_OFS_APPEND,
-		.size		= SZ_1M,
-		.mask_flags	= MTD_WRITEABLE,
-	},
-	{
-		.name		= "u-boot",
-		.offset		= 6 * SZ_1M,
-		.size		= SZ_1M,
-		.mask_flags	= MTD_WRITEABLE,
-	},
-	{
-		.name		= "kernel",
-		.offset		= 0x1000000,
-		.size		= SZ_4M,
 		.mask_flags	= 0,
 	},
 	{
-		.name		= "filesystem",
-		.offset		= 0x1500000,
+		.name		= "UBL",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= SZ_5M,
+		.mask_flags	= MTD_WRITEABLE, //readonly
+	},
+	{
+		.name		= "u-boot",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= SZ_5M,
+		.mask_flags	= MTD_WRITEABLE,
+	},
+	{
+		.name		= "u-boot env backup",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= SZ_5M,
+		.mask_flags	= MTD_WRITEABLE,
+	},
+	{
+		.name		= "kernel one",
+		.offset		= 0x1000000,
+		.size		= SZ_8M,
+		.mask_flags	= 0,
+	},
+	{
+		.name		= "kernel two",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= SZ_8M,
+		.mask_flags	= 0,
+	},
+	{
+		.name		= "root filesystem one",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= SZ_416M,
+		.mask_flags	= 0,
+	},
+	{
+		.name		= "root filesystem two",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= SZ_416M,
+		.mask_flags	= 0,
+	},
+	{
+		.name		= "user filesystem",
+		.offset		= MTDPART_OFS_APPEND,
 		.size		= MTDPART_SIZ_FULL,
 		.mask_flags	= 0,
 	},
@@ -591,10 +612,6 @@ static struct platform_device da850_evm_nandflash_device = {
 static struct platform_device *da850_evm_devices[] = {
 	&da850_evm_nandflash_device,
 };
-
-//TODO these appear to be used for nothing
-//#define DA8XX_AEMIF_CE2CFG_OFFSET	0x10
-//#define DA8XX_AEMIF_ASIZE_16BIT		0x1
 
 //====================Ethernet Configuration=================================
 
@@ -901,13 +918,13 @@ static __init void mb_manhattan_init(void)
 		pr_warn("%s: watchdog registration failed: %d\n", __func__, ret);
 
 	/*LEDs*/
-//	ret = davinci_cfg_reg_list(mb_manhattan_led_pins);			//Configure LED pins
-//	if (ret)
-//		pr_warn("mb_manhattan_init: LED pinmux failed: %d\n", ret);
-//
-//  	ret = platform_device_register(&leds_gpio);						//Register LED pin
-//	if (ret)
-//		pr_warn("da850_evm_init: led device initialization failed: %d\n", ret);
+	ret = davinci_cfg_reg_list(mb_manhattan_led_pins);			//Configure LED pins
+	if (ret)
+		pr_warn("mb_manhattan_init: LED pinmux failed: %d\n", ret);
+
+  	ret = platform_device_register(&leds_gpio);						//Register LED pin
+	if (ret)
+		pr_warn("da850_evm_init: led device initialization failed: %d\n", ret);
 
 	/* Setup alternate events on the PRUs */
 	cfgchip3 = __raw_readl(DA8XX_SYSCFG0_VIRT(DA8XX_CFGCHIP3_REG));		//Read from one of the base registers
