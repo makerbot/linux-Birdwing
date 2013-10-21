@@ -33,7 +33,7 @@
 #include <linux/wl12xx.h>
 #include <linux/wireless.h>
 #include <linux/leds.h>
-//#include <linux/led_pwm.h>
+#include <linux/i2c-gpio.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -314,6 +314,42 @@ static short chamber_heater_pins[] = {
 	-1,
 };
 
+//====================Power monitor I2C===========================
+static short power_monitor_i2c_pins[] = {
+    DA850_GPIO0_5,        // POWER_SCL
+    DA850_GPIO0_6,        // POWER_SDA
+    -1,
+};
+
+static struct i2c_gpio_platform_data power_monitor_i2c_gpio_pdata = {
+    .sda_pin                = GPIO_TO_PIN(0, 6),   // POWER_SDA
+    .scl_pin                = GPIO_TO_PIN(0, 5),   // POWER_SCL
+    //.sda_is_open_drain    = 1,
+    //.scl_is_open_drain    = 1,
+    //.udelay               = 2,
+};
+
+static struct i2c_board_info power_monitor_i2c_info[] = {
+    {
+        I2C_BOARD_INFO("power_monitor_12_i2c", 0x40),
+        .platform_data = &power_monitor_i2c_gpio_pdata,
+    },
+};
+
+static struct platform_device power_monitor_12v_gpio_i2c_device = {
+    .name                 = "i2c-gpio",
+    .id                   = 3,
+    .dev                  =
+    {
+        .platform_data    = &power_monitor_i2c_gpio_pdata,
+    },
+};
+
+static struct platform_device *power_monitor_devices[] __initdata = {
+    &power_monitor_12v_gpio_i2c_device,
+};
+
+
 //====================12V Control=================================
 
 #define DA850_12V_POWER_PIN  GPIO_TO_PIN(0,8)
@@ -356,26 +392,15 @@ static int da850_power_init(void)
 #define LCD_CS			GPIO_TO_PIN(6, 1)
 #define LCD_SIMO		GPIO_TO_PIN(6, 4)
 
-//Pin mux
-static short mb_lcd_spi_pins[] = {
+static short mb_lcd_pins[] = {
+	DA850_GPIO6_3,		//LCD Reset
+	DA850_GPIO4_0,      //LCD Detect Type
+	DA850_GPIO8_10,		//LCD Backlight (GPIO)
 	DA850_GPIO6_4,		//LCD SIMO
 	DA850_GPIO6_2,		//LCD SCK
 	DA850_GPIO6_1,		//LCD SCS
 	-1,
 };
-
-static short mb_lcd_pins[] = {
-	DA850_GPIO6_3,		//LCD Reset
-	DA850_GPIO4_0,        	//LCD Detect Type
-	DA850_GPIO8_10,		//LCD Backlight (GPIO)
-	DA850_GPIO6_14,		//Status LED
-	-1,
-};
-
-//static short mb_lcd_backlight_pins[] = {
-//	DA850_GPIO8_10,		//LCD Backlight
-//	-1,
-//};
 
 static short interface_i2c_pins[] = {
 	DA850_I2C0_SDA,
@@ -397,28 +422,11 @@ static struct davinci_i2c_platform_data mb_i2c0_pdata = {
 	.bus_delay	= 0,	/* usec */
 };
 
-//FIXME is this going to cause an issue with the GPIO LED below?
-//static struct gpio_led mb_lcd_pwm_led[] = {
-//};
-//
-//static struct gpio_led_platform_data mb_lcd_pwm_data = {
-//	.num_leds = ARRAY_SIZE(mb_lcd_pwm_led),
-//	.leds = mb_lcd_pwm_led,
-//};
-//
-//static struct platform_device mb_lcd_pwm = {
-//	.name = "LCD_pwm",
-//	.id = 	-1,
-//	.dev = 	{
-//		.platform_data = &mb_lcd_pwm_data,
-//		},
-//};
 
 static void da850_panel_power_ctrl(int val)
 {
 	/* lcd backlight */
-	//TODO set this timer value appropriately
-	//gpio_set_value(LCD_BACKLIGHT, val);
+	gpio_set_value(LCD_BACKLIGHT, val);
 
 	/* lcd_reset */
 	gpio_set_value(LCD_RESET, val);
@@ -431,17 +439,6 @@ static int da850_lcd_hw_init(void)
 {
 	int status;
 
-//	pr_info("LCD pinmux backlight\n");
-//	status = davinci_cfg_reg_list(mb_lcd_backlight_pins);
-//	if (status < 0)
-//		return status;
-//
-//	pr_info("LCD register backlight\n");
-//	status = platform_device_register(&mb_lcd_pwm);
-//	if (status < 0)
-//		return status;
-
-//	gpio_direction_output(LCD_BACKLIGHT, 0);
 	pr_info("LCD: register LED1\n");
 	status = gpio_request(GPIO_TO_PIN(6,14), "LED1\n");
 	if(status < 0)
@@ -486,7 +483,7 @@ static int da850_lcd_hw_init(void)
 //====================LED Indicator Configuration=================================
 
 const short mb_manhattan_led_pins[] = {
-	//DA850_GPIO8_10,		//LCD Backlight
+	DA850_GPIO6_14,		//LED Status
 	DA850_PRU0_R30_14,	//PRU LED0
 	DA850_PRU0_R30_13,	//PRU LED1
     -1
@@ -498,16 +495,7 @@ static struct gpio_led gpio_leds[] = {
 		.name           = "Kernel_Status",
 		.gpio           = GPIO_TO_PIN(6,14),
 		.default_trigger= "heartbeat",
-	 },
-
-	//{
-	//	.name 			= "backlight_pwm_led",
-	//	.gpio 			= LCD_BACKLIGHT,
-	//	.default_trigger	= "timer",
-	//	.default_state 		= 0,		//default to off state
-	//	//.pwm_period_ns = 10000000, //10ms = 100hz
-	//},
-
+	},
 };
 
 static struct gpio_led_platform_data gpio_led_info = {
@@ -861,6 +849,19 @@ static __init void mb_manhattan_init(void)
 	ret = da8xx_register_spi_bus(1,1);
 	if (ret)
 		pr_warn("%s: SPI 1 registration failed: %d\n", __func__, ret);
+
+    /*Power monitor I2C*/
+    ret = davinci_cfg_reg_list(power_monitor_i2c_pins);
+    if (ret)
+        pr_warn("%s: Power monitor I2C mux setup failed: %d\n", __func__, ret);
+
+    ret = i2c_register_board_info(3, power_monitor_i2c_info, ARRAY_SIZE(power_monitor_i2c_info));
+    if (ret)
+        pr_warn("%s: i2c info registration failed: %d\n", __func__, ret);
+
+    ret = platform_add_devices(power_monitor_devices, ARRAY_SIZE(power_monitor_devices));
+    if (ret)
+        pr_warn("%s: i2c platform add devices failed: %d\n", __func__, ret);
 
 	//TODO Chamber Heater SPI
 	ret = davinci_cfg_reg_list(chamber_heater_pins);		//Configure Chamber heater pins
