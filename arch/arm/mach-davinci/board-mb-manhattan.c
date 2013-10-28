@@ -276,16 +276,16 @@ static short toolhead_spi_pins[] = {
 	DA850_SPI1_CLK, 	//TH CLK
 	DA850_SPI1_SIMO, 	//TH SIMO
 	DA850_SPI1_SCS_0, 	//TH SCS0
-    DA850_PRU0_R31_10,	//TH EXP0
-    DA850_GPIO2_12,		//TH EXP1
-    DA850_GPIO6_5,		//TH0 5V on
-    DA850_GPIO6_11,		//TH0 12V on
+    	DA850_PRU0_R31_10,	//TH EXP0
+   	DA850_GPIO2_12,		//TH EXP1
+   	DA850_GPIO6_5,		//TH0 5V on
+    	DA850_GPIO6_11,		//TH0 12V on
     -1,
 };
 
 static struct davinci_spi_config toolhead_spi_cfg[] = {
 	{
-        .io_type	= SPI_IO_TYPE_POLL,
+        	.io_type	= SPI_IO_TYPE_POLL,
 		.c2tdelay	= 8,
 		.t2cdelay	= 8,
     },
@@ -324,8 +324,8 @@ static short chamber_heater_pins[] = {
 static struct spi_gpio_platform_data chamber_heater_pdata = {
         .miso                = CH_MISO,
         .mosi                = CH_MOSI,
-        .sck                = CH_SCK,
-        .num_chipselect        = 1,
+        .sck                 = CH_SCK,
+        .num_chipselect      = 1,
 };
 
 static struct platform_device chamber_heater_device = {
@@ -338,8 +338,8 @@ static struct spi_board_info chamber_heater_info[] ={
         {
                 .modalias           = "spidev",
                 .controller_data    = (void *)CH_CS,
-                .mode               = SPI_MODE_3,        //TODO check this for xmega
-                .max_speed_hz       = 1000000,         //1Mhz
+                .mode               = SPI_MODE_0,     //Mode 0 for Gowanus Rev A
+                .max_speed_hz       = 100000,         //100Khz, above this the ATtiny24 USI module starts getting bad data
                 .bus_num            = 2,
                 .chip_select        = 0,
         },
@@ -936,17 +936,17 @@ static __init void mb_manhattan_init(void)
 	platform_add_devices(da850_evm_devices, ARRAY_SIZE(da850_evm_devices));		//add NAND storage
 
 	/*Toolhead SPI*/
-	ret = davinci_cfg_reg_list(toolhead_spi_pins);								//Configure Toolhead Pins
-	if (ret)
-		pr_warn("%s: Toolhead spi mux setup failed: %d\n", __func__, ret);
+	//ret = davinci_cfg_reg_list(toolhead_spi_pins);								//Configure Toolhead Pins
+	//if (ret)
+	//	pr_warn("%s: Toolhead spi mux setup failed: %d\n", __func__, ret);
 
-	ret = spi_register_board_info(toolhead_spi_info, ARRAY_SIZE(toolhead_spi_info));	//Register the pins
-	if (ret)
-		pr_warn("%s: spi info registration failed: %d\n", __func__, ret);
+	//ret = spi_register_board_info(toolhead_spi_info, ARRAY_SIZE(toolhead_spi_info));	//Register the pins
+	//if (ret)
+	//	pr_warn("%s: spi info registration failed: %d\n", __func__, ret);
 
-	ret = da8xx_register_spi_bus(1,1);
-	if (ret)
-		pr_warn("%s: SPI 1 registration failed: %d\n", __func__, ret);
+	//ret = da8xx_register_spi_bus(1,1);
+	//if (ret)
+	//	pr_warn("%s: SPI 1 registration failed: %d\n", __func__, ret);
 
     /*Power monitor I2C*/
     ret = davinci_cfg_reg_list(power_monitor_i2c_pins);
