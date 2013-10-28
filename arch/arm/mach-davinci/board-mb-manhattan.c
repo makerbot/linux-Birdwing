@@ -304,6 +304,13 @@ static struct spi_board_info toolhead_spi_info[] = {
 
 //====================Chamber Heater===============================
 
+#define CH_MISO     GPIO_TO_PIN(3, 4)
+#define CH_MOSI     GPIO_TO_PIN(3, 2)
+#define CH_SCK      GPIO_TO_PIN(0, 7)
+#define CH_CS       GPIO_TO_PIN(2, 2)
+#define CH_RSV0     GPIO_TO_PIN(5, 5)
+#define CH_RSV1     GPIO_TO_PIN(2, 5)
+
 static short chamber_heater_pins[] = {
 	DA850_GPIO0_7,	//Chamber heater CLK
 	DA850_GPIO2_2,	//Chamber heater CS
@@ -313,6 +320,80 @@ static short chamber_heater_pins[] = {
 	DA850_GPIO2_5,	//Chamber heater reserved 1
 	-1,
 };
+
+static struct spi_gpio_platform_data chamber_heater_pdata = {
+        .miso                = CH_MISO,
+        .mosi                = CH_MOSI,
+        .sck                = CH_SCK,
+        .num_chipselect        = 1,
+};
+
+static struct platform_device chamber_heater_device = {
+        .name              = "spi_gpio",
+        .id                = 2,
+        .dev.platform_data = &chamber_heater_pdata,
+};
+
+static struct spi_board_info chamber_heater_info[] ={
+        {
+                .modalias           = "spidev",
+                .controller_data    = (void *)CH_CS,
+                .mode               = SPI_MODE_3,        //TODO check this for xmega
+                .max_speed_hz       = 1000000,         //1Mhz
+                .bus_num            = 2,
+                .chip_select        = 0,
+        },
+};
+
+static __init int chamber_heater_init(void){
+
+        int ret;
+
+        pr_info("Chamber heater pin mux\n");
+        ret = davinci_cfg_reg_list(chamber_heater_pins);
+        if(ret){
+                pr_err("ERROR pin mux setup failed: %d\n", ret);
+                goto exit;
+        }
+
+        pr_info("Chamber heater SPIDEV register\n");
+        ret = spi_register_board_info(chamber_heater_info, ARRAY_SIZE(chamber_heater_info));
+        if (ret) {
+                pr_err("ERROR SPIDEV registration failed %d\n", ret);
+                goto exit;
+        }
+
+        pr_info("Chamber heater platform register\n");
+        ret = platform_device_register(&chamber_heater_device);
+        if(ret){
+                pr_warn("ERROR platform device registration failed %d\n", ret);
+                goto exit;
+        }
+
+        pr_info("Chamber heater register RSV0\n");
+        ret = gpio_request_one(CH_RSV0, GPIOF_OUT_INIT_LOW, "ch_rsv0");
+        if(ret){
+                pr_err("ERROR could not request chamber heater RSV0 gpio %d\n", ret);
+                goto free_ch_rsv0;
+        }
+
+        pr_info("Chamber heater register RSV1\n");
+        ret = gpio_request_one(CH_RSV1, GPIOF_OUT_INIT_LOW, "ch_rsv1");
+        if(ret){
+                pr_err("ERROR could not request chamber heater RSV1 gpio %d\n", ret);
+                goto free_ch_rsv1;
+        }
+
+        return 0;
+free_ch_rsv1:
+        gpio_free(CH_RSV1);
+free_ch_rsv0:
+        gpio_free(CH_RSV0);
+exit:
+        return ret;
+
+}
+
 
 //====================Power monitor I2C===========================
 static short power_monitor_i2c_pins[] = {
@@ -880,10 +961,10 @@ static __init void mb_manhattan_init(void)
     if (ret)
         pr_warn("%s: i2c platform add devices failed: %d\n", __func__, ret);
 
-	//TODO Chamber Heater SPI
-	ret = davinci_cfg_reg_list(chamber_heater_pins);		//Configure Chamber heater pins
-	if (ret)
-		pr_warn("%s: Chamber heater pins registration failed: %d\n", __func__, ret);
+	//Chamber Heater SPI
+    ret = chamber_heater_init();
+    if(ret)
+        pr_warn("Error: could not register chamber heater %d\n", ret);
 
 	/* LCD  */
 	ret = davinci_cfg_reg_list(da850_lcdcntl_pins);		//Configure LCD Controler pins, this list is in da850.c
