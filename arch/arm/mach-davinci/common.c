@@ -122,6 +122,6 @@ void __init davinci_init_late(void)
 {
 	davinci_cpufreq_init();
 	davinci_pm_init();
-    mb_serializer_compat_init(davinci_soc_info.lcdc_dev);
 	davinci_clk_disable_unused();
+    mb_serializer_compat_init(davinci_soc_info.lcdc_dev);
 }
