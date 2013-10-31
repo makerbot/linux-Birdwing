@@ -556,6 +556,7 @@ static int da850_lcd_hw_init(void)
 	return 0;
 }
 
+
 //====================LED Indicator Configuration=================================
 
 const short mb_manhattan_led_pins[] = {
@@ -586,6 +587,28 @@ static struct platform_device leds_gpio = {
     .platform_data  = &gpio_led_info,
     },
 };
+
+//====================Buzzer==================================================
+const short buzzer_pins[] = {
+	//Get this from PIN mux list
+	-1
+};
+
+static struct mb_buzzer mb_buzzer_info[]={
+
+};
+
+static struct platform_data mb_buzzer_platofrm_data = {
+};
+
+static struct platform_device mb_buzzer ={
+	
+};
+
+static __init int buzzer_init(void){
+
+return 0;
+}
 
 //====================NAND Flash Configuration=================================
 
