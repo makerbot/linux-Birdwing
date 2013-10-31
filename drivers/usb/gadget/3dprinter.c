@@ -671,6 +671,14 @@ printer_read(struct file *fd, char __user *buf, size_t len, loff_t *ptr)
 			current_rx_buf = NULL;
 			current_rx_req = NULL;
 		}
+
+		/* Do not send from more than one packet at a time.
+		 * Each packet should be one JSON packet, and if we don't
+		 * split up/join JSON packets, we can use a more efficient
+		 * non stream based JSON parser.
+		 */
+		if (bytes_copied > 0)
+			break;
 	}
 
 	dev->current_rx_req = current_rx_req;
