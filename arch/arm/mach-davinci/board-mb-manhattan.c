@@ -32,6 +32,7 @@
 #include <linux/etherdevice.h>
 #include <linux/wl12xx.h>
 #include <linux/wireless.h>
+#include <linux/leds.h>
 #include <linux/i2c-gpio.h>
 
 #include <asm/mach-types.h>
@@ -114,12 +115,12 @@ static struct gpio_keys_button gpio_keys[] = {
             //.active_low = 1,
         },
 };
- 
+
 struct gpio_keys_platform_data gpio_key_info = {
     .buttons    = gpio_keys,
     .nbuttons   = ARRAY_SIZE(gpio_keys),
 };
- 
+
 struct platform_device keys_gpio = {
     .name   = "gpio-keys",
     .id = -1,
@@ -133,18 +134,14 @@ struct platform_device keys_gpio = {
 #define WLAN_EN GPIO_TO_PIN(5, 8)
 #define WLAN_IRQ GPIO_TO_PIN(5, 14)
 
+//Platform struct set up
 struct wl12xx_platform_data mb_wireless_data = {
-		//.wlan_enable_gpio = WLAN_EN,
 		.irq = -1,
 		.board_ref_clock	= WL12XX_REFCLOCK_38,
 		.platform_quirks	= WL12XX_PLATFORM_QUIRK_EDGE_IRQ,
 };
 
-//TODO figure out where this happens - M. Sterling
-//static struct pinmux_config mb_wireless_pin_mux[] = {
-//
-//};
-//I believe these two do the same function.
+//Pin mux
 static const short mb_wireless_pins[] __initconst = {
 	DA850_MMCSD0_DAT_0,
 	DA850_MMCSD0_DAT_1,
@@ -156,6 +153,7 @@ static const short mb_wireless_pins[] __initconst = {
 	DA850_GPIO5_14,
 	-1
 };
+
 
 static void wl12xx_set_power(int index, bool power_on)
 {
@@ -169,18 +167,17 @@ static void wl12xx_set_power(int index, bool power_on)
 
 	if (power_on) {
 		/* Power up sequence required for wl127x devices */
-		//FIXME this is different in the AM335x board
-		//mdelay(70);
-		//gpio_set_value(mb_wireless_data.wlan_enable_gpio, 1);
-		//mdelay(70);
+		mdelay(70);
 		gpio_set_value(WLAN_EN, 1);
-		usleep_range(15000, 15000);
-		gpio_set_value(WLAN_EN, 0);
-		usleep_range(1000, 1000);
-		gpio_set_value(WLAN_EN, 1);
-		msleep(70);
+		mdelay(70);
+		//Note this power up sequence was for older chips (1251?) that had a power up issue
+		//gpio_set_value(WLAN_EN, 1);
+		//usleep_range(15000, 15000);
+		//gpio_set_value(WLAN_EN, 0);
+		//usleep_range(1000, 1000);
+		//gpio_set_value(WLAN_EN, 1);
+		//msleep(70);
 	} else {
-		//gpio_set_value(mb_wireless_data.wlan_enable_gpio, 0);
 		gpio_set_value(WLAN_EN, 0);
 	}
 }
@@ -191,51 +188,44 @@ static struct davinci_mmc_config mb_wireless_mmc_config = {
 	.max_freq	= 25000000,
 	.caps		= MMC_CAP_4_BIT_DATA | MMC_CAP_NONREMOVABLE |MMC_CAP_POWER_OFF_CARD,
 	.version	= MMC_CTLR_VERSION_2,
-	//FIXME non-removable?
-	//FIXME voltage values?
 };
 
 
 static __init int da850_wl12xx_init(void)
 {
-	//struct device *dev;
-	//struct platform_data *pdata ?
 	int ret;
 
-	//FIXME different order from beaglebone, don't think it matters though
-	//if(wl12xx_set_platform_data(&mb_wireless_data))
-	//	pr_err("%s
-	pr_warn(">>WL1271: Start Pin Mux\n");
+	pr_warn("wl12xx: Start Pin Mux\n");
 	ret = davinci_cfg_reg_list(mb_wireless_pins);
 	if (ret) {
 		pr_err("wl12xx/mmc mux setup failed: %d\n", ret);
 		goto exit;
 	}
 
-	pr_warn(">>WL1271: MMC Register\n");
+	pr_warn("wl12xx: MMC Register\n");
 	ret = da8xx_register_mmcsd0(&mb_wireless_mmc_config);
 	if (ret) {
 		pr_err("wl12xx/mmc registration failed: %d\n", ret);
 		goto exit;
 	}
 
-	pr_warn(">>WL1271: WLAN Enable GPIO\n");
+	pr_warn("wl12xx: WLAN Enable GPIO\n");
 	ret = gpio_request_one(WLAN_EN, GPIOF_OUT_INIT_LOW, "wl12xx_en");
 	if (ret) {
 		pr_err("Could not request wl12xx enable gpio: %d\n", ret);
 		goto exit;
 	}
 
-	pr_warn(">>WL1271: WLAN IRQ register\n");
+	pr_warn("wl12xx: WLAN IRQ register\n");
 	ret = gpio_request_one(WLAN_IRQ, GPIOF_IN, "wl12xx_irq");
 	if (ret) {
 		pr_err("Could not request wl12xx irq gpio: %d\n", ret);
 		goto free_wlan_en;
 	}
 
-	mb_wireless_data.irq = gpio_to_irq(DA850_GPIO5_14);
+	mb_wireless_data.irq = gpio_to_irq(WLAN_IRQ);
 
-	pr_warn(">>WL1271: Set Platform data\n");
+	pr_warn("wl12xx: Set Platform data\n");
 	ret = wl12xx_set_platform_data(&mb_wireless_data);
 	if (ret) {
 		pr_err("Could not set wl12xx data: %d\n", ret);
@@ -262,18 +252,18 @@ static short stepper_pru_pins[] = {
     DA850_PRU0_R30_22,	//x dir
     DA850_PRU0_R30_24,	//x en
     DA850_PRU0_R30_25,	//x vref
-    DA850_GPIO0_13,		//x load
+    DA850_GPIO0_13,	//x load
 
     DA850_PRU0_R30_20,	//y step
     DA850_PRU0_R30_19,	//y dir
     DA850_PRU0_R30_17,	//y en
     DA850_PRU0_R30_16,	//y vref
-    DA850_GPIO0_12,		//y load
+    DA850_GPIO0_12,	//y load
 
     DA850_PRU0_R30_21,	//z step
     DA850_PRU0_R30_5,	//z dir
     DA850_PRU0_R30_4,	//z en
-    DA850_GPIO2_4,		//z load
+    DA850_GPIO2_4,	//z load
 
    -1,
 };
@@ -286,43 +276,124 @@ static short toolhead_spi_pins[] = {
 	DA850_SPI1_CLK, 	//TH CLK
 	DA850_SPI1_SIMO, 	//TH SIMO
 	DA850_SPI1_SCS_0, 	//TH SCS0
-    DA850_PRU0_R31_10,	//TH EXP0 
-    DA850_GPIO2_12,		//TH EXP1
-    DA850_GPIO6_5,		//TH0 5V on
-    DA850_GPIO6_11,		//TH0 12V on
+    	DA850_PRU0_R31_10,	//TH EXP0
+   	DA850_GPIO2_12,		//TH EXP1
+   	DA850_GPIO6_5,		//TH0 5V on
+    	DA850_GPIO6_11,		//TH0 12V on
     -1,
 };
 
 static struct davinci_spi_config toolhead_spi_cfg[] = {
 	{
-    .io_type	= SPI_IO_TYPE_POLL,
-	.c2tdelay	= 8,
-	.t2cdelay	= 8,
+        	.io_type	= SPI_IO_TYPE_POLL,
+		.c2tdelay	= 8,
+		.t2cdelay	= 8,
     },
 };
 
 static struct spi_board_info toolhead_spi_info[] = {
 	{
-		.modalias			= "spidev",
+		.modalias		= "spidev",
 		.controller_data	= &toolhead_spi_cfg,
-		.mode				= SPI_MODE_3,
+		.mode			= SPI_MODE_3,
 		.max_speed_hz		= 1600000,
-		.bus_num			= 1,
+		.bus_num		= 1,
 		.chip_select		= 0,
 	},
 };
 
 //====================Chamber Heater===============================
 
+#define CH_MISO     GPIO_TO_PIN(3, 4)
+#define CH_MOSI     GPIO_TO_PIN(3, 2)
+#define CH_SCK      GPIO_TO_PIN(0, 7)
+#define CH_CS       GPIO_TO_PIN(2, 2)
+#define CH_RSV0     GPIO_TO_PIN(5, 5)
+#define CH_RSV1     GPIO_TO_PIN(2, 5)
+
 static short chamber_heater_pins[] = {
-    DA850_GPIO0_7,
-    DA850_GPIO2_2,
-    DA850_GPIO3_4,
-    DA850_GPIO3_2,
-    DA850_GPIO5_5,
-    DA850_GPIO2_5,
-    -1,
+	DA850_GPIO0_7,	//Chamber heater CLK
+	DA850_GPIO2_2,	//Chamber heater CS
+	DA850_GPIO3_4,	//Chamber heater MISO
+	DA850_GPIO3_2,	//Chamber heater SOMI
+	DA850_GPIO5_5,	//Chamber heater reserved 0
+	DA850_GPIO2_5,	//Chamber heater reserved 1
+	-1,
 };
+
+static struct spi_gpio_platform_data chamber_heater_pdata = {
+        .miso                = CH_MISO,
+        .mosi                = CH_MOSI,
+        .sck                 = CH_SCK,
+        .num_chipselect      = 1,
+};
+
+static struct platform_device chamber_heater_device = {
+        .name              = "spi_gpio",
+        .id                = 2,
+        .dev.platform_data = &chamber_heater_pdata,
+};
+
+static struct spi_board_info chamber_heater_info[] ={
+        {
+                .modalias           = "spidev",
+                .controller_data    = (void *)CH_CS,
+                .mode               = SPI_MODE_0,     //Mode 0 for Gowanus Rev A
+                .max_speed_hz       = 100000,         //100Khz, above this the ATtiny24 USI module starts getting bad data
+                .bus_num            = 2,
+                .chip_select        = 0,
+        },
+};
+
+static __init int chamber_heater_init(void){
+
+        int ret;
+
+        pr_info("Chamber heater pin mux\n");
+        ret = davinci_cfg_reg_list(chamber_heater_pins);
+        if(ret){
+                pr_err("ERROR pin mux setup failed: %d\n", ret);
+                goto exit;
+        }
+
+        pr_info("Chamber heater SPIDEV register\n");
+        ret = spi_register_board_info(chamber_heater_info, ARRAY_SIZE(chamber_heater_info));
+        if (ret) {
+                pr_err("ERROR SPIDEV registration failed %d\n", ret);
+                goto exit;
+        }
+
+        pr_info("Chamber heater platform register\n");
+        ret = platform_device_register(&chamber_heater_device);
+        if(ret){
+                pr_warn("ERROR platform device registration failed %d\n", ret);
+                goto exit;
+        }
+
+        pr_info("Chamber heater register RSV0\n");
+        ret = gpio_request_one(CH_RSV0, GPIOF_OUT_INIT_LOW, "ch_rsv0");
+        if(ret){
+                pr_err("ERROR could not request chamber heater RSV0 gpio %d\n", ret);
+                goto free_ch_rsv0;
+        }
+
+        pr_info("Chamber heater register RSV1\n");
+        ret = gpio_request_one(CH_RSV1, GPIOF_OUT_INIT_LOW, "ch_rsv1");
+        if(ret){
+                pr_err("ERROR could not request chamber heater RSV1 gpio %d\n", ret);
+                goto free_ch_rsv1;
+        }
+
+        return 0;
+free_ch_rsv1:
+        gpio_free(CH_RSV1);
+free_ch_rsv0:
+        gpio_free(CH_RSV0);
+exit:
+        return ret;
+
+}
+
 
 //====================Power monitor I2C===========================
 static short power_monitor_i2c_pins[] = {
@@ -365,13 +436,12 @@ static struct platform_device *power_monitor_devices[] __initdata = {
 #define DA850_12V_POWER_PIN  GPIO_TO_PIN(0,8)
 
 static short mb_power_pins[] = {
-  DA850_GPIO0_8,  //12V Power
-  DA850_GPIO1_2,  //Power SB Button 
-  DA850_GPIO0_6,  //Power monitor SDA
-  DA850_GPIO0_5,  //Power monitor SCL
-  -1,
+	DA850_GPIO0_8,  	//12V Power
+	DA850_GPIO1_2,  	//Power SB Button
+	DA850_GPIO0_6,  	//Power monitor SDA
+	DA850_GPIO0_5,  	//Power monitor SCL
+	-1,
 };
-
 
 static void da850_12V_power_control(int val)
 {
@@ -389,84 +459,92 @@ static int da850_power_init(void)
 
 	gpio_direction_output(DA850_12V_POWER_PIN, 0);
 
-    da850_12V_power_control(1);
+	da850_12V_power_control(1);
 
 	return 0;
 }
 
 //====================LCD Configuration=================================
 
-#define DA850_LCD_BL_PIN    GPIO_TO_PIN(8, 10)
-#define DA850_LCD_RESET_PIN GPIO_TO_PIN(6, 3)
-#define GPIO_LCD_DISPLAY_TYPE  GPIO_TO_PIN(4, 0)
+#define	LCD_BACKLIGHT		GPIO_TO_PIN(8, 10)
+#define LCD_RESET		GPIO_TO_PIN(6, 3)
+#define LCD_DISPLAY_TYPE	GPIO_TO_PIN(4, 0)
+#define LCD_CLK			GPIO_TO_PIN(6, 2)
+#define LCD_CS			GPIO_TO_PIN(6, 1)
+#define LCD_SIMO		GPIO_TO_PIN(6, 4)
 
 static short mb_lcd_pins[] = {
-  DA850_GPIO6_4,		//LCD SIMO
-  DA850_GPIO6_2,		//LCD SCK
-  DA850_GPIO8_10,		//LCD Backlight
-  DA850_GPIO6_3,		//LCD Reset
-  DA850_GPIO6_1,		//LCD SCS
-  DA850_GPIO4_0,        //LCD Detect Type
-  -1,
-};
-
-static struct da8xx_spi_pin_data lcd_spi_gpio_data = {
-    .sck = GPIO_TO_PIN(6, 2),
-    .sdi = GPIO_TO_PIN(6, 4),
-    .cs = GPIO_TO_PIN(6, 1),
+	DA850_GPIO6_3,		//LCD Reset
+	DA850_GPIO4_0,      //LCD Detect Type
+	DA850_GPIO8_10,		//LCD Backlight (GPIO)
+	DA850_GPIO6_4,		//LCD SIMO
+	DA850_GPIO6_2,		//LCD SCK
+	DA850_GPIO6_1,		//LCD SCS
+	-1,
 };
 
 static short interface_i2c_pins[] = {
 	DA850_I2C0_SDA,
 	DA850_I2C0_SCL,
-    -1,
+	-1,
 };
+
+//Platform data set up
+static struct da8xx_spi_pin_data lcd_spi_gpio_data = {
+	.sck = LCD_CLK,
+	.sdi = LCD_SIMO,
+	.cs = LCD_CS,
+};
+
+struct da8xx_lcdc_spi_platform_data *lcd_pdata;
 
 static struct davinci_i2c_platform_data mb_i2c0_pdata = {
 	.bus_freq	= 400,	/* kHz */
 	.bus_delay	= 0,	/* usec */
 };
 
-//TODO Need LCD backlight control / PWM here
 
 static void da850_panel_power_ctrl(int val)
 {
 	/* lcd backlight */
-	gpio_set_value(DA850_LCD_BL_PIN, val);
+	gpio_set_value(LCD_BACKLIGHT, val);
 
-    /* lcd_reset */
-    gpio_set_value(DA850_LCD_RESET_PIN, val);
+	/* lcd_reset */
+	gpio_set_value(LCD_RESET, val);
 
-    pr_warn("switching lcd power to : %d\n", val);
+	pr_warn("switching lcd power to : %d\n", val);
 }
 
-struct da8xx_lcdc_spi_platform_data *lcd_pdata;
 
 static int da850_lcd_hw_init(void)
 {
 	int status;
 
-	status = gpio_request(DA850_LCD_BL_PIN, "lcd backlight\n");
+	pr_info("LCD: register backlight\n");
+	status = gpio_request(LCD_BACKLIGHT, "lcd backlight\n");
+	if(status < 0)
+		return status;
+
+	gpio_direction_output(LCD_BACKLIGHT, 0);
+
+	pr_info("LCD register reset\n");
+	status = gpio_request(LCD_RESET, "lcd reset\n");
 	if (status < 0)
 		return status;
 
-	status = gpio_request(DA850_LCD_RESET_PIN, "lcd reset\n");
+	gpio_direction_output(LCD_RESET, 0);
+
+	pr_info("LCD register display type\n");
+	status = gpio_request(LCD_DISPLAY_TYPE, "lcd type\n");
 	if (status < 0)
 		return status;
 
-	status = gpio_request(GPIO_LCD_DISPLAY_TYPE, "lcd type\n");
-	if (status < 0)
-		return status;
-    
     // 0 level for type pin indicates AZ display
-    if(gpio_get_value(GPIO_LCD_DISPLAY_TYPE) == 0) {
-        lcd_pdata = &az_hx8238_pdata;	
-    } else {
-        lcd_pdata = &ssd2119_spi_pdata;	
-    }
-        
-	gpio_direction_output(DA850_LCD_BL_PIN, 0);
-	gpio_direction_output(DA850_LCD_RESET_PIN, 0);
+	if(gpio_get_value(LCD_DISPLAY_TYPE) == 0) {
+		lcd_pdata = &az_hx8238_pdata;
+	} else {
+		lcd_pdata = &ssd2119_spi_pdata;
+	}
 
 	/* Switch off panel power and backlight */
 	da850_panel_power_ctrl(0);
@@ -481,19 +559,19 @@ static int da850_lcd_hw_init(void)
 //====================LED Indicator Configuration=================================
 
 const short mb_manhattan_led_pins[] = {
-    DA850_GPIO6_14,		//Status LED
-    DA850_PRU0_R30_14,	//PRU LED0
-    DA850_PRU0_R30_13,	//PRU LED1
+	DA850_GPIO6_14,		//LED Status
+	DA850_PRU0_R30_14,	//PRU LED0
+	DA850_PRU0_R30_13,	//PRU LED1
     -1
 };
 
 
 static struct gpio_led gpio_leds[] = {
-    {
-        .name           = "Kernel_Status",
-        .gpio           = GPIO_TO_PIN(6,14),
-        .default_trigger= "heartbeat",
-    },
+	{
+		.name           = "Kernel_Status",
+		.gpio           = GPIO_TO_PIN(6,14),
+		.default_trigger= "heartbeat",
+	},
 };
 
 static struct gpio_led_platform_data gpio_led_info = {
@@ -511,34 +589,60 @@ static struct platform_device leds_gpio = {
 
 //====================NAND Flash Configuration=================================
 
+#define SZ_416M 0x1A000000
+#define SZ_5M   0x00500000
 static struct mtd_partition da850_evm_nandflash_partition[] = {
 	{
 		.name		= "u-boot env",
 		.offset		= 0,
 		.size		= SZ_1M,
-		.mask_flags	= MTD_WRITEABLE,
-	 },
-	{
-		.name		= "UBL",
-		.offset		= MTDPART_OFS_APPEND,
-		.size		= SZ_1M,
-		.mask_flags	= MTD_WRITEABLE,
-	},
-	{
-		.name		= "u-boot",
-		.offset		= 6 * SZ_1M,
-		.size		= SZ_1M,
-		.mask_flags	= MTD_WRITEABLE,
-	},
-	{
-		.name		= "kernel",
-		.offset		= 0x1000000,
-		.size		= SZ_4M,
 		.mask_flags	= 0,
 	},
 	{
-		.name		= "filesystem",
-		.offset		= 0x1500000,
+		.name		= "UBL",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= SZ_5M,
+		.mask_flags	= MTD_WRITEABLE, //readonly
+	},
+	{
+		.name		= "u-boot",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= SZ_5M,
+		.mask_flags	= MTD_WRITEABLE,
+	},
+	{
+		.name		= "u-boot env backup",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= SZ_5M,
+		.mask_flags	= MTD_WRITEABLE,
+	},
+	{
+		.name		= "kernel one",
+		.offset		= 0x1000000,
+		.size		= SZ_8M,
+		.mask_flags	= 0,
+	},
+	{
+		.name		= "kernel two",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= SZ_8M,
+		.mask_flags	= 0,
+	},
+	{
+		.name		= "root filesystem one",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= SZ_416M,
+		.mask_flags	= 0,
+	},
+	{
+		.name		= "root filesystem two",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= SZ_416M,
+		.mask_flags	= 0,
+	},
+	{
+		.name		= "user filesystem",
+		.offset		= MTDPART_OFS_APPEND,
 		.size		= MTDPART_SIZ_FULL,
 		.mask_flags	= 0,
 	},
@@ -589,10 +693,6 @@ static struct platform_device da850_evm_nandflash_device = {
 static struct platform_device *da850_evm_devices[] = {
 	&da850_evm_nandflash_device,
 };
-
-//TODO these appear to be used for nothing
-//#define DA8XX_AEMIF_CE2CFG_OFFSET	0x10
-//#define DA8XX_AEMIF_ASIZE_16BIT		0x1
 
 //====================Ethernet Configuration=================================
 
@@ -645,30 +745,29 @@ static __init void mb_manhattan_config_emac(void)
 
 	soc_info->emac_pdata->phy_id = MANHATTAN_PHY_ID;
 
-    // get mac address
-    ptr = strstr(boot_command_line, "eth=");
+	// get mac address
+	ptr = strstr(boot_command_line, "eth=");
 
-    if (ptr) {
-        memcpy(eth, ptr+4, 17*sizeof(char));
+	if (ptr) {
+		memcpy(eth, ptr+4, 17*sizeof(char));
         eth_ptr = eth;
         for (mac_byte_counter = 0; mac_byte_counter <= 5; mac_byte_counter ++) {
             mac_bytes[0] = *eth_ptr;
             mac_bytes[1] = *(eth_ptr + 1);
             ret = kstrtol(mac_bytes, 16, &temp_long);
-            if (ret) { 
+            if (ret) {
                 pr_warn("Error parsing mac address: %d\n", ret);
             }else {
                 mac_addr[mac_byte_counter] = (uint8_t)(temp_long);
-            }            
+            }
             //pr_warn( "mac_addr:%d %2x\n", mac_byte_counter, mac_addr[mac_byte_counter] );
             eth_ptr+=3; /* skip ":" in  eth*/
         }
-        
     }
     if (is_valid_ether_addr(mac_addr)) {
         //pr_warn("valid ethernet addr received from init\n");
         memcpy(da8xx_emac_pdata.mac_addr, mac_addr, ETH_ALEN);
-    } 
+    }
 
 	ret = da8xx_register_emac();
 	if (ret)
@@ -760,7 +859,7 @@ static __init void mb_manhattan_usb_init(void)
 	cfgchip2 |=  CFGCHIP2_SESENDEN | CFGCHIP2_PHY_PLLON;
 
 	__raw_writel(cfgchip2, DA8XX_SYSCFG0_VIRT(DA8XX_CFGCHIP2_REG));
-   
+
     ret = da8xx_register_usb20(1000, 3);
     if (ret)
         pr_warning("%s: USB 2.0 registration failed: %d\n",__func__, ret);
@@ -817,64 +916,62 @@ static __init void mb_manhattan_init(void)
 		pr_warn("%s: EDMA registration failed: %d\n", __func__, ret);
 
 	/*Wireless*/
-	//ret = da850_wl12xx_init();							//Configure and register Wifi
-	//if (ret)
-	//	pr_warn("%s: WL12xx initialization failed: %d\n",__func__, ret);
+	ret = da850_wl12xx_init();							//Configure and register Wifi
+	if (ret)
+		pr_warn("%s: WL12xx initialization failed: %d\n",__func__, ret);
 
 	/*USB*/
 	mb_manhattan_usb_init();							//Init USB
 
 	/*Power Control*/
 	ret = davinci_cfg_reg_list(mb_power_pins);			//Register power pins (+12v on)
-    if (ret)
-        pr_warn("%s: power pin setup failed!: %d\n", __func__, ret);
-
-    ret = da850_power_init();							//Init power pins
-    if (ret)
-        pr_warn("%s: power pin init failed!: %d\n", __func__, ret);
-
-    /*NAND Flash*/
-    platform_add_devices(da850_evm_devices, ARRAY_SIZE(da850_evm_devices));		//add NAND storage
-  
-    /*Toolhead SPI*/
-	ret = davinci_cfg_reg_list(toolhead_spi_pins);								//Configure Toolhead Pins
 	if (ret)
-		pr_warn("%s: Toolhead spi mux setup failed: %d\n", __func__, ret);
+        	pr_warn("%s: power pin setup failed!: %d\n", __func__, ret);
 
-	ret = spi_register_board_info(toolhead_spi_info, ARRAY_SIZE(toolhead_spi_info));	//Register the pins
+	ret = da850_power_init();							//Init power pins
 	if (ret)
-		pr_warn("%s: spi info registration failed: %d\n", __func__, ret);
+		pr_warn("%s: power pin init failed!: %d\n", __func__, ret);
 
-    ret = da8xx_register_spi_bus(1,1);
-    if (ret)
-       pr_warn("%s: SPI 1 registration failed: %d\n", __func__, ret);
+	/*NAND Flash*/
+	platform_add_devices(da850_evm_devices, ARRAY_SIZE(da850_evm_devices));		//add NAND storage
+
+	/*Toolhead SPI*/
+	//ret = davinci_cfg_reg_list(toolhead_spi_pins);								//Configure Toolhead Pins
+	//if (ret)
+	//	pr_warn("%s: Toolhead spi mux setup failed: %d\n", __func__, ret);
+
+	//ret = spi_register_board_info(toolhead_spi_info, ARRAY_SIZE(toolhead_spi_info));	//Register the pins
+	//if (ret)
+	//	pr_warn("%s: spi info registration failed: %d\n", __func__, ret);
+
+	//ret = da8xx_register_spi_bus(1,1);
+	//if (ret)
+	//	pr_warn("%s: SPI 1 registration failed: %d\n", __func__, ret);
 
     /*Power monitor I2C*/
-        ret = davinci_cfg_reg_list(power_monitor_i2c_pins);
-        if (ret)
-            pr_warn("%s: Power monitor I2C mux setup failed: %d\n", __func__, ret);
-
-        ret = i2c_register_board_info(3, power_monitor_i2c_info, ARRAY_SIZE(power_monitor_i2c_info));
-        if (ret)
-            pr_warn("%s: i2c info registration failed: %d\n", __func__, ret);
-
-        ret = platform_add_devices(power_monitor_devices, ARRAY_SIZE(power_monitor_devices));
-        if (ret)
-            pr_warn("%s: i2c platform add devices failed: %d\n", __func__, ret);
-
-	//TODO Chamber Heater SPI
-	ret = davinci_cfg_reg_list(chamber_heater_pins);		//Configure Chamber heater pins
+    ret = davinci_cfg_reg_list(power_monitor_i2c_pins);
     if (ret)
-       pr_warn("%s: Chamber heater pins registration failed: %d\n", __func__, ret);
-    
+        pr_warn("%s: Power monitor I2C mux setup failed: %d\n", __func__, ret);
 
-        
+    ret = i2c_register_board_info(3, power_monitor_i2c_info, ARRAY_SIZE(power_monitor_i2c_info));
+    if (ret)
+        pr_warn("%s: i2c info registration failed: %d\n", __func__, ret);
+
+    ret = platform_add_devices(power_monitor_devices, ARRAY_SIZE(power_monitor_devices));
+    if (ret)
+        pr_warn("%s: i2c platform add devices failed: %d\n", __func__, ret);
+
+	//Chamber Heater SPI
+    ret = chamber_heater_init();
+    if(ret)
+        pr_warn("Error: could not register chamber heater %d\n", ret);
+
 	/* LCD  */
 	ret = davinci_cfg_reg_list(da850_lcdcntl_pins);		//Configure LCD Controler pins, this list is in da850.c
 	if (ret)
 		pr_warn("%s: LCDC mux setup failed: %d\n", __func__, ret);
 
-    ret = davinci_cfg_reg_list(mb_lcd_pins);		//Configure LCD power / config pins
+	ret = davinci_cfg_reg_list(mb_lcd_pins);		//Configure LCD power / config pins
 	if (ret)
 		pr_warn("%s: LCD pins initialization failed: %d\n", __func__, ret);
 
@@ -883,34 +980,32 @@ static __init void mb_manhattan_init(void)
 		pr_warn("%s: LCD initialization failed: %d\n", __func__, ret);
 
 	lcd_pdata->panel_power_ctrl = da850_panel_power_ctrl,		//Tell kernel what function to use for power control
-    lcd_pdata->spi = &lcd_spi_gpio_data;						//Tell the kerenl which spi to use
+	lcd_pdata->spi = &lcd_spi_gpio_data;						//Tell the kerenl which spi to use
 	ret = da8xx_register_lcdc_spi(lcd_pdata);
 	if (ret)
 		pr_warn("%s: LCDC registration failed: %d\n", __func__, ret);
 
-    ret = davinci_cfg_reg_list(interface_i2c_pins);		//Configure LCD power / config pins
+	ret = davinci_cfg_reg_list(interface_i2c_pins);		//Configure LCD power / config pins
 	if (ret)
 		pr_warn("%s: LCD i2c pins initialization failed: %d\n", __func__, ret);
 
-    ret = da8xx_register_i2c(0, &mb_i2c0_pdata);
+	ret = da8xx_register_i2c(0, &mb_i2c0_pdata);
 	if (ret)
 		pr_warn("%s: LCD i2c driver initialization failed: %d\n", __func__, ret);
-
 
 	/*Watchdog*/
 	ret = da8xx_register_watchdog();							//Register the watchdog
 	if (ret)
-		pr_warn("%s: watchdog registration failed: %d\n",
-			__func__, ret);
+		pr_warn("%s: watchdog registration failed: %d\n", __func__, ret);
 
 	/*LEDs*/
-    ret = davinci_cfg_reg_list(mb_manhattan_led_pins);			//Configure LED pins
-    if (ret)
-      pr_warn("mb_manhattan_init: LED pinmux failed: %d\n", ret);
+	ret = davinci_cfg_reg_list(mb_manhattan_led_pins);			//Configure LED pins
+	if (ret)
+		pr_warn("mb_manhattan_init: LED pinmux failed: %d\n", ret);
 
-    platform_device_register(&leds_gpio);						//Register LED pin
-    if (ret)
-         pr_warn("da850_evm_init: led device initialization failed: %d\n", ret);
+  	ret = platform_device_register(&leds_gpio);						//Register LED pin
+	if (ret)
+		pr_warn("da850_evm_init: led device initialization failed: %d\n", ret);
 
 	/* Setup alternate events on the PRUs */
 	cfgchip3 = __raw_readl(DA8XX_SYSCFG0_VIRT(DA8XX_CFGCHIP3_REG));		//Read from one of the base registers
@@ -918,16 +1013,16 @@ static __init void mb_manhattan_init(void)
 	__raw_writel(cfgchip3, DA8XX_SYSCFG0_VIRT(DA8XX_CFGCHIP3_REG));		//Write it back
 
 	/* UI Buttons */
-    ret = davinci_cfg_reg_list(button_pins);							//Configure the UI pins
+	ret = davinci_cfg_reg_list(button_pins);							//Configure the UI pins
 	if (ret)
 		pr_warn("%s: button pins initialization failed: %d\n", __func__, ret);
-    
-    ret = platform_device_register(&keys_gpio);							//register UI pins
+
+	ret = platform_device_register(&keys_gpio);							//register UI pins
 	if (ret)
 		pr_warn("%s: gpio key pins device initialization failed!: %d\n", __func__, ret);
 
 	/*Encoder */
-    ret = platform_device_register(&rotary_encoder);					//Register the encoder
+	ret = platform_device_register(&rotary_encoder);					//Register the encoder
 	if (ret)
 		pr_warn("%s: rotary encoder device initialization failed!: %d\n", __func__, ret);
 
@@ -936,24 +1031,22 @@ static __init void mb_manhattan_init(void)
 	if (ret)
 		pr_warn("%s: stepper pins initialization failed: %d\n", __func__, ret);
 
-    // Disable pull-ups on MS2/Sense inputs on the steppers (CP0 & CP16 in PUPD_ENA reg)
-    // default pull up configuration: 0xC3FFFFFF
+	 // Disable pull-ups on MS2/Sense inputs on the steppers (CP0 & CP16 in PUPD_ENA reg)
+	// default pull up configuration: 0xC3FFFFFF
 	__raw_writel(0xCFFEFFFE,  ioremap(DA8XX_PUPD_ENA, SZ_1K) );
 
 	/* Register PRUSS device */
 	da8xx_register_uio_pruss();
-    if (ret)
-         pr_warn("pruss init failed %d\n", ret);
+	if (ret)
+		pr_warn("pruss init failed %d\n", ret);
 
-    /* read the pruss clock */
-    davinci_psc_is_clk_active(0,13);
-
+	/* read the pruss clock */
+	davinci_psc_is_clk_active(0,13);
 }
 
 #ifdef CONFIG_SERIAL_8250_CONSOLE
 static int __init mb_manhattan_console_init(void)
 {
-
 	return add_preferred_console("ttyS", 1, "115200");
 }
 console_initcall(mb_manhattan_console_init);
