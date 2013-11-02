@@ -46,16 +46,13 @@
 #define MANHATTAN_PHY_ID		NULL
 
 
-//Updated for Rev C
 #define DA850_USB1_VBUS_PIN		GPIO_TO_PIN(6, 12)
 #define DA850_USB1_OC_PIN		GPIO_TO_PIN(6, 13)
 
 //========================Rotary & UI Buttons===============================
 
-//Updated for Rev C
 #define GPIO_ROTARY_A GPIO_TO_PIN(5,9)
 #define GPIO_ROTARY_B GPIO_TO_PIN(5,6)
-
 
 static struct rotary_encoder_platform_data encoder_info = {
     .steps      = 30,
@@ -77,8 +74,6 @@ static struct platform_device rotary_encoder = {
     }
 };
 
-//TODO Check these assignments: Button 0 = Back, Button 1 = Option, Button 2 = Select
-//Updated for Rev C
 #define OPTION_BUTTON   GPIO_TO_PIN(5, 12)
 #define BACK_BUTTON     GPIO_TO_PIN(5, 0)
 #define SELECT_BUTTON   GPIO_TO_PIN(5, 3)
@@ -276,16 +271,16 @@ static short toolhead_spi_pins[] = {
 	DA850_SPI1_CLK, 	//TH CLK
 	DA850_SPI1_SIMO, 	//TH SIMO
 	DA850_SPI1_SCS_0, 	//TH SCS0
-    	DA850_PRU0_R31_10,	//TH EXP0
+    DA850_PRU0_R31_10,	//TH EXP0
    	DA850_GPIO2_12,		//TH EXP1
    	DA850_GPIO6_5,		//TH0 5V on
-    	DA850_GPIO6_11,		//TH0 12V on
+    DA850_GPIO6_11,		//TH0 12V on
     -1,
 };
 
 static struct davinci_spi_config toolhead_spi_cfg[] = {
 	{
-        	.io_type	= SPI_IO_TYPE_POLL,
+        .io_type	= SPI_IO_TYPE_POLL,
 		.c2tdelay	= 8,
 		.t2cdelay	= 8,
     },
@@ -936,17 +931,17 @@ static __init void mb_manhattan_init(void)
 	platform_add_devices(da850_evm_devices, ARRAY_SIZE(da850_evm_devices));		//add NAND storage
 
 	/*Toolhead SPI*/
-	//ret = davinci_cfg_reg_list(toolhead_spi_pins);								//Configure Toolhead Pins
-	//if (ret)
-	//	pr_warn("%s: Toolhead spi mux setup failed: %d\n", __func__, ret);
+	ret = davinci_cfg_reg_list(toolhead_spi_pins);								//Configure Toolhead Pins
+	if (ret)
+		pr_warn("%s: Toolhead spi mux setup failed: %d\n", __func__, ret);
 
-	//ret = spi_register_board_info(toolhead_spi_info, ARRAY_SIZE(toolhead_spi_info));	//Register the pins
-	//if (ret)
-	//	pr_warn("%s: spi info registration failed: %d\n", __func__, ret);
+	ret = spi_register_board_info(toolhead_spi_info, ARRAY_SIZE(toolhead_spi_info));	//Register the pins
+	if (ret)
+		pr_warn("%s: spi info registration failed: %d\n", __func__, ret);
 
-	//ret = da8xx_register_spi_bus(1,1);
-	//if (ret)
-	//	pr_warn("%s: SPI 1 registration failed: %d\n", __func__, ret);
+	ret = da8xx_register_spi_bus(1,1);
+	if (ret)
+		pr_warn("%s: SPI 1 registration failed: %d\n", __func__, ret);
 
     /*Power monitor I2C*/
     ret = davinci_cfg_reg_list(power_monitor_i2c_pins);
