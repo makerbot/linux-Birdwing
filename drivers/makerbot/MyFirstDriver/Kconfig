@@ -10,4 +10,5 @@ config MY_FIRST_DRIVER
 
 	help
 		MyFirstDriver attempt. Should make an LED blink...eventually
+		This is kept around as a reference really
 endmenu

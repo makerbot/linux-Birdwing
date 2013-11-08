@@ -43,6 +43,7 @@
 #include <mach/mux.h>
 #include <mach/psc.h>
 
+
 #define MANHATTAN_PHY_ID		NULL
 
 
@@ -557,7 +558,7 @@ static int da850_lcd_hw_init(void)
 }
 
 
-//====================LED Indicator Configuration=================================
+//====================LED Indicator Configuration================================
 
 const short mb_manhattan_led_pins[] = {
 	DA850_GPIO6_14,		//LED Status
@@ -589,25 +590,47 @@ static struct platform_device leds_gpio = {
 };
 
 //====================Buzzer==================================================
+#define BUZZER_OUT GPIO_TO_PIN(2,15)
+
 const short buzzer_pins[] = {
-	//Get this from PIN mux list
+	DA850_GPIO2_15,		//GPIO
+	//TODO need PWM?
 	-1
 };
 
-static struct mb_buzzer mb_buzzer_info[]={
+//static struct mb_buzzer mb_buzzer_info[]={
+//
+//};
 
-};
+//static struct platform_data mb_buzzer_platofrm_data = {
+//};
 
-static struct platform_data mb_buzzer_platofrm_data = {
-};
-
-static struct platform_device mb_buzzer ={
-	
-};
+//static struct platform_device mb_buzzer ={
+//	
+//};
 
 static __init int buzzer_init(void){
+	int ret;
+	ret = 0;
 
-return 0;
+	pr_warn("buzzer: Start pin Mux\n");
+	ret = davinci_cfg_reg_list(buzzer_pins);
+	if(ret){
+		pr_err("buzzer pin mux failed: %d\n", ret);
+		goto exit;
+
+	//register peripheral? May not need this
+
+	pr_warn("buzzer: Output pin request\n");
+	ret = gpio_request_one(BUZZER_OUT, GPIOF_OUT_INIT_LOW, "buzzer_out");
+	if(ret){
+		pr_err("Could not request buzzer output gpio: %d\n", ret);
+		goto exit;
+	}
+
+	//platform data
+	
+	return ret;
 }
 
 //====================NAND Flash Configuration=================================
