@@ -10,4 +10,10 @@ config FAST_GPIO
     help
         Makerbot custom driver for fast gpio access
 
+config BUZZER
+    tristate "buzzer"
+	depends on GPIOLIB
+    help
+	Makerbot buzzer driver
+
 endmenu

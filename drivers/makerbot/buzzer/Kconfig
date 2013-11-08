@@ -1,0 +1,13 @@
+#
+#	Kernel Config file for a test driver
+#
+
+menu "My First Driver"
+
+config MY_FIRST_DRIVER
+	tristate "my first driver"
+		depends on GPIOLIB
+
+	help
+		MyFirstDriver attempt. Should make an LED blink...eventually
+endmenu
