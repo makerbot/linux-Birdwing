@@ -9,7 +9,7 @@
 #include <linux/init.h>			//init functions
 #include <linux/module.h>		//allows dynamically loadable modules
 #include <linux/kernel.h>		//printk and other kernel-based lib functions
-#include <linux/versioh.h>		//??
+#include <linux/version.h>		//??
 #include <linux/fs.h>			//file operations
 #include <linux/types.h>		//type defs, macros, etc
 #include <linux/kdev_t.h>		//kernel device macros (major, minor, etc)
@@ -19,43 +19,61 @@
 
 #include "buzzer.h"			//custom defines etc
 #include "notes.h"			//Standard note frequencies and MIDI note numbers
-#include "seqeunces.h"			//Sequences from MusicForMakerbots
+//#include "seqeunces.h"			//Sequences from MusicForMakerbots
 
-struct buzzer_dev_t{			//custom device type
-	dev_t 		devt;
-	spinlock_t	spin_lock;
-	struct buzzer_platform_data	*pdev;
-	struct mutex	buf_lock;
-	u8		*buffer;
-} buzzer_dev;				//device
-//TODO character dev?
-//TODO device class?
+struct buzzer_dev_t buzzer_dev;				//device
+static struct cdev buzzer_cdev;				//global for char device struct
+static struct *class_type;				//global to hold the class type
 
-//open the buzzer device
-static int buzzer_open(struct buzzer_platform_data *pdata){
+
+static int buzzer_open(struct buzzer_dev_t *dev){
 	int ret;
 	ret = 0;
 	printk("Buzzer Open\n");
 	return ret;
 }
 
-//read from the buzzer?
-static int buzzer_read(struct buzzer_platform_data *pdata){
-//what would we read from here? Sequence info?
+static int buzzer_read(struct buzzer_dev_t *dev){
 	int ret;
 	ret =0;
 	printk("Buzzer Read\n");
 	return ret;
 }
 
-static void buzzer_write(struct buzzer_platform_data *pdata){
+static void buzzer_write(struct buzzer_dev_t *dev){
 	printk("Buzzer Write\n");
 }
 
-//TODO? write file?
-//TODO? Release file
+static void buzzer_release(struct buzzer_dev_t *dev){
+	printk("Buzzer release\n");
+}
 
-//TODO Synth
+static void synth(u16 dur, u16 freq_1, u16 freq_2, u32 wave, u16 points){
+	//Start Time
+	//Current time
+	//End time from duration
+
+	//Freq log
+	//Wave event duration
+	//event frequency
+
+	//period of freq_1
+	//wave index
+	//next event time
+
+	//while(current_time<end_time){
+	//	if(current_time>=next_event){
+	//		wave_index = (wave_index+1)%points
+	//		write out to pin based on wave position
+	//		calculate next event
+	//	}
+	//	update current_time
+	//}
+
+	//write 0 to output pin
+
+}
+
 //TODO parse sequence to synth
 //TODO parse MIDI file to synth
 
@@ -98,7 +116,7 @@ static int __init buzzer_init(void){
 
 static void __exit buzzer_exit(void){
 	printk("Buzzer Exit\n");
-	platform_driver_ungregister(&buzzer_driver);
+	platform_driver_unregister(&buzzer_driver);
 	class_destroy(buzzer_class);
 	unregister_chrdev(MAJOR, driver_name);
 }

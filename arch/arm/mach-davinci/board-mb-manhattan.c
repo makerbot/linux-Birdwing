@@ -618,7 +618,7 @@ static __init int buzzer_init(void){
 	if(ret){
 		pr_err("buzzer pin mux failed: %d\n", ret);
 		goto exit;
-
+	}
 	//register peripheral? May not need this
 
 	pr_warn("buzzer: Output pin request\n");
@@ -629,7 +629,10 @@ static __init int buzzer_init(void){
 	}
 
 	//platform data
-	
+
+	return ret;
+
+exit:
 	return ret;
 }
 
