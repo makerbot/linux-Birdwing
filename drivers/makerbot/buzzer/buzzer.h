@@ -8,22 +8,22 @@
 
 //Defines
 #ifndef BUZZER_MAJOR
-#define BUZZER_MAJOR 0	//TODO change this to 14 (sound) later
+#define BUZZER_MAJOR 0u		//TODO change this to 14 (sound) later
 #endif
 
 #ifndef BUZZER_MINOR
-#define BUZZER_MINOR 64	//64 should be unused, 1 is sequencer for sound major 
+#define BUZZER_MINOR 64u	//64 should be unused, 1 is sequencer for sound major 
 #endif
 
 #ifndef BUZZER_COUNT
-#define BUZZER_COUNT 1	//incase we ever support more than 1
+#define BUZZER_COUNT 1u		//incase we ever support more than 1
 #endif
 
 //TODO Number of devices? Should only be 1
 
 //Structs
 struct buzzer_dev{
-	struct cdev buzzer_cdev;		//character driver
+	struct cdev cdev;			//character driver
 	struct mutex buzzer_mutex;		//mutual exclusion semaphore
 	struct buzzer_platform_data *pdata;	//platform data
 	unsigned int index;			//index to be used with frequency
@@ -37,12 +37,12 @@ struct buzzer_dev{
 //Sequence struct?
 
 struct buzzer_ops{
-	int	(*open)(struct buzzer_dev_t *dev);
-	int	(*read)(struct buzzer_dev_t *dev);
-	void	(*write)(struct buzzer_dev_t *dev);
-	void	(*release)(struct buzzer_dev_t *dev);
+	int	(*open)(struct buzzer_dev *dev);
+	int	(*read)(struct buzzer_dev *dev);
+	void	(*write)(struct buzzer_dev *dev);
+	void	(*release)(struct buzzer_dev *dev);
 	struct module *owner;
-}
+};
 
 //Functions
 //static int buzzer_open(struct);
@@ -51,3 +51,5 @@ struct buzzer_ops{
 //static void buzzer_close(struct);
 
 //static void synth(u16, u16, u16, u32, u16);
+
+#endif
