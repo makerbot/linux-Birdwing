@@ -1,17 +1,40 @@
 //	Header file for buzzer driver
 //	MSS 8 Nov 2013
 
-//Includes
+#ifndef _BUZZER_H_
+#define _BUZZER_H_
 
+#include <linux/makerbot/buzzer.h>
+
+//Defines
+#ifndef BUZZER_MAJOR
+#define BUZZER_MAJOR 0	//TODO change this to 14 (sound) later
+#endif
+
+#ifndef BUZZER_MINOR
+#define BUZZER_MINOR 64	//64 should be unused, 1 is sequencer for sound major 
+#endif
+
+#ifndef BUZZER_COUNT
+#define BUZZER_COUNT 1	//incase we ever support more than 1
+#endif
+
+//TODO Number of devices? Should only be 1
 
 //Structs
-struct buzzer_dev_t{
-	const char	*label;
-	dev_t		devt;
-	struct buzzer_platform_data	*pdev;
-	struct mutex	buzz_lock;
-	u8		*buffer;
+struct buzzer_dev{
+	struct cdev buzzer_cdev;		//character driver
+	struct mutex buzzer_mutex;		//mutual exclusion semaphore
+	struct buzzer_platform_data *pdata;	//platform data
+	unsigned int index;			//index to be used with frequency
+	unsigned int freq;			//current frequency
+	unsigned int duration;			//duration of the note
+	//array of notes (pitches)
+	//array of tones (timbres)
+	//dev_t buzzer_devt			//need this?
 };
+
+//Sequence struct?
 
 struct buzzer_ops{
 	int	(*open)(struct buzzer_dev_t *dev);

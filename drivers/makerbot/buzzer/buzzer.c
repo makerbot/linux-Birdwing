@@ -6,63 +6,67 @@
 */
 
 
+#include <linux/config.h>			//??
 #include <linux/init.h>				//init functions
 #include <linux/module.h>			//allows dynamically loadable modules
+#include <linux/moduleparam.h>
+
 #include <linux/kernel.h>			//printk and other kernel-based lib functions
-#include <linux/version.h>			//linux version numbers
+#include <linux/slab.h>				//Memory allocation function
 #include <linux/fs.h>				//file operations
+#include <linux/errno.h>			//errors
+#include <linux/version.h>			//linux version numbers
 #include <linux/types.h>			//type defs, macros, etc
 #include <linux/kdev_t.h>			//kernel device macros (major, minor, etc)
 #include <linux/device.h>			//generic device driver model
 #include <linux/platform_device.h>		//allows device drivers to register with the platform
 #include <linux/cdev.h>				//character drivers
+#include <linux/sched.h>			//scheduling and timing related things
 
-//#include "buzzer.h"				//custom defines etc
+#include <linux/makerbot/buzzer.h>		//buzzer files
+
+#include "buzzer.h"
 #include "notes.h"				//Standard note frequencies and MIDI note numbers
 //#include "seqeunces.h"			//Sequences from MusicForMakerbots
 
-#define BUZZER_COUNT 1
 
-static dev_t buzzer_number;				//device major number
+int buzzer_major = BUZZER_MAJOR;
+int buzzer_minor = BUZZER_MINOR;
+int buzzer_count = BUZZER_COUNT;
 
-static struct class *class_type;		//global to hold the class type
+module_param(buzzer_major, int, S_IRUGO);
+module_param(buzzer_minor, int, S_IRUGO);
+module_param(buzzer_count, int, S_IRUGO);
 
-struct buzzer_dev{
-	int sample_rate;			//time base that data is output to the buzzer (sample rate)
-	int ctrl_rate;				//time base that control events happen (envelop, glide, etc)
-	int seq_rate;				//time base that sequence events happen on (note rate)
-	int seq_index;				//index for the sequence
-	int seq_tones;				//Array for sequence tones
-	int seq_notes;				//Array for the sequence notes
-	struct semaphore buzzer_sem;		//Semaphore (might be mutex or spinlock)
-	struct cdev buzzer_cdev;		//char device structure
-};
+struct buzzer_dev *buzzer_devices;
 
 
-static int buzzer_open(struct buzzer_dev_t *dev){
+static int buzzer_open(struct inode *i, struct file *f){
 	int ret;
 	ret = 0;
-	printk("Buzzer Open\n");
-	return ret;
+	pr_info("Buzzer Open\n");
+	return 0;
 }
 
-static int buzzer_read(struct buzzer_dev_t *dev){
+static int buzzer_read(struct file *f, char __user *buf, size_t len, loff_t *off){
 	int ret;
 	ret =0;
-	printk("Buzzer Read\n");
+	pr_info("Buzzer Read\n");
 	return ret;
 }
 
-static void buzzer_write(struct buzzer_dev_t *dev){
-	printk("Buzzer Write\n");
+static ssize_t buzzer_write(struct file *f, const char __user *buf, size_t len, loff_t *off){
+	pr_info("Buzzer Write\n");
+	return 0;
 }
 
-static void buzzer_release(struct buzzer_dev_t *dev){
-	printk("Buzzer release\n");
+static int buzzer_release(struct inode *i, struct file *f){
+	pr_info("Buzzer release\n");
+	return 0;
 }
 
-unsigned int poll(struct buzzer_dev_t *dev){
-	printk("Buzzer poll\n");
+unsigned int poll(struct file *f, struct poll_table_struct *pts){
+	pr_info("Buzzer poll\n");
 	return 0;
 }	
 
@@ -95,18 +99,49 @@ static void synth(u16 dur, u16 freq_1, u16 freq_2, u32 wave, u16 points){
 //TODO parse sequence to synth
 //TODO parse MIDI file to synth
 
-
 static int buzzer_probe(struct platform_device *pdev){
 	int ret;
+	struct buzzer_platform_data *pdata = pdev->dev.platform_data;
+
 	ret = 0;
-	printk("Buzzer Probe\n");
+	pr_info("Buzzer Probe\n");
+
+	pr_info("Start time %lu\n", jiffies);
+	pr_info("HZ setting: %d\n", HZ);
+	pr_info("Cycles: %lu\n", get_cycles());
+
+	//Allocate memory (filled with zeros)
+	buzzer = kzalloc(sizeof(*buzzer), GFP_KERNEL);
+
+	if(!buzzer)
+		return -ENOMEM;
+
+	//initialize driver data
+	buzzer->pdata = pdata;
+	//spinlock?
+//	mutex_init(&buzzer->buzzer_mutex);
+
+	//ret = buzzer_device_register(buzzer, &pdev->dev);	//where is this?
+	//if(ret)	//non-zero?
+	//	goto reg_fail;
+
+	platform_set_drvdata(pdev, buzzer);
+
+	pr_info("End time: %lu\n", jiffies);
+	pr_info("Cycles: %lu\n", get_cycles());
+
 	return ret;
+reg_fail:
+	kfree(buzzer);
+	return ret;
+
 }
 
 static int buzzer_remove(struct platform_device *pdev){
 	int ret;
+
 	ret = 0;
-	printk("Buzzer Remove\n");
+	pr_info("Buzzer Remove\n");
 	return ret;
 }
 
@@ -116,7 +151,7 @@ static const struct file_operations buzzer_fops = {
 	.read = 	buzzer_read,	//read from the device? possibly the currently loaded sequence
 	.release = 	buzzer_release,	//called when all versions are done, may not need
 	.write = 	buzzer_write,	//write data to the device
-	.poll = 	buzzer_poll, 	//check if the device is busy making music
+//	.poll = 	buzzer_poll, 	//check if the device is busy making music
 };
 
 static struct platform_driver buzzer_driver = {
@@ -128,37 +163,103 @@ static struct platform_driver buzzer_driver = {
 	.remove= buzzer_remove,
 };
 
+static void __exit buzzer_exit(void){
+
+	pr_info("Buzzer Exit\n");
+	dev_t devno = MKDEV(buzzer_major, buzzer_minor);
+
+	if(buzzer_devices){
+		//TODO make a loop
+		//trim??
+		cdev_del(&buzzer_devices[0].cdev);
+		kfree(buzzer_devices);
+	}
+
+	unregister_chrdev_region(devno, buzzer_count);
+
+	//buzzer_p_cleanup();
+	//buzzer_access_cleanup();
+}
+
+
+
+platform_driver_unregister(&buzzer_driver);
+	unregister_chrdev(BUZZER_MAJOR, buzzer_driver.driver.name);
+}
+
+
+static void buzzer_setup_cdev(struct buzzer_dev *dev, int index){
+	int ret;
+	int devno = MKDEV(buzzer_major, buzzer_minor+index);
+
+	cdev_init(&dev->cdev, &buzzer_fops);
+	dev->cdev.owner = THIS_MODULE;
+	dev->cdev.ops = &buzzer_fops;
+	ret = cdev_add(&dev->cdev, devno, 1);
+	if(ret)
+		pr_err("Buzzer: Error %d adding buzzer%d", ret, index);
+}
+
 static int __init buzzer_init(void){
 	int ret;
+	dev_t dev = 0;
 	ret = 0;
-	printk("Buzzer Init\n");
+	pr_info("Buzzer Init\n");
+
+	if(buzzer_major){
+		dev = MKDEV(buzzer_major, buzzer_minor);
+		ret = register_chrdev_region(dev, buzzer_count, "buzzer");
+	} else {
+		ret = alloc_chrdev_region(&dev, buzzer_minor, buzzer_count, "buzzer");
+		buzzer_major = MAJOR(dev);
+	}
+
+	if(ret <0){
+		pr_warn("Buzzer: can't get major %d\n", buzzer_major);
+		return result;
+	}
 
 
-	ret = alloc_chrdev_region(&buzzer_number, 0, BUZZER_COUNT, "Buzzer");	//Try to allocate some space
-	if(ret){
-		printk("Failed to allocate region\n");
-		return ret;
-	printk("Registered with <%d, %d>\n", MAJOR(buzzer_number), MINOR(buzzer_number));
-	//FIXME this should be in it's own structure probably
-	cdev_init(buzzer_cdev, buzzer_fops);				//Init character driver
+	ret = platform_driver_register(&buzzer_driver);
+	if(ret<0){
+		pr_err("Buzzer: can't register platform driver %d\n"%ret);
+		goto fail;
+	}
+
+
+
+	//allocate memory for the number of devices we have
+	buzzer_devices = kmalloc(buzzer_count *sizeof(struct buzzer_dev), GFP_KERNEL);
+	if(!scull_devices){
+		ret = -ENOMEM;
+		goto fail;	//Undo previously registered char dev
+	}
+	memset(buzzer_devices, 0, buzzer_count*sizeof(struct buzzer_dev));
+
+	//TODO make this a loop, only one device for now
+		buzzer_devices[0].index = 0;	//nothing to index
+		buzzer_devices[0].freq = 440;	//hz
+		buzzer_devices[0].duration = 1;	//not sure what this corresponds to, maybe make it msec
+		init_MUTEX(&buzzer_devices[0].buzzer_mutex);
+		buzzer_setup_cdev(&buzzer_devices[0], 0);	//possibly unroll this instead of having another func
+		//platform data?
 	
-	//This needs to be at the end, goes live after this call returns
-	ret = cdev_add(buzzer_cdev, first, 1);				//register 
+	//Friend devices? probably don't need this
+	//dev = MKDEV(buzzer_major, buzzer_minor+buzzer_count);
+	//dev += buzzer_p_init(dev);		//??
+	//dev += buzzer_access_init(dev);	//??
+
+	return 0;
+
+fail:
+	buzzer_exit();
 	return ret;
 }
+
 module_init(buzzer_init);
-
-
-static void __exit buzzer_exit(void){
-	printk("Buzzer Exit\n");
-	cdev_del(buzzer_cdev);
-	//platform_driver_unregister(&buzzer_driver);
-	//class_destroy(buzzer_class);
-	unregister_chrdev(buzzer_number, BUZZER_COUNT);
-}
 module_exit(buzzer_exit);
 
 MODULE_AUTHOR("Matt Sterling");
 MODULE_DESCRIPTION("Makerbot Buzzer Driver");
 MODULE_LICENSE("GPL");
-MODULE_VERSION("0.1");
+MODULE_VERSION("0.2");

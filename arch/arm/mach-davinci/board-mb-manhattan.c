@@ -43,6 +43,7 @@
 #include <mach/mux.h>
 #include <mach/psc.h>
 
+#include <linux/makerbot/buzzer.h>
 
 #define MANHATTAN_PHY_ID		NULL
 
@@ -593,30 +594,52 @@ const short buzzer_pins[] = {
 	-1
 };
 
-//static struct mb_buzzer mb_buzzer_info[]={
+//Not needed, could be used to init thing
+//static struct mb_buzzer buzzer_info[]={
 //
 //};
 
-//static struct platform_data mb_buzzer_platofrm_data = {
-//};
+static struct buzzer_platform_data buzzer_pdata = {
+	.sample_rate = 10000,		//10khz
+	.ctrl_rate = 1000,		//1khz
+	.seq_rate = 2,			//2hz = 120 bpm FIXME need to figure out fractional times 
+					//May do PPQN based seq timing
+	.output_pin = BUZZER_OUT,
 
-//static struct platform_device mb_buzzer ={
-//	
-//};
+};
+
+static struct platform_device buzzer_device ={
+	.name		="buzzer",
+	.id		= -1,
+	.dev.platform_data = &buzzer_pdata,
+};
 
 static __init int buzzer_init(void){
 	int ret;
 	ret = 0;
 
-	pr_warn("buzzer: Start pin Mux\n");
+	pr_info("buzzer: Pin Mux\n");
 	ret = davinci_cfg_reg_list(buzzer_pins);
 	if(ret){
-		pr_err("buzzer pin mux failed: %d\n", ret);
+		pr_err("ERROR pin mux failed: %d\n", ret);
 		goto exit;
 	}
-	//register peripheral? May not need this
 
-	pr_warn("buzzer: Output pin request\n");
+//	pr_info("buzzer: Register Info\n");
+//	ret = buzzer_register_board_info(buzzer_info, ARRAY_SIZE(buzzer_info));
+//	if(ret){
+//		pr_err("ERROR could not register board info: %d\n", ret);
+//		goto exit;
+//	}
+
+	pr_info("buzzer: Register Platform Device\n");
+	ret = platform_device_register(&buzzer_device);
+	if(ret){
+		pr_err("ERROR could not register platform device: %d\n", ret);
+		goto exit;
+	}
+
+	pr_info("buzzer: Output pin request\n");
 	ret = gpio_request_one(BUZZER_OUT, GPIOF_OUT_INIT_LOW, "buzzer_out");
 	if(ret){
 		pr_err("Could not request buzzer output gpio: %d\n", ret);
@@ -624,7 +647,7 @@ static __init int buzzer_init(void){
 	}
 
 	//platform data
-
+	pr_info("buzzer: init finished\n");
 	return ret;
 
 exit:
@@ -948,6 +971,11 @@ static __init void mb_manhattan_init(void)
 	int ret;
 	u32 cfgchip3;
 
+	pr_warn("===========================================================================\n");
+	pr_warn(" Buzzer Kernel 14Nov2014 15h54m\n");
+	pr_warn("===========================================================================\n");
+
+
 	/*UART*/
 	davinci_serial_init(&mb_manhattan_uart_config);		//Configure the serial port interface
 
@@ -1050,6 +1078,9 @@ static __init void mb_manhattan_init(void)
   	ret = platform_device_register(&leds_gpio);						//Register LED pin
 	if (ret)
 		pr_warn("da850_evm_init: led device initialization failed: %d\n", ret);
+
+	/*Buzzer*/
+	buzzer_init();
 
 	/* Setup alternate events on the PRUs */
 	cfgchip3 = __raw_readl(DA8XX_SYSCFG0_VIRT(DA8XX_CFGCHIP3_REG));		//Read from one of the base registers
