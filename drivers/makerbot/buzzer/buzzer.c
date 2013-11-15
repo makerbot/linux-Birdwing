@@ -6,7 +6,6 @@
 */
 
 
-#include <linux/config.h>			//??
 #include <linux/init.h>				//init functions
 #include <linux/module.h>			//allows dynamically loadable modules
 #include <linux/moduleparam.h>
@@ -22,6 +21,7 @@
 #include <linux/platform_device.h>		//allows device drivers to register with the platform
 #include <linux/cdev.h>				//character drivers
 #include <linux/sched.h>			//scheduling and timing related things
+#include <linux/mutex.h>			//mutexes
 
 #include <linux/makerbot/buzzer.h>		//buzzer files
 
@@ -70,7 +70,7 @@ unsigned int poll(struct file *f, struct poll_table_struct *pts){
 	return 0;
 }	
 
-static void synth(u16 dur, u16 freq_1, u16 freq_2, u32 wave, u16 points){
+//static void synth(u16 dur, u16 freq_1, u16 freq_2, u32 wave, u16 points){
 	//Start Time
 	//Current time
 	//End time from duration
@@ -94,56 +94,10 @@ static void synth(u16 dur, u16 freq_1, u16 freq_2, u32 wave, u16 points){
 
 	//write 0 to output pin
 
-}
+//}
 
 //TODO parse sequence to synth
 //TODO parse MIDI file to synth
-
-static int buzzer_probe(struct platform_device *pdev){
-	int ret;
-	struct buzzer_platform_data *pdata = pdev->dev.platform_data;
-
-	ret = 0;
-	pr_info("Buzzer Probe\n");
-
-	pr_info("Start time %lu\n", jiffies);
-	pr_info("HZ setting: %d\n", HZ);
-	pr_info("Cycles: %lu\n", get_cycles());
-
-	//Allocate memory (filled with zeros)
-	buzzer = kzalloc(sizeof(*buzzer), GFP_KERNEL);
-
-	if(!buzzer)
-		return -ENOMEM;
-
-	//initialize driver data
-	buzzer->pdata = pdata;
-	//spinlock?
-//	mutex_init(&buzzer->buzzer_mutex);
-
-	//ret = buzzer_device_register(buzzer, &pdev->dev);	//where is this?
-	//if(ret)	//non-zero?
-	//	goto reg_fail;
-
-	platform_set_drvdata(pdev, buzzer);
-
-	pr_info("End time: %lu\n", jiffies);
-	pr_info("Cycles: %lu\n", get_cycles());
-
-	return ret;
-reg_fail:
-	kfree(buzzer);
-	return ret;
-
-}
-
-static int buzzer_remove(struct platform_device *pdev){
-	int ret;
-
-	ret = 0;
-	pr_info("Buzzer Remove\n");
-	return ret;
-}
 
 static const struct file_operations buzzer_fops = {
 	.owner = 	THIS_MODULE,
@@ -153,39 +107,6 @@ static const struct file_operations buzzer_fops = {
 	.write = 	buzzer_write,	//write data to the device
 //	.poll = 	buzzer_poll, 	//check if the device is busy making music
 };
-
-static struct platform_driver buzzer_driver = {
-	.driver = {
-		.name = "buzzer",
-		.owner = THIS_MODULE,
-	},
-	.probe = buzzer_probe,
-	.remove= buzzer_remove,
-};
-
-static void __exit buzzer_exit(void){
-
-	pr_info("Buzzer Exit\n");
-	dev_t devno = MKDEV(buzzer_major, buzzer_minor);
-
-	if(buzzer_devices){
-		//TODO make a loop
-		//trim??
-		cdev_del(&buzzer_devices[0].cdev);
-		kfree(buzzer_devices);
-	}
-
-	unregister_chrdev_region(devno, buzzer_count);
-
-	//buzzer_p_cleanup();
-	//buzzer_access_cleanup();
-}
-
-
-
-platform_driver_unregister(&buzzer_driver);
-	unregister_chrdev(BUZZER_MAJOR, buzzer_driver.driver.name);
-}
 
 
 static void buzzer_setup_cdev(struct buzzer_dev *dev, int index){
@@ -199,6 +120,90 @@ static void buzzer_setup_cdev(struct buzzer_dev *dev, int index){
 	if(ret)
 		pr_err("Buzzer: Error %d adding buzzer%d", ret, index);
 }
+
+
+static int buzzer_probe(struct platform_device *pdev){
+	int ret;
+	//struct buzzer_platform_data *pdata = pdev->dev.platform_data;
+
+	ret = 0;
+	pr_info("Buzzer Probe\n");
+
+	pr_info("Start time %lu\n", jiffies);
+	pr_info("HZ setting: %d\n", HZ);
+	pr_info("Ktime: %lld\n", ktime_to_ns(ktime_get()));
+
+	//allocate memory for the number of devices we have
+	buzzer_devices = kmalloc(buzzer_count *sizeof(struct buzzer_dev), GFP_KERNEL);
+	if(!buzzer_devices){
+		ret = -ENOMEM;
+		goto fail;	//Undo previously registered char dev
+	}
+	memset(buzzer_devices, 0, buzzer_count*sizeof(struct buzzer_dev));
+
+	//TODO make this a loop, only one device for now
+		buzzer_devices[0].index = 0;	//nothing to index
+		buzzer_devices[0].freq = 440;	//hz
+		buzzer_devices[0].duration = 1;	//not sure what this corresponds to, maybe make it msec
+		mutex_init(&buzzer_devices[0].buzzer_mutex);
+		buzzer_setup_cdev(&buzzer_devices[0], 0);	//possibly unroll this instead of having another func
+		//platform data?
+	
+	//Friend devices? probably don't need this
+	//dev = MKDEV(buzzer_major, buzzer_minor+buzzer_count);
+	//dev += buzzer_p_init(dev);		//??
+	//dev += buzzer_access_init(dev);	//??
+
+	platform_set_drvdata(pdev, buzzer_devices);
+
+	pr_info("End time: %lu\n", jiffies);
+	pr_info("Ktime: %lld\n", ktime_to_ns(ktime_get()));
+
+	return ret;
+fail:
+	kfree(buzzer_devices);
+	return ret;
+
+}
+
+static int buzzer_remove(struct platform_device *pdev){
+	int ret;
+
+	ret = 0;
+	pr_info("Buzzer Remove\n");
+	return ret;
+}
+
+
+static struct platform_driver buzzer_driver = {
+	.driver = {
+		.name = "buzzer",
+		.owner = THIS_MODULE,
+	},
+	.probe = buzzer_probe,
+	.remove= buzzer_remove,
+};
+
+static void __exit buzzer_exit(void){
+
+	dev_t devno;
+	devno = MKDEV(buzzer_major, buzzer_minor);
+	pr_info("Buzzer Exit\n");
+
+	platform_driver_unregister(&buzzer_driver);
+	if(buzzer_devices){
+		//TODO make a loop
+		//trim??
+		cdev_del(&buzzer_devices[0].cdev);
+		kfree(buzzer_devices);
+	}
+
+	unregister_chrdev_region(devno, buzzer_count);
+
+	//buzzer_p_cleanup();
+	//buzzer_access_cleanup();
+}
+
 
 static int __init buzzer_init(void){
 	int ret;
@@ -214,40 +219,21 @@ static int __init buzzer_init(void){
 		buzzer_major = MAJOR(dev);
 	}
 
+	pr_info("Registered with <%d, %d>\n", MAJOR(dev), MINOR(dev));
+
 	if(ret <0){
 		pr_warn("Buzzer: can't get major %d\n", buzzer_major);
-		return result;
+		return ret;
 	}
 
 
 	ret = platform_driver_register(&buzzer_driver);
 	if(ret<0){
-		pr_err("Buzzer: can't register platform driver %d\n"%ret);
+		pr_err("Buzzer: can't register platform driver %d\n",ret);
 		goto fail;
 	}
 
 
-
-	//allocate memory for the number of devices we have
-	buzzer_devices = kmalloc(buzzer_count *sizeof(struct buzzer_dev), GFP_KERNEL);
-	if(!scull_devices){
-		ret = -ENOMEM;
-		goto fail;	//Undo previously registered char dev
-	}
-	memset(buzzer_devices, 0, buzzer_count*sizeof(struct buzzer_dev));
-
-	//TODO make this a loop, only one device for now
-		buzzer_devices[0].index = 0;	//nothing to index
-		buzzer_devices[0].freq = 440;	//hz
-		buzzer_devices[0].duration = 1;	//not sure what this corresponds to, maybe make it msec
-		init_MUTEX(&buzzer_devices[0].buzzer_mutex);
-		buzzer_setup_cdev(&buzzer_devices[0], 0);	//possibly unroll this instead of having another func
-		//platform data?
-	
-	//Friend devices? probably don't need this
-	//dev = MKDEV(buzzer_major, buzzer_minor+buzzer_count);
-	//dev += buzzer_p_init(dev);		//??
-	//dev += buzzer_access_init(dev);	//??
 
 	return 0;
 
