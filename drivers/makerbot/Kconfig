@@ -16,4 +16,10 @@ config BUZZER
     help
 	Makerbot buzzer driver
 
+config MY_FIRST_DRIVER
+	tristate "my first driver"
+		depends on GPIOLIB
+	help
+		First driver attempt, really just here for reference 
+
 endmenu
