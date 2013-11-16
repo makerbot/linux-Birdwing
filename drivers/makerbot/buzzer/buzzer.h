@@ -8,30 +8,34 @@
 
 //Defines
 #ifndef BUZZER_MAJOR
-#define BUZZER_MAJOR 0u		//TODO change this to 14 (sound) later
+#define BUZZER_MAJOR 0		//TODO change this to 14 (sound) later
 #endif
 
 #ifndef BUZZER_MINOR
-#define BUZZER_MINOR 64u	//64 should be unused, 1 is sequencer for sound major 
+#define BUZZER_MINOR 64		//64 should be unused, 1 is sequencer for sound major 
 #endif
 
 #ifndef BUZZER_COUNT
-#define BUZZER_COUNT 1u		//incase we ever support more than 1
+#define BUZZER_COUNT 1		//incase we ever support more than 1
 #endif
 
-//TODO Number of devices? Should only be 1
 
 //Structs
 struct buzzer_dev{
+	//Universal device/driver bits
+	dev_t devt;				//device type
 	struct cdev cdev;			//character driver
-	struct mutex buzzer_mutex;		//mutual exclusion semaphore
+	struct mutex mutex;			//mutual exclusion semaphore
+	struct device *device;			//hmm, what is this?
 	struct buzzer_platform_data *pdata;	//platform data
+	//Buzzer specific 
 	unsigned int index;			//index to be used with frequency
-	unsigned int freq;			//current frequency
-	unsigned int duration;			//duration of the note
+	unsigned int freq;			//current frequency (pitch)
+	unsigned int duration;			//duration of the note (time)
+	unsigned int polywave;			//"polywave", this changes the timber of the note
+
 	//array of notes (pitches)
 	//array of tones (timbres)
-	//dev_t buzzer_devt			//need this?
 };
 
 //Sequence struct?

@@ -38,7 +38,7 @@ module_param(buzzer_major, int, S_IRUGO);
 module_param(buzzer_minor, int, S_IRUGO);
 module_param(buzzer_count, int, S_IRUGO);
 
-struct buzzer_dev *buzzer_devices;
+struct buzzer_dev buzzer;
 
 
 static int buzzer_open(struct inode *i, struct file *f){
@@ -105,7 +105,6 @@ static const struct file_operations buzzer_fops = {
 	.read = 	buzzer_read,	//read from the device? possibly the currently loaded sequence
 	.release = 	buzzer_release,	//called when all versions are done, may not need
 	.write = 	buzzer_write,	//write data to the device
-//	.poll = 	buzzer_poll, 	//check if the device is busy making music
 };
 
 
@@ -134,34 +133,34 @@ static int buzzer_probe(struct platform_device *pdev){
 	pr_info("Ktime: %lld\n", ktime_to_ns(ktime_get()));
 
 	//allocate memory for the number of devices we have
-	buzzer_devices = kmalloc(buzzer_count *sizeof(struct buzzer_dev), GFP_KERNEL);
-	if(!buzzer_devices){
-		ret = -ENOMEM;
-		goto fail;	//Undo previously registered char dev
-	}
-	memset(buzzer_devices, 0, buzzer_count*sizeof(struct buzzer_dev));
+	//buzzer = kmalloc(buzzer_count *sizeof(struct buzzer_dev), GFP_KERNEL);
+	//if(!buzzer){
+	//	ret = -ENOMEM;
+	//	goto fail;	//Undo previously registered char dev
+	//}
+	//memset(buzzer, 0, buzzer_count*sizeof(struct buzzer_dev));
 
 	//TODO make this a loop, only one device for now
-		buzzer_devices[0].index = 0;	//nothing to index
-		buzzer_devices[0].freq = 440;	//hz
-		buzzer_devices[0].duration = 1;	//not sure what this corresponds to, maybe make it msec
-		mutex_init(&buzzer_devices[0].buzzer_mutex);
-		buzzer_setup_cdev(&buzzer_devices[0], 0);	//possibly unroll this instead of having another func
+		buzzer.index = 0;	//nothing to index
+		buzzer.freq = 440;	//hz
+		buzzer.duration = 1;	//not sure what this corresponds to, maybe make it msec
+		mutex_init(&buzzer.buzzer_mutex);
+		buzzer_setup_cdev(&buzzer, 0);	//possibly unroll this instead of having another func
 		//platform data?
-	
+
 	//Friend devices? probably don't need this
 	//dev = MKDEV(buzzer_major, buzzer_minor+buzzer_count);
 	//dev += buzzer_p_init(dev);		//??
 	//dev += buzzer_access_init(dev);	//??
 
-	platform_set_drvdata(pdev, buzzer_devices);
+	//platform_set_drvdata(pdev, buzzer);
 
 	pr_info("End time: %lu\n", jiffies);
 	pr_info("Ktime: %lld\n", ktime_to_ns(ktime_get()));
 
 	return ret;
 fail:
-	kfree(buzzer_devices);
+	//kfree(buzzer);
 	return ret;
 
 }
@@ -186,40 +185,42 @@ static struct platform_driver buzzer_driver = {
 
 static void __exit buzzer_exit(void){
 
-	dev_t devno;
-	devno = MKDEV(buzzer_major, buzzer_minor);
+	//dev_t devno;
+	//devno = MKDEV(buzzer_major, buzzer_minor);
 	pr_info("Buzzer Exit\n");
 
-	platform_driver_unregister(&buzzer_driver);
-	if(buzzer_devices){
-		//TODO make a loop
-		//trim??
-		cdev_del(&buzzer_devices[0].cdev);
-		kfree(buzzer_devices);
-	}
+	//platform_driver_unregister(&buzzer_driver);
+	//if(buzzer_devices){
+	//	cdev_del(&buzzer_devices[0].cdev);
+	//	kfree(buzzer_devices);
+	//}
 
-	unregister_chrdev_region(devno, buzzer_count);
+	unregister_chrdev_region(buzzer.dev, buzzer_count);
 
-	//buzzer_p_cleanup();
-	//buzzer_access_cleanup();
 }
 
 
 static int __init buzzer_init(void){
 	int ret;
-	dev_t dev = 0;
+	//dev_t dev = 0;
 	ret = 0;
 	pr_info("Buzzer Init\n");
 
-	if(buzzer_major){
-		dev = MKDEV(buzzer_major, buzzer_minor);
-		ret = register_chrdev_region(dev, buzzer_count, "buzzer");
-	} else {
-		ret = alloc_chrdev_region(&dev, buzzer_minor, buzzer_count, "buzzer");
-		buzzer_major = MAJOR(dev);
+	ret=alloc_chrdev_region(&buzzer.dev, buzzer_minor, buzzer_count, "buzzer");
+	if(ret<0){
+		pr_err("Could not allocate char dev region: %d\n", ret);
+		return -1;
 	}
 
-	pr_info("Registered with <%d, %d>\n", MAJOR(dev), MINOR(dev));
+	//if(buzzer_major){
+	//	dev = MKDEV(buzzer_major, buzzer_minor);
+	//	ret = register_chrdev_region(dev, buzzer_count, "buzzer");
+	//} else {
+	//	ret = alloc_chrdev_region(&dev, buzzer_minor, buzzer_count, "buzzer");
+	//	buzzer_major = MAJOR(dev);
+	//}
+	//
+	pr_info("Registered with <%d, %d>\n", MAJOR(buzzer.dev), MINOR(buzzer.dev));
 
 	if(ret <0){
 		pr_warn("Buzzer: can't get major %d\n", buzzer_major);
@@ -227,19 +228,18 @@ static int __init buzzer_init(void){
 	}
 
 
-	ret = platform_driver_register(&buzzer_driver);
-	if(ret<0){
-		pr_err("Buzzer: can't register platform driver %d\n",ret);
-		goto fail;
-	}
+	//ret = platform_driver_register(&buzzer_driver);
+	//if(ret<0){
+	//	pr_err("Buzzer: can't register platform driver %d\n",ret);
+	//	goto fail;
+	//}
 
 
-
-	return 0;
-
-fail:
-	buzzer_exit();
 	return ret;
+
+//fail:
+//	buzzer_exit();
+//	return ret;
 }
 
 module_init(buzzer_init);

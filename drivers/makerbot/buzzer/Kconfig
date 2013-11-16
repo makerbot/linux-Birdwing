@@ -1,6 +1,7 @@
 #
 #	Kernel Config file for a test driver
 #
+#	ha.ha...never changed this...
 
 menu "My First Driver"
 

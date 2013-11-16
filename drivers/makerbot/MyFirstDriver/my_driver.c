@@ -34,35 +34,35 @@ static struct cdev c_dev;	//Global for the char device struct
 static struct class *cl;		//global for device class
 
 static int my_first_open(struct mf_device *dev){
-	printk("My First open\n");
+	pr_info("My First open\n");
 	return 0;
 }
 
 static int my_first_read(struct mf_device *dev){
-	printk("My First read\n");
+	pr_info("My First read\n");
 	return 0;
 }
 
 static void my_first_write(struct mf_device *dev){
-	printk("My First write\n");
+	pr_info("My First write\n");
 }
 
 static void my_first_release(struct mf_device *dev){
-	printk("My First release\n");
+	pr_info("My First release\n");
 }
 
 static int __init my_first_init(void){
 	if(alloc_chrdev_region(&first, 0, 3, "MyFirstDevice")<0){
 		return -1;
 	}
-	printk("My First Init passed\n");
-	printk("Registered with <%d, %d>\n", MAJOR(first), MINOR(first));
+	pr_info("My First Init passed\n");
+	pr_info("Registered with <%d, %d>\n", MAJOR(first), MINOR(first));
 	return 0;
 }
 
 static void __exit my_first_exit(void){
 	unregister_chrdev_region(first, 3);
-	printk("My First Exit passed\n");
+	pr_info("My First Exit passed\n");
 }
 
 module_init(my_first_init);
@@ -80,14 +80,14 @@ static const struct first_ops my_first_ops = {
 static int my_first_probe(struct platform_device *pdev){
 	int ret;
 	ret = 0;
-	printk("My First Probe\n");
+	pr_info("My First Probe\n");
 	return ret;
 }
 
 static int my_first_remove(struct platform_device *pdev){
 	int ret;
 	ret = 0;
-	printk("My First remove\n");
+	pr_info("My First remove\n");
 	return ret;
 }
 
