@@ -592,6 +592,7 @@ const short buzzer_pins[] = {
 	DA850_GPIO2_15,		//GPIO
 	//TODO need PWM?
 	-1
+
 };
 
 //Not needed, could be used to init thing
@@ -599,20 +600,20 @@ const short buzzer_pins[] = {
 //
 //};
 
-static struct buzzer_platform_data buzzer_pdata = {
-	.sample_rate = 10000,		//10khz
-	.ctrl_rate = 1000,		//1khz
-	.seq_rate = 2,			//2hz = 120 bpm FIXME need to figure out fractional times 
-					//May do PPQN based seq timing
-	.output_pin = BUZZER_OUT,
+//static struct buzzer_platform_data buzzer_pdata = {
+//	.sample_rate = 10000,		//10khz
+//	.ctrl_rate = 1000,		//1khz
+//	.seq_rate = 2,			//2hz = 120 bpm FIXME need to figure out fractional times 
+//					//May do PPQN based seq timing
+//	.output_pin = BUZZER_OUT,
+//
+//};
 
-};
-
-static struct platform_device buzzer_device ={
-	.name		="buzzer",
-	.id		= -1,
-	.dev.platform_data = &buzzer_pdata,
-};
+//static struct platform_device buzzer_device ={
+//	.name		="buzzer_board",
+//	.id		= -1,
+//	.dev.platform_data = &buzzer_pdata,
+//};
 
 static __init int buzzer_init(void){
 	int ret;
@@ -632,12 +633,12 @@ static __init int buzzer_init(void){
 //		goto exit;
 //	}
 
-	pr_info("buzzer: Register Platform Device\n");
-	ret = platform_device_register(&buzzer_device);
-	if(ret){
-		pr_err("ERROR could not register platform device: %d\n", ret);
-		goto exit;
-	}
+//	pr_info("buzzer: Register Platform Device\n");
+//	ret = platform_device_register(&buzzer_device);
+//	if(ret){
+//		pr_err("ERROR could not register platform device: %d\n", ret);
+//		goto exit;
+//	}
 
 	pr_info("buzzer: Output pin request\n");
 	ret = gpio_request_one(BUZZER_OUT, GPIOF_OUT_INIT_LOW, "buzzer_out");
@@ -972,7 +973,7 @@ static __init void mb_manhattan_init(void)
 	u32 cfgchip3;
 
 	pr_warn("===========================================================================\n");
-	pr_warn(" Buzzer Kernel 14Nov2014 15h54m\n");
+	pr_warn(" Buzzer Kernel 18Nov 10h30m\n");
 	pr_warn("===========================================================================\n");
 
 

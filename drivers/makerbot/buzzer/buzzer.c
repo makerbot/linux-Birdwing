@@ -22,6 +22,10 @@
 #include <linux/cdev.h>				//character drivers
 #include <linux/sched.h>			//scheduling and timing related things
 #include <linux/mutex.h>			//mutexes
+#include <linux/gpio.h>				//gpio...how fast is this?
+
+#include <asm/uaccess.h>			//copy to / copy from user
+#include <asm/io.h>				//io
 
 #include <linux/makerbot/buzzer.h>		//buzzer files
 
@@ -29,14 +33,6 @@
 #include "notes.h"				//Standard note frequencies and MIDI note numbers
 //#include "seqeunces.h"			//Sequences from MusicForMakerbots
 
-
-//int buzzer_major = BUZZER_MAJOR;
-//int buzzer_minor = BUZZER_MINOR;
-//int buzzer_count = BUZZER_COUNT;
-
-//module_param(buzzer_major, int, S_IRUGO);
-//module_param(buzzer_minor, int, S_IRUGO);
-//module_param(buzzer_count, int, S_IRUGO);
 
 struct buzzer_dev buzzer;
 static struct class *buzzer_class;
@@ -48,16 +44,54 @@ static int buzzer_open(struct inode *i, struct file *f){
 	return 0;
 }
 
-static int buzzer_read(struct file *f, char __user *buf, size_t len, loff_t *off){
-	int ret;
-	ret =0;
+static ssize_t buzzer_read(struct file *f, char __user *buf, size_t len, loff_t *off){
+
+	char c;
 	pr_info("Buzzer Read\n");
-	return ret;
+	pr_info("Len: %d\n", len);
+	pr_info("Offset: %lld\n", *off);
+	if(*off > 0){
+		pr_info("Freq: %d\n", buzzer.freq);
+		return 0;
+	}else{
+		if(copy_to_user(buf, &c, 1) != 0){
+			return -EFAULT;
+		} else{
+			(*off)++;
+			return 1;
+		}
+	}
+	return 0;
 }
 
 static ssize_t buzzer_write(struct file *f, const char __user *buf, size_t len, loff_t *off){
-	pr_info("Buzzer Write\n");
-	return 0;
+	int ret;
+//	long long start, end;
+	char c[len];	//create a buffer
+
+	ret = 1;
+	//start = ktime_to_ns(ktime_get());
+
+	//if(copy_from_user(&buzzer.freq, buf+len-1, 1)!=0){
+	if(copy_from_user(&c, buf, len)){
+		ret = -EFAULT;
+	} else {
+		ret = len;
+	}
+	//for(ret=0; ret<len; ret++){
+	//	pr_info("C[%d]: %d\n", ret, c[ret]);
+	//	//TODO check for LF, NL, etc
+	//	//Check convert to int
+	//}
+		//Store int to freq
+	buzzer.freq = simple_strtoul(c, NULL, 0);
+	synth(buzzer.freq, buzzer.duration);
+	//pr_info("Convert: %d\n", simple_strtoul(c, NULL, 0));
+	//end = ktime_to_ns(ktime_get());
+
+	ret = len;
+	//pr_info("Duration: %lld\n", (end-start));
+	return ret;
 }
 
 static int buzzer_release(struct inode *i, struct file *f){
@@ -65,15 +99,24 @@ static int buzzer_release(struct inode *i, struct file *f){
 	return 0;
 }
 
-unsigned int poll(struct file *f, struct poll_table_struct *pts){
-	pr_info("Buzzer poll\n");
-	return 0;
-}
 
-//static void synth(u16 dur, u16 freq_1, u16 freq_2, u32 wave, u16 points){
-	//Start Time
-	//Current time
-	//End time from duration
+static void synth(int freq, int dur){
+//static void synth(u16 dur, u16 freq_1, u16 freq_2, u32 wave, u16 points){ //Get to this later
+	//Freq in Hz
+	//Dur in msec
+	//lock mutex?
+	
+	long long start_time, curr_time, end_time, ns_half_period, next_event; //ns_dur
+	bool is_high;
+	start_time = ktime_to_ns(ktime_get());			//get the current time
+	curr_time = start_time;
+	end_time = start_time + (dur*1000000);			//calc the end time
+	//ns_dur = dur*1000000					//convert duration to nanoseconds
+	ns_half_period = 1000000000 / (2*freq);			//get half the period in nanoseconds
+		/*CAUTION KERNEL DOES NOT LIKE FLOATING POINT MATH*/
+	next_event = curr_time+ns_half_period;
+	is_high = 0;
+
 
 	//Freq log
 	//Wave event duration
@@ -81,7 +124,26 @@ unsigned int poll(struct file *f, struct poll_table_struct *pts){
 
 	//period of freq_1
 	//wave index
-	//next event time
+	//ptr = (void __iomem*)GPIO_BASE;
+	//ptr +=GPIO_OUT_OFFSET;
+
+	pr_info("Synth! %dHz for %dms\n", freq, dur);
+
+	while(curr_time < end_time){
+		if(curr_time >= next_event){
+			if(is_high){
+				gpio_set_value(BUZZER_OUT, 0);
+				is_high = 0;
+			} else {
+				gpio_set_value(BUZZER_OUT, 1);
+				is_high = 1;
+			}
+			next_event += ns_half_period;
+		}
+		curr_time = ktime_to_ns(ktime_get());
+	}
+
+	gpio_set_value(BUZZER_OUT, 0);
 
 	//while(current_time<end_time){
 	//	if(current_time>=next_event){
@@ -92,9 +154,8 @@ unsigned int poll(struct file *f, struct poll_table_struct *pts){
 	//	update current_time
 	//}
 
-	//write 0 to output pin
-
-//}
+	//Unlock Mutex
+}
 
 //TODO parse sequence to synth
 //TODO parse MIDI file to synth
@@ -138,10 +199,6 @@ static int buzzer_probe(struct platform_device *pdev){
 	ret = 0;
 	pr_info("Buzzer Probe\n");
 
-	pr_info("Start time %lu\n", jiffies);
-	pr_info("HZ setting: %d\n", HZ);
-	pr_info("Ktime: %lld\n", ktime_to_ns(ktime_get()));
-
 	//allocate memory for the number of devices we have
 	//buzzer = kmalloc(buzzer_count *sizeof(struct buzzer_dev), GFP_KERNEL);
 	//if(!buzzer){
@@ -149,16 +206,11 @@ static int buzzer_probe(struct platform_device *pdev){
 	//	goto fail;	//Undo previously registered char dev
 	//}
 	//memset(buzzer, 0, buzzer_count*sizeof(struct buzzer_dev));
-
-	pr_info("End time: %lu\n", jiffies);
-	pr_info("Ktime: %lld\n", ktime_to_ns(ktime_get()));
-
 	return ret;
 }
 
 static int buzzer_remove(struct platform_device *pdev){
 	int ret;
-
 	ret = 0;
 	pr_info("Buzzer Remove\n");
 	return ret;
@@ -174,11 +226,11 @@ static struct platform_driver buzzer_driver = {
 	.remove= buzzer_remove,
 };
 
-static int __init buzzer_dev_init(void){
+static int __init buzzer_dev_config(void){
 
 	int ret;
 
-	pr_info("Buzzer Init\n");
+	pr_info("Buzzer Device Config\n");
 
 	cdev_init(&buzzer.cdev, &buzzer_fops);
 	buzzer.cdev.owner = THIS_MODULE;
@@ -211,14 +263,22 @@ static void buzzer_dev_cleanup(void){
 
 static int __init buzzer_init(void){
 
-	//FIXME I think this is right
+	int ret;
 	mutex_init(&buzzer.mutex);
 
-	if(buzzer_dev_init() !=0){
+	ret = buzzer_dev_config();		//changed the name of this to avoid confusion
+	if(ret !=0){
 		pr_err("Buzzer Device Init failed\n");
 		return -1;
 	}
 
+	//FIXME this never gets used, can probably take it out
+	ret = platform_driver_register(&buzzer_driver);
+	if(ret <0){
+		pr_err("Buzzer Platform Driver registration failed \n");
+		return -1;
+		//TODO need to unregister stuff?
+	}
 	//TODO init low level stuff here
 
 	//Assign defaults
@@ -232,6 +292,7 @@ static int __init buzzer_init(void){
 }
 
 static void __exit buzzer_exit(void){
+	platform_driver_unregister(&buzzer_driver);
 	buzzer_dev_cleanup();
 }
 module_init(buzzer_init);

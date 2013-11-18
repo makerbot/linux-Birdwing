@@ -19,6 +19,14 @@
 #define BUZZER_COUNT 1		//incase we ever support more than 1
 #endif
 
+#ifndef BUZZER_OUT
+#define BUZZER_OUT 47 	//2, 15
+#endif
+
+#define GPIO_BASE 0x01E26000	//31612928
+#define GPIO_OUT_OFFSET 0x40	//64
+#define GPIO_OUT_BIT 0xF	//15
+#define GPIO_ADDR 0x1E2604F	//Exact address for GPIO
 
 //Structs
 struct buzzer_dev{
@@ -49,11 +57,7 @@ struct buzzer_ops{
 };
 
 //Functions
-//static int buzzer_open(struct);
-//static int buzzer_read(struct);
-//static void buzzer_write(struct);
-//static void buzzer_close(struct);
-
+static void synth(int, int);
 //static void synth(u16, u16, u16, u32, u16);
 
 #endif
