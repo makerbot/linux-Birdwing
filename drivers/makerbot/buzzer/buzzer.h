@@ -34,6 +34,7 @@ struct buzzer_dev{
 	dev_t devt;				//device type
 	struct cdev cdev;			//character driver
 	struct mutex mutex;			//mutual exclusion semaphore
+	spinlock_t spin_lock;			//spinlock
 	struct device *device;			//hmm, what is this?
 	struct buzzer_platform_data *pdata;	//platform data
 	//Buzzer specific 
