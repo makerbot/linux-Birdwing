@@ -23,9 +23,12 @@
 #include <linux/sched.h>			//scheduling and timing related things
 #include <linux/mutex.h>			//mutexes
 #include <linux/gpio.h>				//gpio...how fast is this?
+#include <linux/delay.h>			//delay / sleep
+#include <linux/spinlock.h>			//spinlockit
 
 #include <asm/uaccess.h>			//copy to / copy from user
 #include <asm/io.h>				//io
+
 
 #include <linux/makerbot/buzzer.h>		//buzzer files
 
@@ -82,6 +85,7 @@ static ssize_t buzzer_write(struct file *f, const char __user *buf, size_t len, 
 	buzzer.index = simple_strtoul(c, NULL, 0);
 	if(buzzer.index<SEQ_COUNT && buzzer.index >= 0){
 		pr_info("Play Seq %d\n", buzzer.index);
+		//lock here?
 		do{
 			//TODO reduce the size of the sequence arrays (or pad) to make this a bitshift
 			synth(sequences[buzzer.index][(i*6)],			//Duration
@@ -90,7 +94,7 @@ static ssize_t buzzer_write(struct file *f, const char __user *buf, size_t len, 
 				sequences[buzzer.index][(i*6)+4]);		//Npts
 			i++;
 		}while(sequences[buzzer.index][i*6]);				//Always end with a row of zeros or this won't break
-
+		//unlock
 	} else {
 		ret = -EINVAL;
 	}
@@ -116,35 +120,40 @@ static void synth(uint16_t dur, uint16_t freq, uint16_t wave, uint16_t npts){
 		/*CAUTION KERNEL DOES NOT LIKE FLOATING POINT MATH*/
 
 
-	long long start_time, curr_time, end_time, next_event, ns_per;
+	long long start_time, curr_time, end_time, next_event, us_per;
 	uint8_t mod_index;
-
-	mutex_lock(&buzzer.mutex);				//Only one process can access the buzzer at a time
-
+	unsigned long flags;
+	//mutex_lock(&buzzer.mutex);				//Only one process can access the buzzer at a time
+	spin_lock_irqsave(&buzzer.spin_lock, flags);			//sure let's try a spinlock
 	start_time = ktime_to_us(ktime_get());			//get the current time
 	curr_time = start_time;
-	end_time = start_time + (dur*1000);			//calc the end time (in nanoseconds)
-	ns_per = 1000000 / (npts*freq);				//Event period: when pin might change next (in ns)
+	end_time = start_time + (dur*1000);			//calc the end time (in usec)
+	us_per = 1000000 / (npts*freq);				//Event period: when pin might change next (in us)
 
 	//Freq log: ln(f2/f1), only needed if there's a slide
 	//event frequency: 1/(end-start), only needed if there's a slide
 	mod_index = 0;
-	next_event = curr_time+(ns_per);
+	next_event = curr_time+(us_per);
 	//
 	//pr_info("%dHz (%lld ns) for %dmSec with w=%d modulated %lld nsec \n", freq, ns_per, dur, wave, ns_mod_rate);
 	//FIXME make this usleep_range or something that doesn't hold the kernel
 	while(curr_time < end_time){
+		//usleep_range(next_event-10, next_event);
 		if(curr_time >= next_event){
+			//spin lock here?
 			mod_index = (mod_index+1)%npts;
 			gpio_set_value(BUZZER_OUT, (wave>>mod_index)&1);
-			next_event = curr_time+(ns_per);
+			next_event = curr_time+(us_per);
+			//end spin lock
 		}
+		//need to be careful not to miss an event, but want to yeild the processor
+		//usleep_range(10, 50);		//100u = 10k, 200u = 5k, only plan on going up to 5k
 		curr_time = ktime_to_us(ktime_get());
 	}
 
-	gpio_set_value(BUZZER_OUT, 0);
-
-	mutex_unlock(&buzzer.mutex);
+	gpio_set_value(BUZZER_OUT, 0);				//make sure the pin is set low when we exit
+	spin_unlock_irqrestore(&buzzer.spin_lock, flags);
+	//mutex_unlock(&buzzer.mutex);
 }
 
 //TODO parse MIDI file to synth
@@ -254,7 +263,7 @@ static int __init buzzer_init(void){
 
 	int ret;
 	mutex_init(&buzzer.mutex);
-
+	spin_lock_init(&buzzer.spin_lock);
 	ret = buzzer_dev_config();		//changed the name of this to avoid confusion
 	if(ret !=0){
 		pr_err("Buzzer Device Init failed\n");
