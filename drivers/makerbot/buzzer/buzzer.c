@@ -31,11 +31,12 @@
 
 #include "buzzer.h"
 #include "notes.h"				//Standard note frequencies and MIDI note numbers
-//#include "seqeunces.h"			//Sequences from MusicForMakerbots
+#include "sequences.h"			//Sequences from MusicForMakerbots
 
 
 struct buzzer_dev buzzer;
 static struct class *buzzer_class;
+//extern const uint32_t sequences[];
 
 static int buzzer_open(struct inode *i, struct file *f){
 	int ret;
@@ -64,33 +65,36 @@ static ssize_t buzzer_read(struct file *f, char __user *buf, size_t len, loff_t 
 	return 0;
 }
 
+//Write one of the synth indexes or return -1 for invalid 
 static ssize_t buzzer_write(struct file *f, const char __user *buf, size_t len, loff_t *off){
 	int ret;
-//	long long start, end;
-	char c[len];	//create a buffer
+	char c[len];	//buffer for recieved characters
+	int i;		//can probably remove this
+	i = 0;
+	ret = 0;
 
-	ret = 1;
-	//start = ktime_to_ns(ktime_get());
-
-	//if(copy_from_user(&buzzer.freq, buf+len-1, 1)!=0){
 	if(copy_from_user(&c, buf, len)){
 		ret = -EFAULT;
 	} else {
 		ret = len;
 	}
-	//for(ret=0; ret<len; ret++){
-	//	pr_info("C[%d]: %d\n", ret, c[ret]);
-	//	//TODO check for LF, NL, etc
-	//	//Check convert to int
-	//}
-		//Store int to freq
-	buzzer.freq = simple_strtoul(c, NULL, 0);
-	synth(buzzer.freq, buzzer.duration);
-	//pr_info("Convert: %d\n", simple_strtoul(c, NULL, 0));
-	//end = ktime_to_ns(ktime_get());
+	//TODO use write to index the sequences
+	buzzer.index = simple_strtoul(c, NULL, 0);
+	if(buzzer.index<SEQ_COUNT && buzzer.index >= 0){
+		pr_info("Play Seq %d\n", buzzer.index);
+		do{
+			//TODO reduce the size of the sequence arrays (or pad) to make this a bitshift
+			synth(sequences[buzzer.index][(i*6)],			//Duration
+				sequences[buzzer.index][(i*6)+1],		//Freq
+				sequences[buzzer.index][(i*6)+3],		//Wave
+				sequences[buzzer.index][(i*6)+4]);		//Npts
+			i++;
+		}while(sequences[buzzer.index][i*6]);				//Always end with a row of zeros or this won't break
 
-	ret = len;
-	//pr_info("Duration: %lld\n", (end-start));
+	} else {
+		ret = -EINVAL;
+	}
+
 	return ret;
 }
 
@@ -100,64 +104,49 @@ static int buzzer_release(struct inode *i, struct file *f){
 }
 
 
-static void synth(int freq, int dur){
+static void synth(uint16_t dur, uint16_t freq, uint16_t wave, uint16_t npts){
 //static void synth(u16 dur, u16 freq_1, u16 freq_2, u32 wave, u16 points){ //Get to this later
-	//Freq in Hz
-	//Dur in msec
-	//lock mutex?
-	
-	long long start_time, curr_time, end_time, ns_half_period, next_event; //ns_dur
-	bool is_high;
-	start_time = ktime_to_ns(ktime_get());			//get the current time
-	curr_time = start_time;
-	end_time = start_time + (dur*1000000);			//calc the end time
-	//ns_dur = dur*1000000					//convert duration to nanoseconds
-	ns_half_period = 1000000000 / (2*freq);			//get half the period in nanoseconds
+	//Dur in msec, freq in Hz, per = 1/freq, wave and pts are dimensionless
+	//wave could be a complex binary value, but is 1 for all seqs currently
+	//npts effectively sets the modulation rate of the wave. 
+	//Assume Wave = 1
+	// npts = 2 -> 50% duty cycle
+	// npts = 4 -> 25% duty cycle
+
 		/*CAUTION KERNEL DOES NOT LIKE FLOATING POINT MATH*/
-	next_event = curr_time+ns_half_period;
-	is_high = 0;
 
 
-	//Freq log
-	//Wave event duration
-	//event frequency
+	long long start_time, curr_time, end_time, next_event, ns_per;
+	uint8_t mod_index;
 
-	//period of freq_1
-	//wave index
-	//ptr = (void __iomem*)GPIO_BASE;
-	//ptr +=GPIO_OUT_OFFSET;
+	mutex_lock(&buzzer.mutex);				//Only one process can access the buzzer at a time
 
-	pr_info("Synth! %dHz for %dms\n", freq, dur);
+	start_time = ktime_to_us(ktime_get());			//get the current time
+	curr_time = start_time;
+	end_time = start_time + (dur*1000);			//calc the end time (in nanoseconds)
+	ns_per = 1000000 / (npts*freq);				//Event period: when pin might change next (in ns)
 
+	//Freq log: ln(f2/f1), only needed if there's a slide
+	//event frequency: 1/(end-start), only needed if there's a slide
+	mod_index = 0;
+	next_event = curr_time+(ns_per);
+	//
+	//pr_info("%dHz (%lld ns) for %dmSec with w=%d modulated %lld nsec \n", freq, ns_per, dur, wave, ns_mod_rate);
+	//FIXME make this usleep_range or something that doesn't hold the kernel
 	while(curr_time < end_time){
 		if(curr_time >= next_event){
-			if(is_high){
-				gpio_set_value(BUZZER_OUT, 0);
-				is_high = 0;
-			} else {
-				gpio_set_value(BUZZER_OUT, 1);
-				is_high = 1;
-			}
-			next_event += ns_half_period;
+			mod_index = (mod_index+1)%npts;
+			gpio_set_value(BUZZER_OUT, (wave>>mod_index)&1);
+			next_event = curr_time+(ns_per);
 		}
-		curr_time = ktime_to_ns(ktime_get());
+		curr_time = ktime_to_us(ktime_get());
 	}
 
 	gpio_set_value(BUZZER_OUT, 0);
 
-	//while(current_time<end_time){
-	//	if(current_time>=next_event){
-	//		wave_index = (wave_index+1)%points
-	//		write out to pin based on wave position
-	//		calculate next event
-	//	}
-	//	update current_time
-	//}
-
-	//Unlock Mutex
+	mutex_unlock(&buzzer.mutex);
 }
 
-//TODO parse sequence to synth
 //TODO parse MIDI file to synth
 
 static const struct file_operations buzzer_fops = {
@@ -285,7 +274,7 @@ static int __init buzzer_init(void){
 	//TODO need set and get methods for this
 	buzzer.index = 1;	//
 	buzzer.freq = 440;	//Hz
-	buzzer.duration = 500;	//msec? sure
+	buzzer.duration = 50;	//msec? sure
 	buzzer.polywave = 1;	//good enough
 
 	return 0;
@@ -301,4 +290,4 @@ module_exit(buzzer_exit);
 MODULE_AUTHOR("Matt Sterling");
 MODULE_DESCRIPTION("Makerbot Buzzer Driver");
 MODULE_LICENSE("GPL");
-MODULE_VERSION("0.3");
+MODULE_VERSION("0.4");

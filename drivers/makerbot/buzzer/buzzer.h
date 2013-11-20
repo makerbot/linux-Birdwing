@@ -57,7 +57,6 @@ struct buzzer_ops{
 };
 
 //Functions
-static void synth(int, int);
-//static void synth(u16, u16, u16, u32, u16);
+static void synth(uint16_t, uint16_t, uint16_t, uint16_t);
 
 #endif
