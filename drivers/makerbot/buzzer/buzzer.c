@@ -34,22 +34,19 @@
 
 #include "buzzer.h"
 #include "notes.h"				//Standard note frequencies and MIDI note numbers
-#include "sequences.h"			//Sequences from MusicForMakerbots
+#include "sequences.h"				//Sequences from MusicForMakerbots
 
 
 struct buzzer_dev buzzer;
 static struct class *buzzer_class;
-//extern const uint32_t sequences[];
 
 static int buzzer_open(struct inode *i, struct file *f){
-	int ret;
-	ret = 0;
-	pr_info("Buzzer Open\n");
+	//nothing to do here...
 	return 0;
 }
 
 static ssize_t buzzer_read(struct file *f, char __user *buf, size_t len, loff_t *off){
-
+	//Don't really need this, nothing to read particularly, though could get last sequence
 	char c;
 	pr_info("Buzzer Read\n");
 	pr_info("Len: %d\n", len);
@@ -71,45 +68,57 @@ static ssize_t buzzer_read(struct file *f, char __user *buf, size_t len, loff_t 
 //Write one of the synth indexes or return -1 for invalid 
 static ssize_t buzzer_write(struct file *f, const char __user *buf, size_t len, loff_t *off){
 	int ret;
-	char c[len];	//buffer for recieved characters
-	int i;		//can probably remove this
+	//TODO don't let this get too big, maybe max out at 32
+	char c[len+1];		//buffer for characters, needs to be len+1 to hold end NULL char
+	int i;
+	unsigned int index;
+	mutex_lock(&buzzer.mutex);
 	i = 0;
 	ret = 0;
 
-	if(copy_from_user(&c, buf, len)){
-		ret = -EFAULT;
-	} else {
-		ret = len;
-	}
-	//TODO use write to index the sequences
-	buzzer.index = simple_strtoul(c, NULL, 0);
-	if(buzzer.index<SEQ_COUNT && buzzer.index >= 0){
-		pr_info("Play Seq %d\n", buzzer.index);
-		//lock here?
-		do{
+	if(copy_from_user(&c, buf, len))
+		return -EFAULT;
+
+	c[len]=0;				//NULL char termination
+
+	if(!(kstrtouint(c, 0, &index))){	//0 = successful conversion
+		if(index<SEQ_COUNT ){
+			pr_info("Play Seq %d\n", index);
+			do{
 			//TODO reduce the size of the sequence arrays (or pad) to make this a bitshift
-			synth(sequences[buzzer.index][(i*6)],			//Duration
-				sequences[buzzer.index][(i*6)+1],		//Freq
-				sequences[buzzer.index][(i*6)+3],		//Wave
-				sequences[buzzer.index][(i*6)+4]);		//Npts
-			i++;
-		}while(sequences[buzzer.index][i*6]);				//Always end with a row of zeros or this won't break
-		//unlock
-	} else {
-		ret = -EINVAL;
+			//synth() doesn't return untill it has completed it's note
+				synth(sequences[index][i],		//Duration
+					sequences[index][i+1],		//Freq
+					sequences[index][i+3],		//Wave
+					sequences[index][i+4]);		//Npts
+				i+=6;
+			}while(sequences[index][i]);			//Always end with a row of zeros or this won't break
+
+		} else {
+			pr_info("Invalid sequence number. Values are 1-%d\n", SEQ_COUNT); 
+			return -EINVAL; //may need to pick something else since kstrtouint could return this too
+		}
+	} else {		//else kstrtouint returned some error
+		pr_info("Got: %s\n", c);
+		if(ret == -EINVAL)
+			pr_info("kstrtouint returned parse error\n");
+		if(ret == -ERANGE)
+			pr_info("kstrtouint returned overflow\n");
+		//TODO parse the file
+		//TODO file parse might be spun off in to a different function
 	}
 
-	return ret;
+	mutex_unlock(&buzzer.mutex);
+	return len;
 }
 
 static int buzzer_release(struct inode *i, struct file *f){
-	pr_info("Buzzer release\n");
+	//nothing to do here?
 	return 0;
 }
 
 
 static void synth(uint16_t dur, uint16_t freq, uint16_t wave, uint16_t npts){
-//static void synth(u16 dur, u16 freq_1, u16 freq_2, u32 wave, u16 points){ //Get to this later
 	//Dur in msec, freq in Hz, per = 1/freq, wave and pts are dimensionless
 	//wave could be a complex binary value, but is 1 for all seqs currently
 	//npts effectively sets the modulation rate of the wave. 
@@ -119,51 +128,46 @@ static void synth(uint16_t dur, uint16_t freq, uint16_t wave, uint16_t npts){
 
 		/*CAUTION KERNEL DOES NOT LIKE FLOATING POINT MATH*/
 
-
+//FIXME Currently uses spinlock, but spends a lot of time waiting for the next event time
+//FIXME Would like to make this sleep for some time, but needs to have gauranteed wake up time
 	long long start_time, curr_time, end_time, next_event, us_per;
 	uint8_t mod_index;
 	unsigned long flags;
-	//mutex_lock(&buzzer.mutex);				//Only one process can access the buzzer at a time
-	spin_lock_irqsave(&buzzer.spin_lock, flags);			//sure let's try a spinlock
-	start_time = ktime_to_us(ktime_get());			//get the current time
-	curr_time = start_time;
-	end_time = start_time + (dur*1000);			//calc the end time (in usec)
-	us_per = 1000000 / (npts*freq);				//Event period: when pin might change next (in us)
+	spin_lock_irqsave(&buzzer.spin_lock, flags);		// spinlock works, but it probably chews up system process
+	start_time = ktime_to_us(ktime_get());			// get the current time
+	curr_time = start_time;					// current time
+//FIXME change dur to pass msec to remove this multiply
+	end_time = start_time + (dur*1000);			// calc the end time (in usec)
+	us_per = 1000000 / (npts*freq);				// Event period: when pin might change next (in us)
 
 	//Freq log: ln(f2/f1), only needed if there's a slide
 	//event frequency: 1/(end-start), only needed if there's a slide
-	mod_index = 0;
-	next_event = curr_time+(us_per);
-	//
-	//pr_info("%dHz (%lld ns) for %dmSec with w=%d modulated %lld nsec \n", freq, ns_per, dur, wave, ns_mod_rate);
-	//FIXME make this usleep_range or something that doesn't hold the kernel
-	while(curr_time < end_time){
-		//usleep_range(next_event-10, next_event);
-		if(curr_time >= next_event){
-			//spin lock here?
-			mod_index = (mod_index+1)%npts;
-			gpio_set_value(BUZZER_OUT, (wave>>mod_index)&1);
-			next_event = curr_time+(us_per);
-			//end spin lock
+	mod_index = 0;						// Used for modulation
+	next_event = curr_time+(us_per);			// calculate the first
+//FIXME make this usleep_range or something that doesn't hold the kernel
+	while(curr_time < end_time){				// check if we should still run the loop
+		if(curr_time >= next_event){			// check if the next event should happen
+			mod_index = (mod_index+1)%npts;		// increment our mod index
+			gpio_set_value(BUZZER_OUT, (wave>>mod_index)&1);	//set the output
+			next_event = curr_time+(us_per);	// calc next event time
+
 		}
-		//need to be careful not to miss an event, but want to yeild the processor
-		//usleep_range(10, 50);		//100u = 10k, 200u = 5k, only plan on going up to 5k
 		curr_time = ktime_to_us(ktime_get());
 	}
 
 	gpio_set_value(BUZZER_OUT, 0);				//make sure the pin is set low when we exit
-	spin_unlock_irqrestore(&buzzer.spin_lock, flags);
-	//mutex_unlock(&buzzer.mutex);
+	spin_unlock_irqrestore(&buzzer.spin_lock, flags);	//release the lock
 }
 
 //TODO parse MIDI file to synth
 
 static const struct file_operations buzzer_fops = {
 	.owner = 	THIS_MODULE,
-	.open = 	buzzer_open,	//called on first operation, may not need
-	.read = 	buzzer_read,	//read from the device? possibly the currently loaded sequence
-	.release = 	buzzer_release,	//called when all versions are done, may not need
-	.write = 	buzzer_write,	//write data to the device
+	.open = 	buzzer_open,		//called on first operation, may not need
+	.read = 	buzzer_read,		//read from the device? possibly the currently loaded sequence
+	.release = 	buzzer_release,		//called when all versions are done, may not need
+	.write = 	buzzer_write,		//write data to the device
+	//TODO IOCTRL...maybe
 };
 
 static int __init buzzer_create_node(void){
@@ -191,38 +195,6 @@ static int __init buzzer_destroy_node(void){
 
 	return 0;
 }
-
-static int buzzer_probe(struct platform_device *pdev){
-	int ret;
-	ret = 0;
-	pr_info("Buzzer Probe\n");
-
-	//allocate memory for the number of devices we have
-	//buzzer = kmalloc(buzzer_count *sizeof(struct buzzer_dev), GFP_KERNEL);
-	//if(!buzzer){
-	//	ret = -ENOMEM;
-	//	goto fail;	//Undo previously registered char dev
-	//}
-	//memset(buzzer, 0, buzzer_count*sizeof(struct buzzer_dev));
-	return ret;
-}
-
-static int buzzer_remove(struct platform_device *pdev){
-	int ret;
-	ret = 0;
-	pr_info("Buzzer Remove\n");
-	return ret;
-}
-
-//Not sure where this would get called
-static struct platform_driver buzzer_driver = {
-	.driver = {
-		.name = "buzzer",
-		.owner = THIS_MODULE,
-	},
-	.probe = buzzer_probe,
-	.remove= buzzer_remove,
-};
 
 static int __init buzzer_dev_config(void){
 
@@ -254,7 +226,6 @@ static int __init buzzer_dev_config(void){
 
 static void buzzer_dev_cleanup(void){
 	buzzer_destroy_node();
-
 	cdev_del(&buzzer.cdev);
 	unregister_chrdev_region(buzzer.devt, 1);
 }
@@ -262,25 +233,20 @@ static void buzzer_dev_cleanup(void){
 static int __init buzzer_init(void){
 
 	int ret;
-	mutex_init(&buzzer.mutex);
-	spin_lock_init(&buzzer.spin_lock);
+	mutex_init(&buzzer.mutex);		//Mutex is used to lock the write operation
+	spin_lock_init(&buzzer.spin_lock);	//spin lock is used to lock the synth
 	ret = buzzer_dev_config();		//changed the name of this to avoid confusion
 	if(ret !=0){
 		pr_err("Buzzer Device Init failed\n");
 		return -1;
 	}
 
-	//FIXME this never gets used, can probably take it out
-	ret = platform_driver_register(&buzzer_driver);
-	if(ret <0){
-		pr_err("Buzzer Platform Driver registration failed \n");
-		return -1;
-		//TODO need to unregister stuff?
-	}
-	//TODO init low level stuff here
+
+//TODO init low level stuff here
 
 	//Assign defaults
 	//TODO need set and get methods for this
+//FIXME these don't get used, can probably remove and remove from struct
 	buzzer.index = 1;	//
 	buzzer.freq = 440;	//Hz
 	buzzer.duration = 50;	//msec? sure
@@ -290,7 +256,6 @@ static int __init buzzer_init(void){
 }
 
 static void __exit buzzer_exit(void){
-	platform_driver_unregister(&buzzer_driver);
 	buzzer_dev_cleanup();
 }
 module_init(buzzer_init);
@@ -299,4 +264,4 @@ module_exit(buzzer_exit);
 MODULE_AUTHOR("Matt Sterling");
 MODULE_DESCRIPTION("Makerbot Buzzer Driver");
 MODULE_LICENSE("GPL");
-MODULE_VERSION("0.4");
+MODULE_VERSION("0.6");
