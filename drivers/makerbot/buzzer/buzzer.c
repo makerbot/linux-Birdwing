@@ -84,6 +84,7 @@ static ssize_t buzzer_write(struct file *f, const char __user *buf, size_t len, 
 	if(!(kstrtouint(c, 0, &index))){	//0 = successful conversion
 		if(index<SEQ_COUNT ){
 			pr_info("Play Seq %d\n", index);
+			preempt_disable();		//bad
 			do{
 			//TODO reduce the size of the sequence arrays (or pad) to make this a bitshift
 			//synth() doesn't return untill it has completed it's note
@@ -93,7 +94,7 @@ static ssize_t buzzer_write(struct file *f, const char __user *buf, size_t len, 
 					sequences[index][i+4]);		//Npts
 				i+=6;
 			}while(sequences[index][i]);			//Always end with a row of zeros or this won't break
-
+			preempt_enable();		//also...bad.
 		} else {
 			pr_info("Invalid sequence number. Values are 1-%d\n", SEQ_COUNT); 
 			return -EINVAL; //may need to pick something else since kstrtouint could return this too
