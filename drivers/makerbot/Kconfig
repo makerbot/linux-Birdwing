@@ -10,4 +10,16 @@ config FAST_GPIO
     help
         Makerbot custom driver for fast gpio access
 
+config BUZZER
+    tristate "buzzer"
+	depends on GPIOLIB
+    help
+	Makerbot buzzer driver
+
+config MY_FIRST_DRIVER
+	tristate "my first driver"
+		depends on GPIOLIB
+	help
+		First driver attempt, really just here for reference 
+
 endmenu
