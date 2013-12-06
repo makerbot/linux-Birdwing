@@ -42,9 +42,9 @@
 #include <mach/da8xx.h>
 #include <mach/mux.h>
 #include <mach/psc.h>
+#include <mach/serial.h>
 
 #define MANHATTAN_PHY_ID		NULL
-
 
 #define DA850_USB1_VBUS_PIN		GPIO_TO_PIN(6, 12)
 #define DA850_USB1_OC_PIN		GPIO_TO_PIN(6, 13)
@@ -165,13 +165,6 @@ static void wl12xx_set_power(int index, bool power_on)
 		mdelay(70);
 		gpio_set_value(WLAN_EN, 1);
 		mdelay(70);
-		//Note this power up sequence was for older chips (1251?) that had a power up issue
-		//gpio_set_value(WLAN_EN, 1);
-		//usleep_range(15000, 15000);
-		//gpio_set_value(WLAN_EN, 0);
-		//usleep_range(1000, 1000);
-		//gpio_set_value(WLAN_EN, 1);
-		//msleep(70);
 	} else {
 		gpio_set_value(WLAN_EN, 0);
 	}
@@ -432,7 +425,7 @@ static struct platform_device *power_monitor_devices[] __initdata = {
 
 static short mb_power_pins[] = {
 	DA850_GPIO0_8,  	//12V Power
-	DA850_GPIO1_2,  	//Power SB Button
+	//DA850_GPIO1_2,  	//Power SB Button
 	DA850_GPIO0_6,  	//Power monitor SDA
 	DA850_GPIO0_5,  	//Power monitor SCL
 	-1,
@@ -849,7 +842,7 @@ static __init void mb_manhattan_usb_init(void)
 	cfgchip2 &= ~CFGCHIP2_REFFREQ;
 	cfgchip2 |=  CFGCHIP2_REFFREQ_24MHZ;
 
-    cfgchip2 &= ~CFGCHIP2_OTGMODE;
+	cfgchip2 &= ~CFGCHIP2_OTGMODE;
 	cfgchip2 |=  CFGCHIP2_FORCE_DEVICE;
 	cfgchip2 |=  CFGCHIP2_SESENDEN | CFGCHIP2_PHY_PLLON;
 
@@ -894,13 +887,30 @@ static struct davinci_uart_config mb_manhattan_uart_config __initdata = {
 	.enabled_uarts = 0x7,
 };
 
+static const short uart_pins[]  ={
+	DA850_UART2_TXD,
+	-1
+};
+
+
+
 static __init void mb_manhattan_init(void)
 {
 	int ret;
 	u32 cfgchip3;
 
 	/*UART*/
+	ret = davinci_cfg_reg_list(uart_pins);
+	if(ret)
+		pr_warn("%s: UART 2 pin mux failed: %d\n", __func__, ret);
+	else {
+		pr_info("UART Pin mux successful\n");
+	}
+
+
 	davinci_serial_init(&mb_manhattan_uart_config);		//Configure the serial port interface
+
+	//should be able to get the UART2 value here
 
 	/*Ethernet*/
 	mb_manhattan_config_emac();							//Configure Ethernet

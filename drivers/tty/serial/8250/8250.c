@@ -1362,9 +1362,11 @@ static void serial8250_start_tx(struct uart_port *port)
 	struct uart_8250_port *up =
 		container_of(port, struct uart_8250_port, port);
 
+
 	if (!(up->ier & UART_IER_THRI)) {
 		up->ier |= UART_IER_THRI;
 		serial_port_out(port, UART_IER, up->ier);
+
 
 		if (up->bugs & UART_BUG_TXEN) {
 			unsigned char lsr;
@@ -1494,6 +1496,8 @@ void serial8250_tx_chars(struct uart_8250_port *up)
 	struct uart_port *port = &up->port;
 	struct circ_buf *xmit = &port->state->xmit;
 	int count;
+
+//	pr_info("tx_chars\n");
 
 	if (port->x_char) {
 		serial_out(up, UART_TX, port->x_char);
