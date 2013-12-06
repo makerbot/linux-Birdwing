@@ -903,14 +903,8 @@ static __init void mb_manhattan_init(void)
 	ret = davinci_cfg_reg_list(uart_pins);
 	if(ret)
 		pr_warn("%s: UART 2 pin mux failed: %d\n", __func__, ret);
-	else {
-		pr_info("UART Pin mux successful\n");
-	}
-
 
 	davinci_serial_init(&mb_manhattan_uart_config);		//Configure the serial port interface
-
-	//should be able to get the UART2 value here
 
 	/*Ethernet*/
 	mb_manhattan_config_emac();							//Configure Ethernet
