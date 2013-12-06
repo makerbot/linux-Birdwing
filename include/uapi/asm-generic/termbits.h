@@ -122,9 +122,10 @@ struct ktermios {
 #define  B1200	0000011
 #define  B1800	0000012
 #define  B2400	0000013
-#define  B4800	0000014
-#define  B9600	0000015
-#define  B19200	0000016
+//#define  B4800	0000014
+#define  B9600	0000014
+#define  B14400 0000015
+#define  B19200 0000016
 #define  B38400	0000017
 #define EXTA B19200
 #define EXTB B38400

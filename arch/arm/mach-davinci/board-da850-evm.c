@@ -1499,7 +1499,8 @@ static __init void da850_evm_init(void)
 	 * accessing them causes endless "too much work in irq53" messages
 	 * with arago fs
 	 */
-	__raw_writel(0, IO_ADDRESS(DA8XX_UART2_BASE) + 0x30);
+//check this
+	//__raw_writel(0, IO_ADDRESS(DA8XX_UART2_BASE) + 0x30);
 	__raw_writel(0, IO_ADDRESS(DA8XX_UART0_BASE) + 0x30);
 
 	ret = davinci_cfg_reg_list(da850_evm_mcasp_pins);

@@ -453,7 +453,7 @@ static const struct mux_config da850_pins[] = {
 	MUX_CFG(DA850, UART1_TXD,	4,	28,	15,	2,	false)
 	/* UART2 function */
 	MUX_CFG(DA850, UART2_RXD,	4,	16,	15,	2,	false)
-	MUX_CFG(DA850, UART2_TXD,	4,	20,	15,	2,	false)
+	MUX_CFG(DA850, UART2_TXD,	4,	20,	15,	2,	true)
 	/* I2C1 function */
 	MUX_CFG(DA850, I2C1_SCL,	4,	16,	15,	4,	false)
 	MUX_CFG(DA850, I2C1_SDA,	4,	20,	15,	4,	false)
