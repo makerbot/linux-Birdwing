@@ -556,6 +556,67 @@ static int da850_lcd_hw_init(void)
 	return 0;
 }
 
+static int __init mb_lcd_init(void){
+
+	int ret;
+
+	//Configure LCD controler pins
+	ret = davinci_cfg_reg_list(da850_lcdcntl_pins);	
+	if (ret){
+		pr_warn("%s: LCDC pin mux setup failed: %d\n", __func__, ret);
+		return ret;
+	}
+
+	//Configure LCD power and configuration (SPI) pins
+	ret = davinci_cfg_reg_list(mb_lcd_pins);
+	if (ret){
+		pr_warn("%s: LCD pins initialization failed: %d\n", __func__, ret);
+	//TODO unregister lcdcntl pins
+		return ret;
+	}
+
+	//Set up the LCD power and config pins
+	ret = da850_lcd_hw_init();
+	if (ret){
+		pr_warn("%s: LCD initialization failed: %d\n", __func__, ret);
+	//TODO unregister lcdcntl
+	//TODO unregister lcd power 
+		return ret;
+	}
+
+	//Associate power control functions with platform data
+	lcd_pdata->panel_power_ctrl = da850_panel_power_ctrl;
+
+	//Associate set up SPI with 
+	lcd_pdata->spi = &lcd_spi_gpio_data;
+	ret = da8xx_register_lcdc_spi(lcd_pdata);
+	if (ret){
+		pr_warn("%s: LCDC registration failed: %d\n", __func__, ret);
+	//TODO unregister lcdcntl
+	//TODO unregister lcd power
+		return ret;
+	}
+
+	//Configure LCD power / config pins
+
+	ret = davinci_cfg_reg_list(interface_i2c_pins);
+	if (ret){
+		pr_warn("%s: LCD i2c pins initialization failed: %d\n", __func__, ret);
+	//TODO undo stuff
+		return ret;
+	}
+
+	//Register the I2C bus?
+	ret = da8xx_register_i2c(0, &mb_i2c0_pdata);
+	if (ret){
+		pr_warn("%s: LCD i2c driver initialization failed: %d\n", __func__, ret);
+	//TODO undo thigns
+		return ret;
+	}
+
+	return 0;
+}
+
 
 //====================LED Indicator Configuration================================
 
@@ -947,7 +1008,7 @@ static __init void mb_manhattan_init(void)
 	u32 cfgchip3;
 
 	pr_warn("===========================================================================\n");
-	pr_warn(" Buzzer Kernel 18Nov 10h30m\n");
+	pr_warn("LCD Issues Kernel 10Dec2013 11h40\n");
 	pr_warn("===========================================================================\n");
 
 
@@ -955,14 +1016,9 @@ static __init void mb_manhattan_init(void)
 	ret = davinci_cfg_reg_list(uart_pins);
 	if(ret)
 		pr_warn("%s: UART 2 pin mux failed: %d\n", __func__, ret);
-	else {
-		pr_info("UART Pin mux successful\n");
-	}
-
 
 	davinci_serial_init(&mb_manhattan_uart_config);		//Configure the serial port interface
 
-	//should be able to get the UART2 value here
 
 	/*Ethernet*/
 	mb_manhattan_config_emac();							//Configure Ethernet
@@ -971,6 +1027,12 @@ static __init void mb_manhattan_init(void)
 	ret = da850_register_edma(0);						//Register Ethernet with kernel
 	if (ret)
 		pr_warn("%s: EDMA registration failed: %d\n", __func__, ret);
+
+//move this up to see if it fixes anything
+//	/* LCD  */
+//	ret = mb_lcd_init();
+//	if(ret)
+//		pr_warn("Error: Could not register LCD %d\n", ret);
 
 	/*Wireless*/
 	ret = da850_wl12xx_init();							//Configure and register Wifi
@@ -1023,32 +1085,7 @@ static __init void mb_manhattan_init(void)
     if(ret)
         pr_warn("Error: could not register chamber heater %d\n", ret);
 
-	/* LCD  */
-	ret = davinci_cfg_reg_list(da850_lcdcntl_pins);		//Configure LCD Controler pins, this list is in da850.c
-	if (ret)
-		pr_warn("%s: LCDC mux setup failed: %d\n", __func__, ret);
 
-	ret = davinci_cfg_reg_list(mb_lcd_pins);		//Configure LCD power / config pins
-	if (ret)
-		pr_warn("%s: LCD pins initialization failed: %d\n", __func__, ret);
-
-	ret = da850_lcd_hw_init();							//Set up the LCD power / config pins
-	if (ret)
-		pr_warn("%s: LCD initialization failed: %d\n", __func__, ret);
-
-	lcd_pdata->panel_power_ctrl = da850_panel_power_ctrl,		//Tell kernel what function to use for power control
-	lcd_pdata->spi = &lcd_spi_gpio_data;						//Tell the kerenl which spi to use
-	ret = da8xx_register_lcdc_spi(lcd_pdata);
-	if (ret)
-		pr_warn("%s: LCDC registration failed: %d\n", __func__, ret);
-
-	ret = davinci_cfg_reg_list(interface_i2c_pins);		//Configure LCD power / config pins
-	if (ret)
-		pr_warn("%s: LCD i2c pins initialization failed: %d\n", __func__, ret);
-
-	ret = da8xx_register_i2c(0, &mb_i2c0_pdata);
-	if (ret)
-		pr_warn("%s: LCD i2c driver initialization failed: %d\n", __func__, ret);
 
 	/*Watchdog*/
 	ret = da8xx_register_watchdog();							//Register the watchdog
