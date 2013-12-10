@@ -135,7 +135,7 @@ config PWM_TEGRA
 
 config  PWM_TIECAP
 	tristate "ECAP PWM support"
-	depends on SOC_AM33XX
+	depends on SOC_AM33XX || ARCH_DAVINCI_DA850
 	select PWM_TIPWMSS
 	help
 	  PWM driver support for the ECAP APWM controller found on AM33XX
@@ -146,7 +146,7 @@ config  PWM_TIECAP
 
 config  PWM_TIEHRPWM
 	tristate "EHRPWM PWM support"
-	depends on SOC_AM33XX
+	depends on SOC_AM33XX || ARCH_DAVINCI_DA850 
 	select PWM_TIPWMSS
 	help
 	  PWM driver support for the EHRPWM controller found on AM33XX
@@ -157,7 +157,7 @@ config  PWM_TIEHRPWM
 
 config  PWM_TIPWMSS
 	bool
-	depends on SOC_AM33XX && (PWM_TIEHRPWM || PWM_TIECAP)
+	depends on (SOC_AM33XX || ARCH_DAVINCI_DA850) && (PWM_TIEHRPWM || PWM_TIECAP)
 	help
 	  PWM Subsystem driver support for AM33xx SOC.
 
