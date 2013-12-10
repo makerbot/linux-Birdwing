@@ -496,7 +496,7 @@ static struct davinci_i2c_platform_data mb_i2c0_pdata = {
 	.bus_delay	= 0,	/* usec */
 };
 
-
+//TODO split this in to two functions, reset and backlight control
 static void da850_panel_power_ctrl(int val)
 {
 	/* lcd backlight */
@@ -506,6 +506,15 @@ static void da850_panel_power_ctrl(int val)
 	gpio_set_value(LCD_RESET, val);
 
 	pr_warn("switching lcd power to : %d\n", val);
+}
+
+static void mb_lcd_set_reset(int val){
+	gpio_set_value(LCD_RESET, val);
+}
+
+//todo this should be broken out to a dimmable driver
+static void mb_lcd_set_backlight(int val){
+	gpio_set_value(LCD_BACKLIGHT, val);
 }
 
 
@@ -519,6 +528,7 @@ static int da850_lcd_hw_init(void)
 		return status;
 
 	gpio_direction_output(LCD_BACKLIGHT, 0);
+//	gpio_set_value(LCD_BACKLIGHT, 0); //Keep the LCD off for now
 
 	pr_info("LCD register reset\n");
 	status = gpio_request(LCD_RESET, "lcd reset\n");
@@ -541,9 +551,6 @@ static int da850_lcd_hw_init(void)
 
 	/* Switch off panel power and backlight */
 	da850_panel_power_ctrl(0);
-
-	/* Switch on panel power and backlight */
-	//da850_panel_power_ctrl(1);
 
 
 	return 0;
