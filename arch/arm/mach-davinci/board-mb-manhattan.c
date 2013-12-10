@@ -44,6 +44,8 @@
 #include <mach/psc.h>
 #include <mach/serial.h>
 
+#include <linux/makerbot/buzzer.h>
+
 #define MANHATTAN_PHY_ID		NULL
 
 #define DA850_USB1_VBUS_PIN		GPIO_TO_PIN(6, 12)
@@ -92,6 +94,7 @@ static struct gpio_keys_button gpio_keys[] = {
             .code = KEY_ENTER,
             .gpio = OPTION_BUTTON,
             .desc = "Option",
+            .debounce_interval = 10,
             .type = EV_KEY,
             //.active_low = 1,
         },
@@ -99,6 +102,7 @@ static struct gpio_keys_button gpio_keys[] = {
             .code = KEY_BACKSPACE,
             .gpio = BACK_BUTTON,
             .desc = "Back",
+            .debounce_interval = 10,
             .type = EV_KEY,
             //.active_low = 1,
         },
@@ -106,6 +110,7 @@ static struct gpio_keys_button gpio_keys[] = {
             .code = KEY_SPACE,
             .gpio = SELECT_BUTTON,
             .desc = "Select",
+            .debounce_interval = 10,
             .type = EV_KEY,
             //.active_low = 1,
         },
@@ -544,7 +549,8 @@ static int da850_lcd_hw_init(void)
 	return 0;
 }
 
-//====================LED Indicator Configuration=================================
+
+//====================LED Indicator Configuration================================
 
 const short mb_manhattan_led_pins[] = {
 	DA850_GPIO6_14,		//LED Status
@@ -574,6 +580,40 @@ static struct platform_device leds_gpio = {
     .platform_data  = &gpio_led_info,
     },
 };
+
+//====================Buzzer==================================================
+#define BUZZER_OUT GPIO_TO_PIN(2,15)
+
+const short buzzer_pins[] = {
+	DA850_GPIO2_15,		//GPIO
+	-1
+};
+
+static __init int buzzer_init(void){
+	int ret;
+	ret = 0;
+
+	pr_info("buzzer: Pin Mux\n");
+	ret = davinci_cfg_reg_list(buzzer_pins);
+	if(ret){
+		pr_err("ERROR pin mux failed: %d\n", ret);
+		goto exit;
+	}
+
+	pr_info("buzzer: Output pin request\n");
+	ret = gpio_request_one(BUZZER_OUT, GPIOF_OUT_INIT_LOW, "buzzer_out");
+	if(ret){
+		pr_err("Could not request buzzer output gpio: %d\n", ret);
+		goto exit;
+	}
+
+	//platform data
+	pr_info("buzzer: init finished\n");
+	return ret;
+
+exit:
+	return ret;
+}
 
 //====================NAND Flash Configuration=================================
 
@@ -899,6 +939,11 @@ static __init void mb_manhattan_init(void)
 	int ret;
 	u32 cfgchip3;
 
+	pr_warn("===========================================================================\n");
+	pr_warn(" Buzzer Kernel 18Nov 10h30m\n");
+	pr_warn("===========================================================================\n");
+
+
 	/*UART*/
 	ret = davinci_cfg_reg_list(uart_pins);
 	if(ret)
@@ -1011,6 +1056,9 @@ static __init void mb_manhattan_init(void)
   	ret = platform_device_register(&leds_gpio);						//Register LED pin
 	if (ret)
 		pr_warn("da850_evm_init: led device initialization failed: %d\n", ret);
+
+	/*Buzzer*/
+	buzzer_init();
 
 	/* Setup alternate events on the PRUs */
 	cfgchip3 = __raw_readl(DA8XX_SYSCFG0_VIRT(DA8XX_CFGCHIP3_REG));		//Read from one of the base registers
