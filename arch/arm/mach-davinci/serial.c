@@ -65,7 +65,6 @@ static inline void serial_write_reg(struct plat_serial8250_port *p, int offset,
 	offset <<= p->regshift;
 
 	WARN_ONCE(!p->membase, "unmapped write: uart[%d]\n", offset);
-pr_info("UART Write %d at %x\n", value, (unsigned int)(p->membase+offset));
 	__raw_writel(value, p->membase + offset);
 }
 
@@ -85,21 +84,6 @@ static void __init davinci_serial_reset(struct plat_serial8250_port *p)
 	pwremu |= 0x1;
 	serial_write_reg(p, UART_DAVINCI_PWREMU, pwremu);
 
-//	if(p->mapbase == 0x01D0D000){
-//		pr_info("configuring UART2\n");
-//		divisor = (p->uartclk)/(BAUD_RATE*16);
-//
-//		serial_write_reg(p, UART_MDR, 0);
-//
-//		serial_write_reg(p, UART_DLLO, (divisor & 0xFF));
-//		serial_write_reg(p, UART_DLHI, ((divisor & 0xFF00)>>8));
-//
-//		serial_write_reg(p, UART_LCREG, UART_CONFIG & (UART_STOP_BIT | UART_WORDL |
-//							UART_PARITY| UART_SET_PARITY |
-//							UART_STICK_PARITY | UART_BREAK_CTRL |
-//							UART_DLAB));
-//	}
-
 	if (cpu_is_davinci_dm646x())
 		serial_write_reg(p, UART_DM646X_SCR,
 				 UART_DM646X_SCR_TX_WATERMARK);
@@ -114,9 +98,6 @@ int __init davinci_serial_setup_clk(unsigned instance, unsigned int *rate)
 	struct device *dev = &soc_info->serial_dev->dev;
 
 
-pr_err("==============>>UART CLK<<================\n");
-pr_err("UART%d\n", instance);
-	sprintf(name, "uart%d", instance);
 	clk = clk_get(dev, name);
 	if (IS_ERR(clk)) {
 		pr_err("%s:%d: failed to get UART%d clock\n",
@@ -128,7 +109,6 @@ pr_err("UART%d\n", instance);
 
 	if (rate){
 		*rate = clk_get_rate(clk);
-pr_err("UART Rate %u\n", *rate);
 
 	}
 
@@ -148,8 +128,6 @@ int __init davinci_serial_init(struct davinci_uart_config *info)
 	 * Make sure the serial ports are muxed on at this point.
 	 * You have to mux them off in device drivers later on if not needed.
 	 */
-pr_err("==============>>UART<<================\n");
-	
 	for (i = 0; p->flags; i++, p++) {
 		if (!(info->enabled_uarts & (1 << i)))
 			continue;
@@ -159,15 +137,12 @@ pr_err("==============>>UART<<================\n");
 			continue;
 
 		if (!p->membase && p->mapbase) {
-pr_err("UART Mapbase: %lu\n", (unsigned long) p->mapbase);
 			p->membase = ioremap(p->mapbase, SZ_4K);
-pr_err("UART Membase: %lu\n", (unsigned long)p->membase);
 			if (p->membase)
 				p->flags &= ~UPF_IOREMAP;
 			else
 				pr_err("uart regs ioremap failed\n");
 		}
-pr_err("UART Flags: %x\n", p->flags);
 
 		if (p->membase && p->type != PORT_AR7)
 			davinci_serial_reset(p);
