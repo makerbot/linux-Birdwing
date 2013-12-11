@@ -132,6 +132,8 @@ nand_bch_init(struct mtd_info *mtd, unsigned int eccsize, unsigned int eccbytes,
 	struct nand_bch_control *nbc = NULL;
 	unsigned char *erased_page;
 
+    printk(KERN_WARNING "BCH INIT !!!!!!!!!!!!!!!\n");
+
 	if (!eccsize || !eccbytes) {
 		printk(KERN_WARNING "ecc parameters not supplied\n");
 		goto fail;
@@ -208,6 +210,8 @@ nand_bch_init(struct mtd_info *mtd, unsigned int eccsize, unsigned int eccbytes,
 	if (!erased_page)
 		goto fail;
 
+    printk(KERN_WARNING "eccsize: %d eccbytes: %d, oobsize: %d \n", eccsize, eccbytes, mtd->oobsize) ;
+    
 	memset(erased_page, 0xff, eccsize);
 	memset(nbc->eccmask, 0, eccbytes);
 	encode_bch(nbc->bch, erased_page, eccsize, nbc->eccmask);

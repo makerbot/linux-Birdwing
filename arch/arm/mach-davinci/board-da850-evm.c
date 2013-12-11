@@ -311,7 +311,7 @@ static void __init da850_evm_init_nor(void)
 	iounmap(aemif_addr);
 }
 
-static const short da850_evm_nand_pins[] = {
+7tatic const short da850_evm_nand_pins[] = {
 	DA850_EMA_D_0, DA850_EMA_D_1, DA850_EMA_D_2, DA850_EMA_D_3,
 	DA850_EMA_D_4, DA850_EMA_D_5, DA850_EMA_D_6, DA850_EMA_D_7,
 	DA850_EMA_A_1, DA850_EMA_A_2, DA850_NEMA_CS_3, DA850_NEMA_CS_4,
