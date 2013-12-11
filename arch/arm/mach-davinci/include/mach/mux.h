@@ -899,6 +899,7 @@ enum davinci_da850_index {
 	DA850_EMA_BA_1,
 	DA850_EMA_CLK,
 	DA850_EMA_WAIT_1,
+	DA850_EMA_WAIT_0,
 	DA850_NEMA_CS_2,
 	/* GPIO function */
 	DA850_GPIO2_4,
@@ -1085,6 +1086,11 @@ enum davinci_da850_index {
     DA850_PRU0_R30_4,
     DA850_PRU0_R30_14,
     DA850_PRU0_R30_13,
+    /* rev E motor pins */
+    DA850_PRU0_R30_3,
+    DA850_PRU0_R31_20,
+    DA850_PRU0_R31_19,
+    DA850_PRU0_R31_2,
     /* power pins */
     DA850_GPIO0_8,
     DA850_GPIO1_2,

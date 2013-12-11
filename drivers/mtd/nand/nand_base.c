@@ -1,4 +1,7 @@
 /*
+    else {
+        pr_warn ("nand pins init!!!!!!!!!!!!!!!!!!\n");
+    }
  *  drivers/mtd/nand.c
  *
  *  Overview:
