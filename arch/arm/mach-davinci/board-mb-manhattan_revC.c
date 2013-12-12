@@ -263,7 +263,6 @@ static short stepper_pru_pins[] = {
     DA850_PRU0_R30_21,	//z step
     DA850_PRU0_R30_5,	//z dir
     DA850_PRU0_R30_4,	//z en
-    DA850_PRU0_R30_3,	//z vref
     DA850_GPIO2_4,	//z load
 
    -1,
@@ -281,7 +280,6 @@ static short toolhead_spi_pins[] = {
    	DA850_GPIO2_12,		//TH EXP1
    	DA850_GPIO6_5,		//TH0 5V on
     DA850_GPIO6_11,		//TH0 12V on
-    DA850_GPIO2_0,		//TH LVDS Enable
     -1,
 };
 
@@ -311,7 +309,7 @@ static struct spi_board_info toolhead_spi_info[] = {
 #define CH_SCK      GPIO_TO_PIN(0, 7)
 #define CH_CS       GPIO_TO_PIN(2, 2)
 #define CH_RSV0     GPIO_TO_PIN(5, 5)
-#define CH_RSV1     GPIO_TO_PIN(5, 7)
+#define CH_RSV1     GPIO_TO_PIN(2, 5)
 
 static short chamber_heater_pins[] = {
 	DA850_GPIO0_7,	//Chamber heater CLK
@@ -319,7 +317,7 @@ static short chamber_heater_pins[] = {
 	DA850_GPIO3_4,	//Chamber heater MISO
 	DA850_GPIO3_2,	//Chamber heater SOMI
 	DA850_GPIO5_5,	//Chamber heater reserved 0
-	DA850_GPIO5_7,	//Chamber heater reserved 1
+	DA850_GPIO2_5,	//Chamber heater reserved 1
 	-1,
 };
 
@@ -626,20 +624,48 @@ exit:
 
 //====================NAND Flash Configuration=================================
 
-static const short nand_pins[] = {
-	DA850_EMA_D_0, DA850_EMA_D_1, DA850_EMA_D_2, DA850_EMA_D_3,
-	DA850_EMA_D_4, DA850_EMA_D_5, DA850_EMA_D_6, DA850_EMA_D_7,
-	DA850_EMA_A_1, DA850_EMA_A_2, DA850_NEMA_CS_3, DA850_NEMA_CS_2,
-	DA850_NEMA_WE, DA850_NEMA_OE, DA850_EMA_WAIT_0, DA850_EMA_WAIT_1,
-	-1
-};
-
 #define SZ_416M 0x1A000000
 #define SZ_5M   0x00500000
 static struct mtd_partition da850_evm_nandflash_partition[] = {
 	{
-		.name		= "root filesystem one",
+		.name		= "u-boot env",
 		.offset		= 0,
+		.size		= SZ_1M,
+		.mask_flags	= 0,
+	},
+	{
+		.name		= "UBL",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= SZ_5M,
+		.mask_flags	= MTD_WRITEABLE, //readonly
+	},
+	{
+		.name		= "u-boot",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= SZ_5M,
+		.mask_flags	= MTD_WRITEABLE,
+	},
+	{
+		.name		= "u-boot env backup",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= SZ_5M,
+		.mask_flags	= MTD_WRITEABLE,
+	},
+	{
+		.name		= "kernel one",
+		.offset		= 0x1000000,
+		.size		= SZ_8M,
+		.mask_flags	= 0,
+	},
+	{
+		.name		= "kernel two",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= SZ_8M,
+		.mask_flags	= 0,
+	},
+	{
+		.name		= "root filesystem one",
+		.offset		= MTDPART_OFS_APPEND,
 		.size		= SZ_416M,
 		.mask_flags	= 0,
 	},
@@ -947,14 +973,6 @@ static __init void mb_manhattan_init(void)
 		pr_warn("%s: power pin init failed!: %d\n", __func__, ret);
 
 	/*NAND Flash*/
-    ret = davinci_cfg_reg_list(nand_pins);
-	if (ret)
-		pr_warn("%s: nand pin init failed!!!!!!!!!!!: %d\n", __func__, ret);
-    else {
-        pr_warn ("nand pins init!!!!!!!!!!!!!!!!!!\n");
-    }
-    printk ("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-
 	platform_add_devices(da850_evm_devices, ARRAY_SIZE(da850_evm_devices));		//add NAND storage
 
 	/*Toolhead SPI*/
