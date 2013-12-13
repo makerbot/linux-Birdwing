@@ -276,7 +276,8 @@ static short toolhead_spi_pins[] = {
 	DA850_SPI1_SOMI, 	//TH SOMI
 	DA850_SPI1_CLK, 	//TH CLK
 	DA850_SPI1_SIMO, 	//TH SIMO
-	DA850_SPI1_SCS_0, 	//TH SCS0
+	DA850_SPI1_SCS_0, 	//NOR SCS0
+	DA850_GPIO1_3, 	    //TH SCS0
     DA850_PRU0_R31_10,	//TH EXP0
    	DA850_GPIO2_12,		//TH EXP1
    	DA850_GPIO6_5,		//TH0 5V on
@@ -293,6 +294,7 @@ static struct davinci_spi_config toolhead_spi_cfg[] = {
     },
 };
 
+static u8 spi1_chip_selects[2] = {0xFF, 19};
 static struct spi_board_info toolhead_spi_info[] = {
 	{
 		.modalias		= "spidev",
@@ -301,6 +303,14 @@ static struct spi_board_info toolhead_spi_info[] = {
 		.max_speed_hz		= 1600000,
 		.bus_num		= 1,
 		.chip_select		= 0,
+	},
+	{
+		.modalias		= "spidev",
+		.controller_data	= &toolhead_spi_cfg,
+		.mode			= SPI_MODE_3,
+		.max_speed_hz		= 1600000,
+		.bus_num		= 1,
+		.chip_select		= 1,
 	},
 };
 
@@ -966,7 +976,8 @@ static __init void mb_manhattan_init(void)
 	if (ret)
 		pr_warn("%s: spi info registration failed: %d\n", __func__, ret);
 
-	ret = da8xx_register_spi_bus(1,1);
+    da8xx_spi_pdata[1].chip_sel = spi1_chip_selects;
+    ret = da8xx_register_spi_bus(1,2);
 	if (ret)
 		pr_warn("%s: SPI 1 registration failed: %d\n", __func__, ret);
 
