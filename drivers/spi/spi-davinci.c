@@ -784,6 +784,7 @@ static int davinci_spi_probe(struct platform_device *pdev)
 	resource_size_t	dma_tx_chan = SPI_NO_RESOURCE;
 	int i = 0, ret = 0;
 	u32 spipc0;
+	u16 spidat1 = CS_DEFAULT;
 
 	pdata = pdev->dev.platform_data;
 	if (pdata == NULL) {
@@ -904,6 +905,7 @@ static int davinci_spi_probe(struct platform_device *pdev)
 	if (pdata->chip_sel) {
 		for (i = 0; i < pdata->num_chipselect; i++) {
 			if (pdata->chip_sel[i] != SPI_INTERN_CS){
+                gpio_request(pdata->chip_sel[i], "spi cs");
 				gpio_direction_output(pdata->chip_sel[i], 1);
             }
 		}
@@ -920,6 +922,9 @@ static int davinci_spi_probe(struct platform_device *pdev)
 	set_io_bits(dspi->base + SPIGCR1, SPIGCR1_CLKMOD_MASK);
 	set_io_bits(dspi->base + SPIGCR1, SPIGCR1_MASTER_MASK);
 	set_io_bits(dspi->base + SPIGCR1, SPIGCR1_POWERDOWN_MASK);
+
+    spidat1 |= SPIDAT1_CSHOLD_MASK;
+    iowrite16(spidat1, dspi->base + SPIDAT1 + 2);
 
 	ret = spi_bitbang_start(&dspi->bitbang);
 	if (ret)
