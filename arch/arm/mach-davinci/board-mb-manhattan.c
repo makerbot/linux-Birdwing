@@ -71,7 +71,7 @@ static struct rotary_encoder_platform_data encoder_info = {
 static struct platform_device rotary_encoder = {
     .name       = "rotary-encoder",
     .id     = -1,
-    .dev        = {
+    .dev = {
         .platform_data = &encoder_info,
     }
 };
@@ -195,28 +195,28 @@ static __init int da850_wl12xx_init(void)
 {
 	int ret;
 
-	pr_warn("wl12xx: Start Pin Mux\n");
+	pr_debug("wl12xx: Start Pin Mux\n");
 	ret = davinci_cfg_reg_list(mb_wireless_pins);
 	if (ret) {
 		pr_err("wl12xx/mmc mux setup failed: %d\n", ret);
 		goto exit;
 	}
 
-	pr_warn("wl12xx: MMC Register\n");
+	pr_debug("wl12xx: MMC Register\n");
 	ret = da8xx_register_mmcsd0(&mb_wireless_mmc_config);
 	if (ret) {
 		pr_err("wl12xx/mmc registration failed: %d\n", ret);
 		goto exit;
 	}
 
-	pr_warn("wl12xx: WLAN Enable GPIO\n");
+	pr_debug("wl12xx: WLAN Enable GPIO\n");
 	ret = gpio_request_one(WLAN_EN, GPIOF_OUT_INIT_LOW, "wl12xx_en");
 	if (ret) {
 		pr_err("Could not request wl12xx enable gpio: %d\n", ret);
 		goto exit;
 	}
 
-	pr_warn("wl12xx: WLAN IRQ register\n");
+	pr_debug("wl12xx: WLAN IRQ register\n");
 	ret = gpio_request_one(WLAN_IRQ, GPIOF_IN, "wl12xx_irq");
 	if (ret) {
 		pr_err("Could not request wl12xx irq gpio: %d\n", ret);
@@ -225,7 +225,7 @@ static __init int da850_wl12xx_init(void)
 
 	mb_wireless_data.irq = gpio_to_irq(WLAN_IRQ);
 
-	pr_warn("wl12xx: Set Platform data\n");
+	pr_debug("wl12xx: Set Platform data\n");
 	ret = wl12xx_set_platform_data(&mb_wireless_data);
 	if (ret) {
 		pr_err("Could not set wl12xx data: %d\n", ret);
@@ -361,35 +361,35 @@ static __init int chamber_heater_init(void){
 
         int ret;
 
-        pr_info("Chamber heater pin mux\n");
+        pr_debug("Chamber heater pin mux\n");
         ret = davinci_cfg_reg_list(chamber_heater_pins);
         if(ret){
                 pr_err("ERROR pin mux setup failed: %d\n", ret);
                 goto exit;
         }
 
-        pr_info("Chamber heater SPIDEV register\n");
+        pr_debug("Chamber heater SPIDEV register\n");
         ret = spi_register_board_info(chamber_heater_info, ARRAY_SIZE(chamber_heater_info));
         if (ret) {
                 pr_err("ERROR SPIDEV registration failed %d\n", ret);
                 goto exit;
         }
 
-        pr_info("Chamber heater platform register\n");
+        pr_debug("Chamber heater platform register\n");
         ret = platform_device_register(&chamber_heater_device);
         if(ret){
                 pr_warn("ERROR platform device registration failed %d\n", ret);
                 goto exit;
         }
 
-        pr_info("Chamber heater register RSV0\n");
+        pr_debug("Chamber heater register RSV0\n");
         ret = gpio_request_one(CH_RSV0, GPIOF_OUT_INIT_LOW, "ch_rsv0");
         if(ret){
                 pr_err("ERROR could not request chamber heater RSV0 gpio %d\n", ret);
                 goto free_ch_rsv0;
         }
 
-        pr_info("Chamber heater register RSV1\n");
+        pr_debug("Chamber heater register RSV1\n");
         ret = gpio_request_one(CH_RSV1, GPIOF_OUT_INIT_LOW, "ch_rsv1");
         if(ret){
                 pr_err("ERROR could not request chamber heater RSV1 gpio %d\n", ret);
@@ -524,7 +524,7 @@ static void da850_panel_power_ctrl(int val)
 	/* lcd_reset */
 	gpio_set_value(LCD_RESET, val);
 
-	pr_warn("switching lcd power to : %d\n", val);
+	pr_debug("switching lcd power to : %d\n", val);
 }
 
 
@@ -532,21 +532,21 @@ static int da850_lcd_hw_init(void)
 {
 	int status;
 
-	pr_info("LCD: register backlight\n");
+	pr_debug("LCD: register backlight\n");
 	status = gpio_request(LCD_BACKLIGHT, "lcd backlight\n");
 	if(status < 0)
 		return status;
 
 	gpio_direction_output(LCD_BACKLIGHT, 0);
 
-	pr_info("LCD register reset\n");
+	pr_debug("LCD register reset\n");
 	status = gpio_request(LCD_RESET, "lcd reset\n");
 	if (status < 0)
 		return status;
 
 	gpio_direction_output(LCD_RESET, 0);
 
-	pr_info("LCD register display type\n");
+	pr_debug("LCD register display type\n");
 	status = gpio_request(LCD_DISPLAY_TYPE, "lcd type\n");
 	if (status < 0)
 		return status;
@@ -612,14 +612,14 @@ static __init int buzzer_init(void){
 	int ret;
 	ret = 0;
 
-	pr_info("buzzer: Pin Mux\n");
+	pr_debug("buzzer: Pin Mux\n");
 	ret = davinci_cfg_reg_list(buzzer_pins);
 	if(ret){
 		pr_err("ERROR pin mux failed: %d\n", ret);
 		goto exit;
 	}
 
-	pr_info("buzzer: Output pin request\n");
+	pr_debug("buzzer: Output pin request\n");
 	ret = gpio_request_one(BUZZER_OUT, GPIOF_OUT_INIT_LOW, "buzzer_out");
 	if(ret){
 		pr_err("Could not request buzzer output gpio: %d\n", ret);
@@ -627,7 +627,7 @@ static __init int buzzer_init(void){
 	}
 
 	//platform data
-	pr_info("buzzer: init finished\n");
+	pr_debug("buzzer: init finished\n");
 	return ret;
 
 exit:
@@ -760,7 +760,7 @@ static __init void mb_manhattan_config_emac(void)
 
 	/* configure the CFGCHIP3 register for MII */
 	__raw_writel(val, cfgchip3);
-	pr_info("EMAC: MII PHY configured\n");
+	pr_debug("EMAC: MII PHY configured\n");
 
 	soc_info->emac_pdata->phy_id = MANHATTAN_PHY_ID;
 
@@ -923,11 +923,6 @@ static __init void mb_manhattan_init(void)
 	int ret;
 	u32 cfgchip3;
 
-	pr_warn("===========================================================================\n");
-	pr_warn(" Buzzer Kernel 18Nov 10h30m\n");
-	pr_warn("===========================================================================\n");
-
-
 	/*UART*/
 	davinci_serial_init(&mb_manhattan_uart_config);		//Configure the serial port interface
 
@@ -960,10 +955,6 @@ static __init void mb_manhattan_init(void)
     ret = davinci_cfg_reg_list(nand_pins);
 	if (ret)
 		pr_warn("%s: nand pin init failed!!!!!!!!!!!: %d\n", __func__, ret);
-    else {
-        pr_warn ("nand pins init!!!!!!!!!!!!!!!!!!\n");
-    }
-    printk ("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
 
 	platform_add_devices(da850_evm_devices, ARRAY_SIZE(da850_evm_devices));		//add NAND storage
 

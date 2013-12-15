@@ -132,8 +132,6 @@ nand_bch_init(struct mtd_info *mtd, unsigned int eccsize, unsigned int eccbytes,
 	struct nand_bch_control *nbc = NULL;
 	unsigned char *erased_page;
 
-    printk(KERN_WARNING "BCH INIT !!!!!!!!!!!!!!!\n");
-
 	if (!eccsize || !eccbytes) {
 		printk(KERN_WARNING "ecc parameters not supplied\n");
 		goto fail;
