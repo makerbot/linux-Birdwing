@@ -644,24 +644,10 @@ static const short nand_pins[] = {
 	-1
 };
 
-#define SZ_416M 0x1A000000
-#define SZ_5M   0x00500000
 static struct mtd_partition da850_evm_nandflash_partition[] = {
 	{
-		.name		= "root filesystem one",
+		.name		= "root",
 		.offset		= 0,
-		.size		= SZ_416M,
-		.mask_flags	= 0,
-	},
-	{
-		.name		= "root filesystem two",
-		.offset		= MTDPART_OFS_APPEND,
-		.size		= SZ_416M,
-		.mask_flags	= 0,
-	},
-	{
-		.name		= "user filesystem",
-		.offset		= MTDPART_OFS_APPEND,
 		.size		= MTDPART_SIZ_FULL,
 		.mask_flags	= 0,
 	},
