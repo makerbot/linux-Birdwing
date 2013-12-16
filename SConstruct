@@ -104,17 +104,14 @@ gen_sources = [
 ]
 gen_sources.extend(env.MBRecursiveFileGlob('drivers/video/logo', '*.c', 'logo.c'))
 
-build_sources = config_targets
-build_sources.extend(env.MBRecursiveFileGlob('.', '*.[chSs]'))
-def not_generated(path):
-    return str(path) not in map(str, gen_sources)
-build_sources = filter(not_generated, build_sources)
+build_sources = []
 
 build_targets = [
     'arch/arm/boot/uImage',
 ]
 
 build = env.Command(build_targets, build_sources, make_cmd('uImage', '-j4'))
+AlwaysBuild(build) # Let make determine what needs to be built
 
 clean_targets = [
     '.missing-syscalls.d',
