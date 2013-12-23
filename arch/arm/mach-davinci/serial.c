@@ -31,23 +31,6 @@
 #include <mach/serial.h>
 #include <mach/cputype.h>
 
-#define BAUD_RATE 14400
-
-#define UART_MDR 0x34
-#define UART_DLLO 0x20
-#define UART_DLHI 0x24
-#define UART_LCREG 0xC
-
-#define UART_CONFIG 0x3
-#define UART_OVR_SMPL 0x1
-#define UART_STOP_BIT 0x4
-#define UART_WORDL 0x3
-#define UART_PARITY 0x8
-#define UART_SET_PARITY 0x10
-#define UART_STICK_PARITY 0x20
-#define UART_BREAK_CTRL 0x40
-#define UART_DLAB 0x80
-
 
 static inline unsigned int serial_read_reg(struct plat_serial8250_port *up,
 					   int offset)
@@ -65,14 +48,13 @@ static inline void serial_write_reg(struct plat_serial8250_port *p, int offset,
 	offset <<= p->regshift;
 
 	WARN_ONCE(!p->membase, "unmapped write: uart[%d]\n", offset);
+
 	__raw_writel(value, p->membase + offset);
 }
 
 static void __init davinci_serial_reset(struct plat_serial8250_port *p)
 {
 	unsigned int pwremu = 0;
-
-	unsigned int divisor = 0;
 
 	serial_write_reg(p, UART_IER, 0);  /* disable all interrupts */
 
@@ -98,6 +80,7 @@ int __init davinci_serial_setup_clk(unsigned instance, unsigned int *rate)
 	struct device *dev = &soc_info->serial_dev->dev;
 
 
+	sprintf(name, "uart%d", instance);
 	clk = clk_get(dev, name);
 	if (IS_ERR(clk)) {
 		pr_err("%s:%d: failed to get UART%d clock\n",
@@ -107,10 +90,8 @@ int __init davinci_serial_setup_clk(unsigned instance, unsigned int *rate)
 
 	clk_prepare_enable(clk);
 
-	if (rate){
+	if (rate)
 		*rate = clk_get_rate(clk);
-
-	}
 
 	return 0;
 }
