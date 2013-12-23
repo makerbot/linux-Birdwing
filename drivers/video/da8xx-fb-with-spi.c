@@ -442,23 +442,26 @@ static int lcd_ssd2119_spi_init(struct da8xx_spi_pin_data *spi) {
 int mb_serializer_compat_init(struct platform_device *device)
 {
 	struct da8xx_lcdc_spi_platform_data *fb_pdata;
-    int ret = 0;
-    if (device) {
-        fb_pdata = device->dev.platform_data;
-        fb_pdata->panel_power_ctrl(1);
+	int ret = 0;
+	pr_info("initing LCD\n");
+	msleep(500);	//wait for the PCLK to be stable
+    	if (device) {
+        	fb_pdata = device->dev.platform_data;
+        	pr_info(">>>LCD: Switcing panel power on\n");
+		fb_pdata->panel_power_ctrl(1);
 
-        ret = ssd2119_spi_init(fb_pdata->spi);
-        if (ret < 0){
-            pr_err("init error in spi !!\n");
-            return ret;
-        }
+        	ret = ssd2119_spi_init(fb_pdata->spi);
+        	if (ret < 0){
+            		pr_err("init error in spi !!\n");
+            		return ret;
+        	}
 
-        ret = lcd_ssd2119_spi_init(fb_pdata->spi);
-        if (ret < 0){
-            pr_err("init error in spi lcd sequence!!\n");
-            return ret;
-        }
-    }
+        	ret = lcd_ssd2119_spi_init(fb_pdata->spi);
+        	if (ret < 0){
+            		pr_err("init error in spi lcd sequence!!\n");
+            		return ret;
+        	}
+    	}
     return ret;
 }
 
