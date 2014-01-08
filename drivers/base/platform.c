@@ -281,7 +281,7 @@ int platform_device_add(struct platform_device *pdev)
 {
 	int i, ret;
 
-	pr_err("Start Registering platform device '%s'\n",
+	pr_debug("Start Registering platform device '%s'\n",
 		 dev_name(&pdev->dev));
 
 	if (!pdev)
@@ -337,12 +337,12 @@ int platform_device_add(struct platform_device *pdev)
 		}
 	}
 
-	pr_err("Registering platform device '%s'. Parent at %s\n",
+	pr_debug("Registering platform device '%s'. Parent at %s\n",
 		 dev_name(&pdev->dev), dev_name(pdev->dev.parent));
 
 	ret = device_add(&pdev->dev);
 	if (ret == 0){
-        pr_err("success!!");
+        pr_debug("success!!");
 		return ret;
     }
 
