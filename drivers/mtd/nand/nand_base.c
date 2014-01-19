@@ -2889,7 +2889,7 @@ static int nand_flash_detect_onfi(struct mtd_info *mtd, struct nand_chip *chip,
 		chip->read_buf(mtd, (uint8_t *)p, sizeof(*p));
 		if (onfi_crc16(ONFI_CRC_BASE, (uint8_t *)p, 254) ==
 				le16_to_cpu(p->crc)) {
-			pr_info("ONFI param page %d valid\n", i);
+			pr_debug("ONFI param page %d valid\n", i);
 			break;
 		}
 	}
@@ -2913,7 +2913,7 @@ static int nand_flash_detect_onfi(struct mtd_info *mtd, struct nand_chip *chip,
 		chip->onfi_version = 0;
 
 	if (!chip->onfi_version) {
-		pr_info("%s: unsupported ONFI version: %d\n", __func__, val);
+		pr_warn("%s: unsupported ONFI version: %d\n", __func__, val);
 		return 0;
 	}
 
@@ -2930,7 +2930,7 @@ static int nand_flash_detect_onfi(struct mtd_info *mtd, struct nand_chip *chip,
 	if (le16_to_cpu(p->features) & 1)
 		*busw = NAND_BUSWIDTH_16;
 
-	pr_info("ONFI flash detected\n");
+	pr_debug("ONFI flash detected\n");
 	return 1;
 }
 
@@ -3217,7 +3217,7 @@ static struct nand_flash_dev *nand_get_flash_type(struct mtd_info *mtd,
 		id_data[i] = chip->read_byte(mtd);
 
 	if (id_data[0] != *maf_id || id_data[1] != *dev_id) {
-		pr_info("%s: second ID read did not match "
+		pr_warn("%s: second ID read did not match "
 			"%02x,%02x against %02x,%02x\n", __func__,
 			*maf_id, *dev_id, id_data[0], id_data[1]);
 		return ERR_PTR(-ENODEV);

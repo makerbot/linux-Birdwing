@@ -211,7 +211,7 @@ static int pruss_probe(struct platform_device *dev)
 		if (ret < 0)
 			goto out_free;
 	}
-    pr_info("pruss registered succsussfully\n");
+    pr_debug("pruss registered succsussfully\n");
 
 	platform_set_drvdata(dev, gdev);
 	return 0;

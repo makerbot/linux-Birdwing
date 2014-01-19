@@ -381,7 +381,6 @@ static int ssd2119_spi_write_reg(struct da8xx_spi_pin_data *spi, u8 reg, u16 val
 
 	if (spi){
 
-        //printk("spi reg: %d val: %d \n", reg, val);    
         // the registers don't seem to get written reliably so we send them 3 times
         for (i = 0; i < 3; i++) {
             // transfer command code
@@ -592,8 +591,6 @@ static void lcd_blit(int load_mode, struct da8xx_fb_par *par)
 		start    = par->dma_start;
 		end      = par->dma_end;
 
-        pr_err("load data\n");
-
 		reg_ras |= LCD_PALETTE_LOAD_MODE(DATA_ONLY);
 		if (lcd_revision == LCD_VERSION_1) {
 			reg_dma |= LCD_V1_END_OF_FRAME_INT_ENA;
@@ -614,7 +611,6 @@ static void lcd_blit(int load_mode, struct da8xx_fb_par *par)
 		start    = par->p_palette_base;
 		end      = start + par->palette_sz - 1;
 
-        pr_err("load_pallette\n");
 		reg_ras |= LCD_PALETTE_LOAD_MODE(PALETTE_ONLY);
 
 		if (lcd_revision == LCD_VERSION_1) {
@@ -1424,7 +1420,7 @@ static int da8xx_pan_display(struct fb_var_screeninfo *var,
 	unsigned int start;
 	unsigned long irq_flags;
 
-    pr_err("pan_display x_offset%d, y_offset%d\n", fbi->var.xoffset, fbi->var.yoffset);
+    pr_debug("pan_display x_offset%d, y_offset%d\n", fbi->var.xoffset, fbi->var.yoffset);
 
 	if (var->xoffset != fbi->var.xoffset ||
 			var->yoffset != fbi->var.yoffset) {
@@ -1441,7 +1437,7 @@ static int da8xx_pan_display(struct fb_var_screeninfo *var,
 				new_var.xoffset * fbi->var.bits_per_pixel / 8;
 			end	= start + fbi->var.yres * fix->line_length - 1;
 
-            pr_err("pan_display new_start%d, new_end%d\n", start, end);
+            pr_debug("pan_display new_start%d, new_end%d\n", start, end);
 			par->dma_start	= start;
 			par->dma_end	= end;
 			spin_lock_irqsave(&par->lock_for_chan_update,

@@ -593,6 +593,7 @@ static const struct mux_config da850_pins[] = {
 	MUX_CFG(DA850, EMA_BA_1,	5,	24,	15,	1,	false)
 	MUX_CFG(DA850, EMA_CLK,		6,	0,	15,	1,	false)
 	MUX_CFG(DA850, EMA_WAIT_1,	6,	24,	15,	1,	false)
+    MUX_CFG(DA850, EMA_WAIT_0,  7,  28, 15, 1,  false)
 	MUX_CFG(DA850, NEMA_CS_2,	7,	0,	15,	1,	false)
 	/* GPIO function */
 	MUX_CFG(DA850, GPIO2_4,		6,	12,	15,	8,	false)
@@ -777,6 +778,13 @@ static const struct mux_config da850_pins[] = {
     MUX_CFG(DA850,  PRU0_R30_4, 6,  4,  15, 4,  false)
     MUX_CFG(DA850,  PRU0_R30_14,    15, 12, 15, 8,  false)
     MUX_CFG(DA850,  PRU0_R30_13,    15, 16, 15, 8,  false)
+
+    /* rev E motor pins */
+    MUX_CFG(DA850,  PRU0_R30_3, 6,  8,  15, 4,  false)
+    MUX_CFG(DA850,  PRU0_R31_20,    0,  8,  15, 0,  false)
+    MUX_CFG(DA850,  PRU0_R31_19,    0,  12, 15, 0,  false)
+    MUX_CFG(DA850,  PRU0_R31_2, 6,  12, 15, 0,  false)
+
     /* power */
     MUX_CFG(DA850,  GPIO0_8,    0,  28, 15, 8,  false)
     MUX_CFG(DA850,  GPIO1_2,    4,  20, 15, 8,  false) 

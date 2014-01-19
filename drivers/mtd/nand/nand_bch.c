@@ -208,6 +208,8 @@ nand_bch_init(struct mtd_info *mtd, unsigned int eccsize, unsigned int eccbytes,
 	if (!erased_page)
 		goto fail;
 
+    printk(KERN_WARNING "eccsize: %d eccbytes: %d, oobsize: %d \n", eccsize, eccbytes, mtd->oobsize) ;
+    
 	memset(erased_page, 0xff, eccsize);
 	memset(nbc->eccmask, 0, eccbytes);
 	encode_bch(nbc->bch, erased_page, eccsize, nbc->eccmask);
