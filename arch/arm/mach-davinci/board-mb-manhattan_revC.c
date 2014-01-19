@@ -42,11 +42,11 @@
 #include <mach/da8xx.h>
 #include <mach/mux.h>
 #include <mach/psc.h>
-#include <mach/serial.h>
 
 #include <linux/makerbot/buzzer.h>
 
 #define MANHATTAN_PHY_ID		NULL
+
 
 #define DA850_USB1_VBUS_PIN		GPIO_TO_PIN(6, 12)
 #define DA850_USB1_OC_PIN		GPIO_TO_PIN(6, 13)
@@ -71,7 +71,7 @@ static struct rotary_encoder_platform_data encoder_info = {
 static struct platform_device rotary_encoder = {
     .name       = "rotary-encoder",
     .id     = -1,
-    .dev = {
+    .dev        = {
         .platform_data = &encoder_info,
     }
 };
@@ -170,6 +170,13 @@ static void wl12xx_set_power(int index, bool power_on)
 		mdelay(70);
 		gpio_set_value(WLAN_EN, 1);
 		mdelay(70);
+		//Note this power up sequence was for older chips (1251?) that had a power up issue
+		//gpio_set_value(WLAN_EN, 1);
+		//usleep_range(15000, 15000);
+		//gpio_set_value(WLAN_EN, 0);
+		//usleep_range(1000, 1000);
+		//gpio_set_value(WLAN_EN, 1);
+		//msleep(70);
 	} else {
 		gpio_set_value(WLAN_EN, 0);
 	}
@@ -188,28 +195,28 @@ static __init int da850_wl12xx_init(void)
 {
 	int ret;
 
-	pr_debug("wl12xx: Start Pin Mux\n");
+	pr_warn("wl12xx: Start Pin Mux\n");
 	ret = davinci_cfg_reg_list(mb_wireless_pins);
 	if (ret) {
 		pr_err("wl12xx/mmc mux setup failed: %d\n", ret);
 		goto exit;
 	}
 
-	pr_debug("wl12xx: MMC Register\n");
+	pr_warn("wl12xx: MMC Register\n");
 	ret = da8xx_register_mmcsd0(&mb_wireless_mmc_config);
 	if (ret) {
 		pr_err("wl12xx/mmc registration failed: %d\n", ret);
 		goto exit;
 	}
 
-	pr_debug("wl12xx: WLAN Enable GPIO\n");
+	pr_warn("wl12xx: WLAN Enable GPIO\n");
 	ret = gpio_request_one(WLAN_EN, GPIOF_OUT_INIT_LOW, "wl12xx_en");
 	if (ret) {
 		pr_err("Could not request wl12xx enable gpio: %d\n", ret);
 		goto exit;
 	}
 
-	pr_debug("wl12xx: WLAN IRQ register\n");
+	pr_warn("wl12xx: WLAN IRQ register\n");
 	ret = gpio_request_one(WLAN_IRQ, GPIOF_IN, "wl12xx_irq");
 	if (ret) {
 		pr_err("Could not request wl12xx irq gpio: %d\n", ret);
@@ -218,7 +225,7 @@ static __init int da850_wl12xx_init(void)
 
 	mb_wireless_data.irq = gpio_to_irq(WLAN_IRQ);
 
-	pr_debug("wl12xx: Set Platform data\n");
+	pr_warn("wl12xx: Set Platform data\n");
 	ret = wl12xx_set_platform_data(&mb_wireless_data);
 	if (ret) {
 		pr_err("Could not set wl12xx data: %d\n", ret);
@@ -256,7 +263,6 @@ static short stepper_pru_pins[] = {
     DA850_PRU0_R30_21,	//z step
     DA850_PRU0_R30_5,	//z dir
     DA850_PRU0_R30_4,	//z en
-    DA850_PRU0_R30_3,	//z vref
     DA850_GPIO2_4,	//z load
 
    -1,
@@ -269,13 +275,11 @@ static short toolhead_spi_pins[] = {
 	DA850_SPI1_SOMI, 	//TH SOMI
 	DA850_SPI1_CLK, 	//TH CLK
 	DA850_SPI1_SIMO, 	//TH SIMO
-	DA850_SPI1_SCS_0, 	//NOR SCS0
-	DA850_GPIO1_3, 	    //TH SCS0
+	DA850_SPI1_SCS_0, 	//TH SCS0
     DA850_PRU0_R31_10,	//TH EXP0
    	DA850_GPIO2_12,		//TH EXP1
    	DA850_GPIO6_5,		//TH0 5V on
     DA850_GPIO6_11,		//TH0 12V on
-    DA850_GPIO2_0,		//TH LVDS Enable
     -1,
 };
 
@@ -287,7 +291,6 @@ static struct davinci_spi_config toolhead_spi_cfg[] = {
     },
 };
 
-static u8 spi1_chip_selects[2] = {0xFF, 19};
 static struct spi_board_info toolhead_spi_info[] = {
 	{
 		.modalias		= "spidev",
@@ -296,14 +299,6 @@ static struct spi_board_info toolhead_spi_info[] = {
 		.max_speed_hz		= 1600000,
 		.bus_num		= 1,
 		.chip_select		= 0,
-	},
-	{
-		.modalias		= "spidev",
-		.controller_data	= &toolhead_spi_cfg,
-		.mode			= SPI_MODE_3,
-		.max_speed_hz		= 1600000,
-		.bus_num		= 1,
-		.chip_select		= 1,
 	},
 };
 
@@ -314,7 +309,7 @@ static struct spi_board_info toolhead_spi_info[] = {
 #define CH_SCK      GPIO_TO_PIN(0, 7)
 #define CH_CS       GPIO_TO_PIN(2, 2)
 #define CH_RSV0     GPIO_TO_PIN(5, 5)
-#define CH_RSV1     GPIO_TO_PIN(5, 7)
+#define CH_RSV1     GPIO_TO_PIN(2, 5)
 
 static short chamber_heater_pins[] = {
 	DA850_GPIO0_7,	//Chamber heater CLK
@@ -322,7 +317,7 @@ static short chamber_heater_pins[] = {
 	DA850_GPIO3_4,	//Chamber heater MISO
 	DA850_GPIO3_2,	//Chamber heater SOMI
 	DA850_GPIO5_5,	//Chamber heater reserved 0
-	DA850_GPIO5_7,	//Chamber heater reserved 1
+	DA850_GPIO2_5,	//Chamber heater reserved 1
 	-1,
 };
 
@@ -354,35 +349,35 @@ static __init int chamber_heater_init(void){
 
         int ret;
 
-        pr_debug("Chamber heater pin mux\n");
+        pr_info("Chamber heater pin mux\n");
         ret = davinci_cfg_reg_list(chamber_heater_pins);
         if(ret){
                 pr_err("ERROR pin mux setup failed: %d\n", ret);
                 goto exit;
         }
 
-        pr_debug("Chamber heater SPIDEV register\n");
+        pr_info("Chamber heater SPIDEV register\n");
         ret = spi_register_board_info(chamber_heater_info, ARRAY_SIZE(chamber_heater_info));
         if (ret) {
                 pr_err("ERROR SPIDEV registration failed %d\n", ret);
                 goto exit;
         }
 
-        pr_debug("Chamber heater platform register\n");
+        pr_info("Chamber heater platform register\n");
         ret = platform_device_register(&chamber_heater_device);
         if(ret){
                 pr_warn("ERROR platform device registration failed %d\n", ret);
                 goto exit;
         }
 
-        pr_debug("Chamber heater register RSV0\n");
+        pr_info("Chamber heater register RSV0\n");
         ret = gpio_request_one(CH_RSV0, GPIOF_OUT_INIT_LOW, "ch_rsv0");
         if(ret){
                 pr_err("ERROR could not request chamber heater RSV0 gpio %d\n", ret);
                 goto free_ch_rsv0;
         }
 
-        pr_debug("Chamber heater register RSV1\n");
+        pr_info("Chamber heater register RSV1\n");
         ret = gpio_request_one(CH_RSV1, GPIOF_OUT_INIT_LOW, "ch_rsv1");
         if(ret){
                 pr_err("ERROR could not request chamber heater RSV1 gpio %d\n", ret);
@@ -442,7 +437,7 @@ static struct platform_device *power_monitor_devices[] __initdata = {
 
 static short mb_power_pins[] = {
 	DA850_GPIO0_8,  	//12V Power
-	//DA850_GPIO1_2,  	//Power SB Button
+	DA850_GPIO1_2,  	//Power SB Button
 	DA850_GPIO0_6,  	//Power monitor SDA
 	DA850_GPIO0_5,  	//Power monitor SCL
 	-1,
@@ -517,7 +512,7 @@ static void da850_panel_power_ctrl(int val)
 	/* lcd_reset */
 	gpio_set_value(LCD_RESET, val);
 
-	pr_debug("switching lcd power to : %d\n", val);
+	pr_warn("switching lcd power to : %d\n", val);
 }
 
 
@@ -525,21 +520,21 @@ static int da850_lcd_hw_init(void)
 {
 	int status;
 
-	pr_debug("LCD: register backlight\n");
+	pr_info("LCD: register backlight\n");
 	status = gpio_request(LCD_BACKLIGHT, "lcd backlight\n");
 	if(status < 0)
 		return status;
 
 	gpio_direction_output(LCD_BACKLIGHT, 0);
 
-	pr_debug("LCD register reset\n");
+	pr_info("LCD register reset\n");
 	status = gpio_request(LCD_RESET, "lcd reset\n");
 	if (status < 0)
 		return status;
 
 	gpio_direction_output(LCD_RESET, 0);
 
-	pr_debug("LCD register display type\n");
+	pr_info("LCD register display type\n");
 	status = gpio_request(LCD_DISPLAY_TYPE, "lcd type\n");
 	if (status < 0)
 		return status;
@@ -605,14 +600,14 @@ static __init int buzzer_init(void){
 	int ret;
 	ret = 0;
 
-	pr_debug("buzzer: Pin Mux\n");
+	pr_info("buzzer: Pin Mux\n");
 	ret = davinci_cfg_reg_list(buzzer_pins);
 	if(ret){
 		pr_err("ERROR pin mux failed: %d\n", ret);
 		goto exit;
 	}
 
-	pr_debug("buzzer: Output pin request\n");
+	pr_info("buzzer: Output pin request\n");
 	ret = gpio_request_one(BUZZER_OUT, GPIOF_OUT_INIT_LOW, "buzzer_out");
 	if(ret){
 		pr_err("Could not request buzzer output gpio: %d\n", ret);
@@ -620,7 +615,7 @@ static __init int buzzer_init(void){
 	}
 
 	//platform data
-	pr_debug("buzzer: init finished\n");
+	pr_info("buzzer: init finished\n");
 	return ret;
 
 exit:
@@ -629,18 +624,60 @@ exit:
 
 //====================NAND Flash Configuration=================================
 
-static const short nand_pins[] = {
-	DA850_EMA_D_0, DA850_EMA_D_1, DA850_EMA_D_2, DA850_EMA_D_3,
-	DA850_EMA_D_4, DA850_EMA_D_5, DA850_EMA_D_6, DA850_EMA_D_7,
-	DA850_EMA_A_1, DA850_EMA_A_2, DA850_NEMA_CS_3, DA850_NEMA_CS_2,
-	DA850_NEMA_WE, DA850_NEMA_OE, DA850_EMA_WAIT_0, DA850_EMA_WAIT_1,
-	-1
-};
-
+#define SZ_416M 0x1A000000
+#define SZ_5M   0x00500000
 static struct mtd_partition da850_evm_nandflash_partition[] = {
 	{
-		.name		= "root",
+		.name		= "u-boot env",
 		.offset		= 0,
+		.size		= SZ_1M,
+		.mask_flags	= 0,
+	},
+	{
+		.name		= "UBL",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= SZ_5M,
+		.mask_flags	= MTD_WRITEABLE, //readonly
+	},
+	{
+		.name		= "u-boot",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= SZ_5M,
+		.mask_flags	= MTD_WRITEABLE,
+	},
+	{
+		.name		= "u-boot env backup",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= SZ_5M,
+		.mask_flags	= MTD_WRITEABLE,
+	},
+	{
+		.name		= "kernel one",
+		.offset		= 0x1000000,
+		.size		= SZ_8M,
+		.mask_flags	= 0,
+	},
+	{
+		.name		= "kernel two",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= SZ_8M,
+		.mask_flags	= 0,
+	},
+	{
+		.name		= "root filesystem one",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= SZ_416M,
+		.mask_flags	= 0,
+	},
+	{
+		.name		= "root filesystem two",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= SZ_416M,
+		.mask_flags	= 0,
+	},
+	{
+		.name		= "user filesystem",
+		.offset		= MTDPART_OFS_APPEND,
 		.size		= MTDPART_SIZ_FULL,
 		.mask_flags	= 0,
 	},
@@ -739,7 +776,7 @@ static __init void mb_manhattan_config_emac(void)
 
 	/* configure the CFGCHIP3 register for MII */
 	__raw_writel(val, cfgchip3);
-	pr_debug("EMAC: MII PHY configured\n");
+	pr_info("EMAC: MII PHY configured\n");
 
 	soc_info->emac_pdata->phy_id = MANHATTAN_PHY_ID;
 
@@ -852,7 +889,7 @@ static __init void mb_manhattan_usb_init(void)
 	cfgchip2 &= ~CFGCHIP2_REFFREQ;
 	cfgchip2 |=  CFGCHIP2_REFFREQ_24MHZ;
 
-	cfgchip2 &= ~CFGCHIP2_OTGMODE;
+    cfgchip2 &= ~CFGCHIP2_OTGMODE;
 	cfgchip2 |=  CFGCHIP2_FORCE_DEVICE;
 	cfgchip2 |=  CFGCHIP2_SESENDEN | CFGCHIP2_PHY_PLLON;
 
@@ -897,30 +934,18 @@ static struct davinci_uart_config mb_manhattan_uart_config __initdata = {
 	.enabled_uarts = 0x7,
 };
 
-static const short uart_pins[]  ={
-	DA850_UART2_TXD,
-	-1
-};
-
-
-
 static __init void mb_manhattan_init(void)
 {
 	int ret;
 	u32 cfgchip3;
 
+	pr_warn("===========================================================================\n");
+	pr_warn(" Buzzer Kernel 18Nov 10h30m\n");
+	pr_warn("===========================================================================\n");
+
+
 	/*UART*/
-	ret = davinci_cfg_reg_list(uart_pins);
-	if(ret)
-		pr_warn("%s: UART 2 pin mux failed: %d\n", __func__, ret);
-	else {
-		pr_info("UART Pin mux successful\n");
-	}
-
-
 	davinci_serial_init(&mb_manhattan_uart_config);		//Configure the serial port interface
-
-	//should be able to get the UART2 value here
 
 	/*Ethernet*/
 	mb_manhattan_config_emac();							//Configure Ethernet
@@ -948,10 +973,6 @@ static __init void mb_manhattan_init(void)
 		pr_warn("%s: power pin init failed!: %d\n", __func__, ret);
 
 	/*NAND Flash*/
-    ret = davinci_cfg_reg_list(nand_pins);
-	if (ret)
-		pr_warn("%s: nand pin init failed!!!!!!!!!!!: %d\n", __func__, ret);
-
 	platform_add_devices(da850_evm_devices, ARRAY_SIZE(da850_evm_devices));		//add NAND storage
 
 	/*Toolhead SPI*/
@@ -963,8 +984,7 @@ static __init void mb_manhattan_init(void)
 	if (ret)
 		pr_warn("%s: spi info registration failed: %d\n", __func__, ret);
 
-    da8xx_spi_pdata[1].chip_sel = spi1_chip_selects;
-    ret = da8xx_register_spi_bus(1,2);
+	ret = da8xx_register_spi_bus(1,1);
 	if (ret)
 		pr_warn("%s: SPI 1 registration failed: %d\n", __func__, ret);
 

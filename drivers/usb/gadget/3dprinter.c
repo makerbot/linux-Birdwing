@@ -322,11 +322,11 @@ static struct usb_gadget_strings	ms_os_stringtab_dev = {
 static char				product_desc [40] = DRIVER_DESC;
 static char				serial_num [40] = "1";
 static char				pnp_string [1024] =
-	"XXMFG:linux;MDL:g_3dprinter;CLS:PRINTER;SN:1;";
+	"XXThis MUST be overwritten as a module parameter";
 
 /* static strings, in UTF-8 */
 static struct usb_string		strings [] = {
-	[USB_GADGET_MANUFACTURER_IDX].s = "",
+	[USB_GADGET_MANUFACTURER_IDX].s = "MakerBot Industries",
 	[USB_GADGET_PRODUCT_IDX].s = product_desc,
 	[USB_GADGET_SERIAL_IDX].s =	serial_num,
 	{  }		/* end of list */
@@ -672,13 +672,6 @@ printer_read(struct file *fd, char __user *buf, size_t len, loff_t *ptr)
 			current_rx_req = NULL;
 		}
 
-		/* Do not send from more than one packet at a time.
-		 * Each packet should be one JSON packet, and if we don't
-		 * split up/join JSON packets, we can use a more efficient
-		 * non stream based JSON parser.
-		 */
-		if (bytes_copied > 0)
-			break;
 	}
 
 	dev->current_rx_req = current_rx_req;
