@@ -821,7 +821,7 @@ CONFIG_EEPROM_AT24=y
 # Makerbot
 #
 # CONFIG_FAST_GPIO is not set
-# CONFIG_BUZZER is not set
+CONFIG_BUZZER=y
 # CONFIG_MY_FIRST_DRIVER is not set
 CONFIG_HAVE_IDE=y
 # CONFIG_IDE is not set
