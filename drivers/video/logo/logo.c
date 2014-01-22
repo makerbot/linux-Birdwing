@@ -101,8 +101,12 @@ const struct linux_logo * __init_refok fb_find_logo(int depth)
 		logo = &logo_m32r_clut224;
 #endif
 #ifdef CONFIG_LOGO_MAKERBOT_CLUT224
-        /* Makerbot logo */
+        /* Makerbot logo red M*/
         logo = &logo_makerbot_clut224;
+#endif
+#ifdef CONFIG_LOGO_MAKERBOT_SPLASH_CLUT224
+        /* Makerbot logo Black white text + M */
+        logo = &logo_makerbot_splash_clut224;
 #endif
 	}
 	return logo;
