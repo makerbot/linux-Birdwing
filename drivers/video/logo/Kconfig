@@ -31,6 +31,10 @@ config LOGO_MAKERBOT_CLUT224
 	bool "Standard 224-color Makerbot logo"
 	default y
 
+config LOGO_MAKERBOT_SPLASH_CLUT224
+	bool "Standard 224-color Makerbot text logo"
+	default y
+
 config LOGO_BLACKFIN_VGA16
 	bool "16-colour Blackfin Processor Linux logo"
 	depends on BLACKFIN
