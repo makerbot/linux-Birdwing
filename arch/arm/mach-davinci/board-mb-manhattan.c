@@ -34,6 +34,7 @@
 #include <linux/wireless.h>
 #include <linux/leds.h>
 #include <linux/i2c-gpio.h>
+#include <linux/workqueue.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -442,7 +443,6 @@ static struct platform_device *power_monitor_devices[] __initdata = {
 
 static short mb_power_pins[] = {
 	DA850_GPIO0_8,  	//12V Power
-	//DA850_GPIO1_2,  	//Power SB Button
 	DA850_GPIO0_6,  	//Power monitor SDA
 	DA850_GPIO0_5,  	//Power monitor SCL
 	-1,
@@ -451,6 +451,7 @@ static short mb_power_pins[] = {
 static void da850_12V_power_control(int val)
 {
 	/* 12V power rail */
+	pr_debug("12V Power: %d\n", val);
 	gpio_set_value(DA850_12V_POWER_PIN, val);
 }
 
@@ -480,7 +481,7 @@ static int da850_power_init(void)
 
 static short mb_lcd_pins[] = {
 	DA850_GPIO6_3,		//LCD Reset
-	DA850_GPIO4_0,      //LCD Detect Type
+	DA850_GPIO4_0,      	//LCD Detect Type
 	DA850_GPIO8_10,		//LCD Backlight (GPIO)
 	DA850_GPIO6_4,		//LCD SIMO
 	DA850_GPIO6_2,		//LCD SCK
@@ -508,17 +509,32 @@ static struct davinci_i2c_platform_data mb_i2c0_pdata = {
 	.bus_delay	= 0,	/* usec */
 };
 
+//TODO this should be broken out to a dimmable driver
+static void mb_lcd_enable_backlight(struct work_struct *work){
+	gpio_set_value(LCD_BACKLIGHT, 1);
+}
+
+DECLARE_DELAYED_WORK(backlight_work, &mb_lcd_enable_backlight);
 
 static void da850_panel_power_ctrl(int val)
 {
-	/* lcd backlight */
-	gpio_set_value(LCD_BACKLIGHT, val);
-
 	/* lcd_reset */
 	gpio_set_value(LCD_RESET, val);
 
 	pr_debug("switching lcd power to : %d\n", val);
+
+	/* lcd backlight */
+	if(val){	//Need to wait before turning on the backlight
+			//FIXME calculate the actual delay for this
+			//FIXME change this back to val
+			//atomic_long_set(&(backlight_work.data), val);
+		schedule_delayed_work(&backlight_work, 500); //delay in jiffies
+	}
+	else{		//Else we can turn it off immediately
+		gpio_set_value(LCD_BACKLIGHT, 0);
+	}
 }
+
 
 
 static int da850_lcd_hw_init(void)
@@ -526,11 +542,9 @@ static int da850_lcd_hw_init(void)
 	int status;
 
 	pr_debug("LCD: register backlight\n");
-	status = gpio_request(LCD_BACKLIGHT, "lcd backlight\n");
+	status = gpio_request_one(LCD_BACKLIGHT, GPIOF_OUT_INIT_LOW, "lcd backlight");
 	if(status < 0)
 		return status;
-
-	gpio_direction_output(LCD_BACKLIGHT, 0);
 
 	pr_debug("LCD register reset\n");
 	status = gpio_request(LCD_RESET, "lcd reset\n");
@@ -552,13 +566,71 @@ static int da850_lcd_hw_init(void)
 	}
 
 	/* Switch off panel power and backlight */
+	//TODO might not need/want this
 	da850_panel_power_ctrl(0);
 
-	/* Switch on panel power and backlight */
-	//da850_panel_power_ctrl(1);
-
-
 	return 0;
+}
+
+static __init int mb_lcd_init(void){
+
+	int ret;
+
+	//Configure LCD controler pins
+	ret = davinci_cfg_reg_list(da850_lcdcntl_pins);	
+	if (ret){
+		pr_warn("%s: LCDC pin mux setup failed: %d\n", __func__, ret);
+//		return ret;
+	}
+
+	//Configure LCD power and configuration (SPI) pins
+	ret = davinci_cfg_reg_list(mb_lcd_pins);
+	if (ret){
+		pr_warn("%s: LCD pins initialization failed: %d\n", __func__, ret);
+	//TODO unregister lcdcntl pins
+//		return ret;
+	}
+
+	//Set up the LCD power and config pins
+	ret = da850_lcd_hw_init();
+	if (ret){
+		pr_warn("%s: LCD initialization failed: %d\n", __func__, ret);
+	//TODO unregister lcdcntl
+	//TODO unregister lcd power 
+//		return ret;
+	}
+
+	//Associate power control functions with platform data
+	lcd_pdata->panel_power_ctrl = da850_panel_power_ctrl;
+
+	//Associate set up SPI with 
+	lcd_pdata->spi = &lcd_spi_gpio_data;
+	ret = da8xx_register_lcdc_spi(lcd_pdata);
+	if (ret){
+		pr_warn("%s: LCDC registration failed: %d\n", __func__, ret);
+	//TODO unregister lcdcntl
+	//TODO unregister lcd power
+//		return ret;
+	}
+
+	//Configure LCD power / config pins
+
+	ret = davinci_cfg_reg_list(interface_i2c_pins);
+	if (ret){
+		pr_warn("%s: LCD i2c pins initialization failed: %d\n", __func__, ret);
+	//TODO undo stuff
+		return ret;
+	}
+
+	//Register the I2C bus?
+	ret = da8xx_register_i2c(0, &mb_i2c0_pdata);
+	if (ret){
+		pr_warn("%s: LCD i2c driver initialization failed: %d\n", __func__, ret);
+	//TODO undo thigns
+//		return ret;
+	}
+
+	return ret;
 }
 
 
@@ -608,14 +680,14 @@ static __init int buzzer_init(void){
 	pr_debug("buzzer: Pin Mux\n");
 	ret = davinci_cfg_reg_list(buzzer_pins);
 	if(ret){
-		pr_err("ERROR pin mux failed: %d\n", ret);
-		goto exit;
+		pr_err("ERROR: Buzzer pin mux failed: %d\n", ret);
+		return ret;
 	}
 
 	pr_debug("buzzer: Output pin request\n");
 	ret = gpio_request_one(BUZZER_OUT, GPIOF_OUT_INIT_LOW, "buzzer_out");
 	if(ret){
-		pr_err("Could not request buzzer output gpio: %d\n", ret);
+		pr_err("ERROR: Could not request buzzer output gpio: %d\n", ret);
 		goto exit;
 	}
 
@@ -624,6 +696,7 @@ static __init int buzzer_init(void){
 	return ret;
 
 exit:
+	gpio_free(BUZZER_OUT);
 	return ret;
 }
 
@@ -924,6 +997,12 @@ static __init void mb_manhattan_init(void)
 	if (ret)
 		pr_warn("%s: EDMA registration failed: %d\n", __func__, ret);
 
+//move this up to see if it fixes anything
+	/* LCD  */
+	ret = mb_lcd_init();
+	if(ret)
+		pr_warn("Error: Could not register LCD %d\n", ret);
+
 	/*Wireless*/
 	ret = da850_wl12xx_init();							//Configure and register Wifi
 	if (ret)
@@ -937,6 +1016,7 @@ static __init void mb_manhattan_init(void)
 	if (ret)
         	pr_warn("%s: power pin setup failed!: %d\n", __func__, ret);
 
+	//possibly delay this
 	ret = da850_power_init();							//Init power pins
 	if (ret)
 		pr_warn("%s: power pin init failed!: %d\n", __func__, ret);
@@ -980,32 +1060,7 @@ static __init void mb_manhattan_init(void)
     if(ret)
         pr_warn("Error: could not register chamber heater %d\n", ret);
 
-	/* LCD  */
-	ret = davinci_cfg_reg_list(da850_lcdcntl_pins);		//Configure LCD Controler pins, this list is in da850.c
-	if (ret)
-		pr_warn("%s: LCDC mux setup failed: %d\n", __func__, ret);
 
-	ret = davinci_cfg_reg_list(mb_lcd_pins);		//Configure LCD power / config pins
-	if (ret)
-		pr_warn("%s: LCD pins initialization failed: %d\n", __func__, ret);
-
-	ret = da850_lcd_hw_init();							//Set up the LCD power / config pins
-	if (ret)
-		pr_warn("%s: LCD initialization failed: %d\n", __func__, ret);
-
-	lcd_pdata->panel_power_ctrl = da850_panel_power_ctrl,		//Tell kernel what function to use for power control
-	lcd_pdata->spi = &lcd_spi_gpio_data;						//Tell the kerenl which spi to use
-	ret = da8xx_register_lcdc_spi(lcd_pdata);
-	if (ret)
-		pr_warn("%s: LCDC registration failed: %d\n", __func__, ret);
-
-	ret = davinci_cfg_reg_list(interface_i2c_pins);		//Configure LCD power / config pins
-	if (ret)
-		pr_warn("%s: LCD i2c pins initialization failed: %d\n", __func__, ret);
-
-	ret = da8xx_register_i2c(0, &mb_i2c0_pdata);
-	if (ret)
-		pr_warn("%s: LCD i2c driver initialization failed: %d\n", __func__, ret);
 
 	/*Watchdog*/
 	ret = da8xx_register_watchdog();							//Register the watchdog
