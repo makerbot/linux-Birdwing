@@ -118,10 +118,20 @@ err:
 	panic("davinci_common_init: SoC Initialization failed\n");
 }
 
+//TODO need to change the function call for 
+//mb_serializer_compat_init
+//DECLARE_DELAYED_WORK(lcd_work, &mb_serializer_compat_init);
+
 void __init davinci_init_late(void)
 {
+//	pr_info("Init late\n");
 	davinci_cpufreq_init();
 	davinci_pm_init();
 	davinci_clk_disable_unused();
-    mb_serializer_compat_init(davinci_soc_info.lcdc_dev);
+	//LCD init needs to wait for the PCLK to be active for 
+	//Some amount of time
+	
+	//schedule_delayed_work(&lcd_work, 250);
+	//Try with 500ms sleep in function
+	mb_serializer_compat_init(davinci_soc_info.lcdc_dev);
 }
