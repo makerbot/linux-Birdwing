@@ -384,7 +384,7 @@ static __init int chamber_heater_init(void){
         }
 
         pr_debug("Chamber heater register RSV1\n");
-        ret = gpio_request_one(CH_RSV1, GPIOF_OUT_INIT_LOW, "ch_rsv1");
+        ret = gpio_request_one(CH_RSV1, GPIOF_IN, "ch_rsv1");
         if(ret){
                 pr_err("ERROR could not request chamber heater RSV1 gpio %d\n", ret);
                 goto free_ch_rsv1;
