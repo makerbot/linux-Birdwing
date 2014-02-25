@@ -322,8 +322,8 @@ static short chamber_heater_pins[] = {
 	DA850_GPIO2_2,	//Chamber heater CS
 	DA850_GPIO3_4,	//Chamber heater MISO
 	DA850_GPIO3_2,	//Chamber heater SOMI
-	DA850_GPIO5_5,	//Chamber heater reserved 0
-	DA850_GPIO5_7,	//Chamber heater reserved 1
+//	DA850_GPIO5_5,	//Chamber heater reserved 0
+//	DA850_GPIO5_7,	//Chamber heater reserved 1
 	-1,
 };
 
@@ -384,11 +384,13 @@ static __init int chamber_heater_init(void){
         }
 
         pr_debug("Chamber heater register RSV1\n");
-        ret = gpio_request_one(CH_RSV1, GPIOF_OUT_INIT_LOW, "ch_rsv1");
+        ret = gpio_request_one(CH_RSV1, GPIOF_IN, "ch_rsv1");
         if(ret){
                 pr_err("ERROR could not request chamber heater RSV1 gpio %d\n", ret);
                 goto free_ch_rsv1;
         }
+	gpio_export(CH_RSV0, 1);
+	gpio_export(CH_RSV1, 1);
 
         return 0;
 free_ch_rsv1:
