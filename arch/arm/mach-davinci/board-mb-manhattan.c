@@ -525,10 +525,7 @@ static void da850_panel_power_ctrl(int val)
 
 	/* lcd backlight */
 	if(val){	//Need to wait before turning on the backlight
-			//FIXME calculate the actual delay for this
-			//FIXME change this back to val
-			//atomic_long_set(&(backlight_work.data), val);
-		schedule_delayed_work(&backlight_work, 500); //delay in jiffies
+		schedule_delayed_work(&backlight_work, msecs_to_jiffies(1000)); //delay in jiffies
 	}
 	else{		//Else we can turn it off immediately
 		gpio_set_value(LCD_BACKLIGHT, 0);
@@ -920,6 +917,17 @@ static __init void mb_manhattan_usb_init(void)
 		return;
 	}
 
+	ret = gpio_request_one(DA850_USB1_VBUS_PIN, GPIOF_DIR_OUT, "USB1 VBUS");
+	if (ret < 0) {
+		pr_err("%s: failed to request GPIO for USB 1.1 port "
+			"power control: %d\n", __func__, ret);
+		return;
+	}
+
+	pr_debug("turning the USB power off\n");
+	gpio_set_value(DA850_USB1_VBUS_PIN, 0);
+
+
 	/* Setup the Ref. clock frequency for the HAWK at 24 MHz. */
 	cfgchip2 = __raw_readl(DA8XX_SYSCFG0_VIRT(DA8XX_CFGCHIP2_REG));
 	cfgchip2 &= ~CFGCHIP2_REFFREQ;
@@ -935,12 +943,6 @@ static __init void mb_manhattan_usb_init(void)
     if (ret)
         pr_warning("%s: USB 2.0 registration failed: %d\n",__func__, ret);
 
-	ret = gpio_request_one(DA850_USB1_VBUS_PIN, GPIOF_DIR_OUT, "USB1 VBUS");
-	if (ret < 0) {
-		pr_err("%s: failed to request GPIO for USB 1.1 port "
-			"power control: %d\n", __func__, ret);
-		return;
-	}
 
 	ret = gpio_request_one(DA850_USB1_OC_PIN,
 			GPIOF_DIR_IN, "USB1 OC");
@@ -997,7 +999,6 @@ static __init void mb_manhattan_init(void)
 	if (ret)
 		pr_warn("%s: EDMA registration failed: %d\n", __func__, ret);
 
-//move this up to see if it fixes anything
 	/* LCD  */
 	ret = mb_lcd_init();
 	if(ret)
@@ -1016,7 +1017,6 @@ static __init void mb_manhattan_init(void)
 	if (ret)
         	pr_warn("%s: power pin setup failed!: %d\n", __func__, ret);
 
-	//possibly delay this
 	ret = da850_power_init();							//Init power pins
 	if (ret)
 		pr_warn("%s: power pin init failed!: %d\n", __func__, ret);
