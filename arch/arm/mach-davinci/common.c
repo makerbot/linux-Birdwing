@@ -133,5 +133,5 @@ void __init davinci_init_late(void)
 	
 	//schedule_delayed_work(&lcd_work, 250);
 	//Try with 500ms sleep in function
-	mb_serializer_compat_init(davinci_soc_info.lcdc_dev);
+	//mb_serializer_compat_init(davinci_soc_info.lcdc_dev);
 }
