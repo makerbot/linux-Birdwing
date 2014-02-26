@@ -41,7 +41,6 @@
 #include <asm/div64.h>
 #include <linux/gpio.h>
 #include <linux/delay.h>
-#include <linux/workqueue.h>
 
 #define DRIVER_NAME "da8xx_lcdc"
 
@@ -140,8 +139,6 @@
 #define UPPER_MARGIN	32
 #define LOWER_MARGIN	32
 
-#define LCD_RESET	GPIO_TO_PIN(6, 3)
-
 static void __iomem *da8xx_fb_reg_base;
 static struct resource *lcdc_regs;
 static unsigned int lcd_revision;
@@ -159,34 +156,24 @@ static inline void lcdc_write(unsigned int val, unsigned int addr)
 	__raw_writel(val, da8xx_fb_reg_base + (addr));
 }
 
-//static struct workqueue_struct *mb_wq;
-//
-//typedef struct {
-//	struct work_struct	work_q;
-//	struct platform_device 	p_dev;
-//	int 			count;
-//} mb_lcd_work_t;
-//
-//mb_lcd_work_t *lcd_work;
-
 struct da8xx_fb_par {
-	resource_size_t 	p_palette_base;
-	unsigned char 		*v_palette_base;
+	resource_size_t p_palette_base;
+	unsigned char *v_palette_base;
 	dma_addr_t		vram_phys;
 	unsigned long		vram_size;
 	void			*vram_virt;
 	unsigned int		dma_start;
 	unsigned int		dma_end;
-	struct clk 		*lcdc_clk;
+	struct clk *lcdc_clk;
 	int irq;
-	unsigned int 		palette_sz;
-	unsigned int 		pxl_clk;
+	unsigned int palette_sz;
+	unsigned int pxl_clk;
 	int blank;
 	wait_queue_head_t	vsync_wait;
 	int			vsync_flag;
 	int			vsync_timeout;
 	spinlock_t		lock_for_chan_update;
-  	struct da8xx_spi_pin_data *spi;
+  struct da8xx_spi_pin_data *spi;
 
 	/*
 	 * LCDC has 2 ping pong DMA channels, channel 0
@@ -306,19 +293,25 @@ static struct fb_videomode known_lcd_panels[] = {
 		.sync           = 0,
 		.flag           = 0,
 	},
+        
+    
 };
 
 
 // set the chip select line
 static void ssd2119_spi_set_cs(struct da8xx_spi_pin_data *spi, u8 val){
+
   gpio_set_value(spi->cs, val);
+
 }
 
 // send one bit of data
 static void ssd2119_spi_send_bit(struct da8xx_spi_pin_data *spi, u8 val){
 
   gpio_set_value(spi->sck, 0);
+
   gpio_set_value(spi->sdi, val);
+
   gpio_set_value(spi->sck, 1);
 
 }
@@ -326,7 +319,7 @@ static void ssd2119_spi_send_bit(struct da8xx_spi_pin_data *spi, u8 val){
 
 /* Reverse bit order of a uint8_t to match required format for SPI communcation */
 static u8 bit_reverse(u8 int_in){
-
+	
 	u8 rev_bit = 0;
 	rev_bit |= (int_in & 0x1) << 7;
 	rev_bit |= (int_in & 0x2) << 5;
@@ -336,7 +329,7 @@ static u8 bit_reverse(u8 int_in){
 	rev_bit |= (int_in & 0x20) >> 3;
 	rev_bit |= (int_in & 0x40) >> 5;
 	rev_bit |= (int_in & 0x80) >> 7;
-
+	
 	return rev_bit;
 }
 
@@ -344,34 +337,37 @@ static u8 bit_reverse(u8 int_in){
 // send one byte of data, MSB first
 static void ssd2119_spi_send_byte(struct da8xx_spi_pin_data *spi, u8 val){
 
-	u8 rev_val = bit_reverse(val);
-	u8 i;
-
-	for (i = 0; i < 8; i++){
-		ssd2119_spi_send_bit(spi, rev_val & 0x01);
-		rev_val >>= 1;
-  	}
+  u8 rev_val = bit_reverse(val);
+  u8 i; 
+ 
+  for (i = 0; i < 8; i++){
+    ssd2119_spi_send_bit(spi, rev_val & 0x01);
+    rev_val >>= 1;
+  }
 }
 
 // data_type is "0" for command and "1" for data
 static void ssd2119_spi_send_packet(struct da8xx_spi_pin_data * spi, u8 data, u8 data_type){
 
-  	ssd2119_spi_set_cs(spi, 0);
-  	ssd2119_spi_send_bit(spi, data_type); // command code;
-  	ssd2119_spi_send_byte(spi, data);
-  	ssd2119_spi_set_cs(spi, 1);
+  ssd2119_spi_set_cs(spi, 0);
+
+  ssd2119_spi_send_bit(spi, data_type); // command code;
+
+  ssd2119_spi_send_byte(spi, data);
+
+  ssd2119_spi_set_cs(spi, 1);
 
 }
 
 static int ssd2119_spi_init(struct da8xx_spi_pin_data *spi){
-
+ 
     int ret = -1;
-	pr_debug("ssd2119_spi_init\n");
+ 
     if (spi){
         ret = gpio_request(spi->cs, "lcd_cs");
         ret = gpio_request(spi->sdi, "lcd_sdi");
         ret = gpio_request(spi->sck, "lcd_sck");
-
+ 
         ret = gpio_direction_output(spi->cs, 1);
         ret = gpio_direction_output(spi->sdi, 1);
         ret = gpio_direction_output(spi->sck, 1);
@@ -381,19 +377,25 @@ static int ssd2119_spi_init(struct da8xx_spi_pin_data *spi){
 
 static int ssd2119_spi_write_reg(struct da8xx_spi_pin_data *spi, u8 reg, u16 val)
 {
+    int i;	
 
 	if (spi){
-	pr_debug("ssd2119_spi_write reg 0x%x, 0x%x\n", reg, val);
+
+        // the registers don't seem to get written reliably so we send them 3 times
+        for (i = 0; i < 3; i++) {
             // transfer command code
             ssd2119_spi_send_packet(spi, reg, 0);
+
             // transfer first data byte
             ssd2119_spi_send_packet(spi, (val >> 8) & 0xFF, 1);
+
             //transfer second data byte
             ssd2119_spi_send_packet(spi, val & 0xFF, 1);
+        }
 
         return 0;
-	}
-return -1;
+  }
+	return -1;
 }
 
 
@@ -406,7 +408,7 @@ static int lcd_ssd2119_spi_init(struct da8xx_spi_pin_data *spi) {
 #define LCD_DOTCLOCK_ACTIVE 0x0100
 #define LCD_NOSYNC_DMODE 0x0200
 
-    ret = ssd2119_spi_write_reg(spi, 0x00, 0x0001); 	// OSCEN = 1;
+    ret = ssd2119_spi_write_reg(spi, 0x00, 0x0001); // OSCEN = 1;
     ret = ssd2119_spi_write_reg(spi, 0x10, 0x0000);	// Sleep = 0;
     ret = ssd2119_spi_write_reg(spi, 0x07, 0x0033);	// Display control. CM=0
     ret = ssd2119_spi_write_reg(spi, 0x11, 0x4E70);	// ??
@@ -414,10 +416,9 @@ static int lcd_ssd2119_spi_init(struct da8xx_spi_pin_data *spi) {
     ret = ssd2119_spi_write_reg(spi, 0x03, 0x6A38);	// VGH/VGL=5/-3
     ret = ssd2119_spi_write_reg(spi, 0x01, 0x72EF);	// Gate lines = 240
     ret = ssd2119_spi_write_reg(spi, 0x28, 0x0006);	// Enable R25, R29 register
-    ret = ssd2119_spi_write_reg(spi, 0x12, 0x0999); 	// sleep mode
-    ret = ssd2119_spi_write_reg(spi, 0x26, 0x3800);	// analogue setting, what are we British? it's 'analog'
+    ret = ssd2119_spi_write_reg(spi, 0x12, 0x0999); // sleep mode
+    ret = ssd2119_spi_write_reg(spi, 0x26, 0x3800);	// analogue setting
     ret = ssd2119_spi_write_reg(spi, 0x0C, 0x0004);	// VCIX2;
-    ret = ssd2119_spi_write_reg(spi, 0x0D, 0x000A);	// VLCD63
     ret = ssd2119_spi_write_reg(spi, 0x0E, 0x2600);	// VCOML
     ret = ssd2119_spi_write_reg(spi, 0x1E, 0x00AF);	// VCOMH
     ret = ssd2119_spi_write_reg(spi, 0x15, 0x0058);	// Entry Mode
@@ -428,7 +429,7 @@ static int lcd_ssd2119_spi_init(struct da8xx_spi_pin_data *spi) {
     ret = ssd2119_spi_write_reg(spi, 0x34, 0x0707);	// Gamma B control 5
     ret = ssd2119_spi_write_reg(spi, 0x35, 0x0305);	// Gamma B control 6
     ret = ssd2119_spi_write_reg(spi, 0x36, 0x0707);	// Gamma B control 7
-    ret = ssd2119_spi_write_reg(spi, 0x37, 0x0201); 	// Gamma B control 8
+    ret = ssd2119_spi_write_reg(spi, 0x37, 0x0201); // Gamma B control 8
     ret = ssd2119_spi_write_reg(spi, 0x3A, 0x1200);	// Gamma B control 9
     ret = ssd2119_spi_write_reg(spi, 0x3B, 0x0900);	// Gamma B control 10
     ret = ssd2119_spi_write_reg(spi, 0x22, 0x0000);	// write data to RAM
@@ -437,11 +438,103 @@ static int lcd_ssd2119_spi_init(struct da8xx_spi_pin_data *spi) {
 
 }
 
+int mb_serializer_compat_init(struct platform_device *device)
+{
+	struct da8xx_lcdc_spi_platform_data *fb_pdata;
+	int ret = 0;
+	pr_debug("initing LCD\n");
+    if (device) {
+        fb_pdata = device->dev.platform_data;
+        pr_debug(">>>LCD: Switcing panel power on\n");
+        fb_pdata->panel_power_ctrl(1);
+
+        ret = ssd2119_spi_init(fb_pdata->spi);
+        if (ret < 0){
+                pr_err("init error in spi !!\n");
+                return ret;
+        }
+
+        ret = lcd_ssd2119_spi_init(fb_pdata->spi);
+        if (ret < 0){
+                pr_err("init error in spi lcd sequence!!\n");
+                return ret;
+        }
+    }
+    return ret;
+}
+
+int mb_serializer_compat_par_init(struct da8xx_fb_par *par)
+{
+    int ret = 0;
+    par->panel_power_ctrl(1);
+    ret = ssd2119_spi_init(par->spi);
+    if (ret < 0){
+        pr_err("init error in spi !!\n");
+        return ret;
+    }
+
+    ret = lcd_ssd2119_spi_init(par->spi);
+    if (ret < 0){
+        pr_err("init error in spi lcd sequence!!\n");
+        return ret;
+    }
+    return ret;
+}
+
+
+
+static int lcd_ssd2119_shutdown(struct da8xx_fb_par *par){
+
+    int ret = 0;
+
+    // enter sleep mode: R10H at 0001h
+    ssd2119_spi_write_reg(par->spi, 0x10, 0x01);
+
+    // halt the operation: R07h at 0000h
+    ssd2119_spi_write_reg(par->spi, 0x07, 0x00);
+
+    // wait until VGH < 5V
+
+    // remove power from VCI then VDDIO
+
+    // display OFF
+
+    return ret;
+}
+
+static int lcd_ssd2119_sleep(struct da8xx_fb_par *par){
+
+    int ret = 0;
+
+    // enter sleep mode: R10H at 0001h
+    ssd2119_spi_write_reg(par->spi, 0x10, 0x01);
+
+    // halt the operation: R07h at 0000h
+    ssd2119_spi_write_reg(par->spi, 0x07, 0x00);
+
+    return ret;
+}
+
+static int lcd_ssd2119_wake(struct da8xx_fb_par *par){
+  
+    int ret = 0;
+
+    // enter sleep mode: R10H at 0001h
+    ssd2119_spi_write_reg(par->spi, 0x10, 0x00);
+
+    // halt the operation: R07h at 0000h
+    ssd2119_spi_write_reg(par->spi, 0x07, 0x33);
+
+    return ret;
+
+}
+
+
 /* Enable the Raster Engine of the LCD Controller */
 static inline void lcd_enable_raster(void)
 {
 	u32 reg;
-	pr_debug("lcd_enable_raster\n");
+
 	/* Put LCDC in reset for several cycles */
 	if (lcd_revision == LCD_VERSION_2)
 		/* Write 1 to reset LCDC */
@@ -465,7 +558,6 @@ static inline void lcd_disable_raster(bool wait_for_frame_done)
 	u32 reg;
 	int ret;
 
-	pr_debug("lcd_disable_raster\n");
 	reg = lcdc_read(LCD_RASTER_CTRL_REG);
 	if (reg & LCD_RASTER_ENABLE)
 		lcdc_write(reg & ~LCD_RASTER_ENABLE, LCD_RASTER_CTRL_REG);
@@ -482,98 +574,6 @@ static inline void lcd_disable_raster(bool wait_for_frame_done)
 			pr_err("LCD Controller timed out\n");
 	}
 }
-
-static void reset_lcdc(struct work_struct *work){
-	pr_debug("reseting LCDC\n");
-	gpio_set_value(LCD_RESET, 0);
-	mdelay(50);
-	gpio_set_value(LCD_RESET, 1);
-}
-
-DECLARE_DELAYED_WORK(lcdc_work, &reset_lcdc);
-
-int mb_serializer_compat_init(struct platform_device *device)
-{
-	struct da8xx_lcdc_spi_platform_data *fb_pdata;
-	int ret = 0;
-
-	pr_debug("mb_serialzier_compat_init\n");
-
-	if (device) {
-        	fb_pdata = device->dev.platform_data;
-		fb_pdata->panel_power_ctrl(1);
-
-        	ret = ssd2119_spi_init(fb_pdata->spi);
-        	if (ret < 0){
-            		pr_err("init error in spi !!\n");
-            		return ret;
-        	}
-
-        	ret = lcd_ssd2119_spi_init(fb_pdata->spi);
-        	if (ret < 0){
-            		pr_err("init error in spi lcd sequence!!\n");
-            		return ret;
-        	}
-	//schedule_delayed_work(&lcdc_work, msecs_to_jiffies(10000)); //reset this whole thing 
-    	}
-    return ret;
-}
-
-int mb_serializer_compat_par_init(struct da8xx_fb_par *par)
-{
-	int ret = 0;
-	pr_debug("mb_serializer_compat_par_init\n");
-    	par->panel_power_ctrl(1);
-    	ret = ssd2119_spi_init(par->spi);
-    	if (ret < 0){
-        	pr_err("init error in spi !!\n");
-        	return ret;
-    	}
-
-    	ret = lcd_ssd2119_spi_init(par->spi);
-    	if (ret < 0){
-        	pr_err("init error in spi lcd sequence!!\n");
-        	return ret;
-    	}
-    return ret;
-}
-
-
-
-static int lcd_ssd2119_shutdown(struct da8xx_fb_par *par){
-
-    int ret = 0;
-    // enter sleep mode: R10H at 0001h
-    ssd2119_spi_write_reg(par->spi, 0x10, 0x01);
-    // halt the operation: R07h at 0000h
-    ssd2119_spi_write_reg(par->spi, 0x07, 0x00);
-    // wait until VGH < 5V
-    // remove power from VCI then VDDIO
-    // display OFF
-    return ret;
-}
-
-static int lcd_ssd2119_sleep(struct da8xx_fb_par *par){
-
-    int ret = 0;
-    // enter sleep mode: R10H at 0001h
-    ssd2119_spi_write_reg(par->spi, 0x10, 0x01);
-    // halt the operation: R07h at 0000h
-    ssd2119_spi_write_reg(par->spi, 0x07, 0x00);
-    return ret;
-}
-
-static int lcd_ssd2119_wake(struct da8xx_fb_par *par){
-
-    int ret = 0;
-    // enter sleep mode: R10H at 0001h
-    ssd2119_spi_write_reg(par->spi, 0x10, 0x00);
-    // halt the operation: R07h at 0000h
-    ssd2119_spi_write_reg(par->spi, 0x07, 0x33);
-    return ret;
-}
-
-
 
 static void lcd_blit(int load_mode, struct da8xx_fb_par *par)
 {
@@ -954,7 +954,6 @@ static int fb_setcolreg(unsigned regno, unsigned red, unsigned green,
 
 static void lcd_reset(struct da8xx_fb_par *par)
 {
-	pr_debug("lcd_reset\n");
 	/* Disable the Raster if previously Enabled */
 	lcd_disable_raster(false);
 
@@ -994,7 +993,6 @@ static int lcd_init(struct da8xx_fb_par *par, const struct lcd_ctrl_config *cfg,
 	u32 bpp;
 	int ret = 0;
 
-	pr_debug("lcd_init\n");
 	lcd_reset(par);
 
 	/* Calculate the divider */
@@ -1036,7 +1034,7 @@ static int lcd_init(struct da8xx_fb_par *par, const struct lcd_ctrl_config *cfg,
 	/* Configure FDD */
 	lcdc_write((lcdc_read(LCD_RASTER_CTRL_REG) & 0xfff00fff) |
 		       (cfg->fdd << 12), LCD_RASTER_CTRL_REG);
-	pr_debug("exit lcd_init\n");
+
 	return 0;
 }
 
@@ -1424,6 +1422,8 @@ static int da8xx_pan_display(struct fb_var_screeninfo *var,
 	unsigned int start;
 	unsigned long irq_flags;
 
+    pr_debug("pan_display x_offset%d, y_offset%d\n", fbi->var.xoffset, fbi->var.yoffset);
+
 	if (var->xoffset != fbi->var.xoffset ||
 			var->yoffset != fbi->var.yoffset) {
 		memcpy(&new_var, &fbi->var, sizeof(new_var));
@@ -1483,7 +1483,7 @@ static struct fb_ops da8xx_fb_ops = {
 	.fb_copyarea = cfb_copyarea,
 	.fb_imageblit = cfb_imageblit,
 	.fb_blank = cfb_blank,
-    	.fb_cursor = cfb_cursor,
+    .fb_cursor = cfb_cursor,
 };
 
 /* Calculate and return pixel clock period in pico seconds */
@@ -1712,11 +1712,6 @@ static int fb_probe(struct platform_device *device)
 		goto err_dealloc_cmap;
 	}
 
-pr_debug(">>>>>>>SERIALIZER COMPAT INIT\n");
-	msleep(500);
-	mb_serializer_compat_init(device);
-pr_debug(">>>>>>>END INIT\n");
-
 #ifdef CONFIG_CPU_FREQ
 	ret = lcd_da8xx_cpufreq_register(par);
 	if (ret) {
@@ -1736,8 +1731,8 @@ pr_debug(">>>>>>>END INIT\n");
 			DRIVER_NAME, par);
 	if (ret)
 		goto irq_freq;
-
 	return 0;
+
 irq_freq:
 #ifdef CONFIG_CPU_FREQ
 	lcd_da8xx_cpufreq_deregister(par);
