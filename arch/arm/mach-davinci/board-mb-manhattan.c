@@ -926,9 +926,6 @@ static __init void mb_manhattan_usb_init(void)
 		return;
 	}
 
-	pr_debug("turning the USB power off\n");
-	gpio_set_value(DA850_USB1_VBUS_PIN, 0);
-
 
 	/* Setup the Ref. clock frequency for the HAWK at 24 MHz. */
 	cfgchip2 = __raw_readl(DA8XX_SYSCFG0_VIRT(DA8XX_CFGCHIP2_REG));
