@@ -42,6 +42,7 @@ struct da8xx_lcdc_spi_platform_data {
 	void *controller_data;
 	const char type[25];
 	void (*panel_power_ctrl)(int);
+	void (*lcdc_psc_ctrl)(bool);
   struct da8xx_spi_pin_data *spi;
 };
 
