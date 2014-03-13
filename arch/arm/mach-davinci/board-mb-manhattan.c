@@ -13,6 +13,7 @@
 
 #include <linux/kernel.h>
 #include <linux/init.h>
+#include <linux/clk.h>
 #include <linux/console.h>
 #include <linux/gpio.h>
 #include <linux/gpio_keys.h>
@@ -46,6 +47,8 @@
 #include <mach/serial.h>
 
 #include <linux/makerbot/buzzer.h>
+
+#include "clock.h"
 
 #define MANHATTAN_PHY_ID		NULL
 
@@ -514,7 +517,19 @@ static void da850_panel_power_ctrl(int val)
 	}
 }
 
+// There are sometimes underflow issues in the LCDC fifo and we need to reset the LCD peripheral
+static void lcdc_psc_ctrl(bool on)
+{
 
+    if (on) {
+        davinci_psc_config(lcd_clk->domain, lcd_clk->gpsc, lcd_clk->lpsc,
+            true, lcd_clk->flags);
+    } else {
+        davinci_psc_config(lcd_clk->domain, lcd_clk->gpsc, lcd_clk->lpsc,
+            false, lcd_clk->flags);
+    }
+    
+}
 
 static int da850_lcd_hw_init(void)
 {
@@ -581,6 +596,7 @@ static __init int mb_lcd_init(void){
 
 	//Associate power control functions with platform data
 	lcd_pdata->panel_power_ctrl = da850_panel_power_ctrl;
+	lcd_pdata->lcdc_psc_ctrl = lcdc_psc_ctrl;
 
 	//Associate set up SPI with 
 	lcd_pdata->spi = &lcd_spi_gpio_data;

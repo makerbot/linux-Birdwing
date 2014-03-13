@@ -13,6 +13,7 @@
 
 #include <video/da8xx-fb.h>
 
+#include <linux/clk.h>
 #include <linux/platform_device.h>
 #include <linux/davinci_emac.h>
 #include <linux/spi/spi.h>
@@ -151,4 +152,5 @@ extern const short da850_i2c0_pins[];
 extern const short da850_i2c1_pins[];
 extern const short da850_lcdcntl_pins[];
 
+extern struct clk *lcd_clk;
 #endif /* __ASM_ARCH_DAVINCI_DA8XX_H */
