@@ -185,6 +185,7 @@ struct da8xx_fb_par {
 	unsigned int		lcd_fck_rate;
 #endif
 	void (*panel_power_ctrl)(int);
+	void (*lcdc_psc_ctrl)(bool);
 	u32 pseudo_palette[16];
 };
 
@@ -1129,7 +1130,7 @@ static irqreturn_t lcdc_irq_handler_rev01(int irq, void *arg)
 
 		/* Setup and start data loading mode */
 		lcd_blit(LOAD_DATA, par);
-	} else {
+	} else if ((stat & LCD_END_OF_FRAME0) || (stat & LCD_END_OF_FRAME1)){
 		lcdc_write(stat, LCD_STAT_REG);
 
 		if (stat & LCD_END_OF_FRAME0) {
@@ -1151,8 +1152,20 @@ static irqreturn_t lcdc_irq_handler_rev01(int irq, void *arg)
 			par->vsync_flag = 1;
 			wake_up_interruptible(&par->vsync_wait);
 		}
-	}
-
+	}else if (stat & LCD_FIFO_UNDERFLOW) {
+		lcd_disable_raster(false);
+        if (par->lcdc_psc_ctrl) {
+            par->lcdc_psc_ctrl(false);
+        }
+		lcdc_write(stat, LCD_STAT_REG);
+        if (par->lcdc_psc_ctrl) {
+            par->lcdc_psc_ctrl(true);
+        }
+		lcd_enable_raster();
+    }else {
+		lcdc_write(stat, LCD_STAT_REG);
+    }
+       
 	return IRQ_HANDLED;
 }
 
@@ -1601,9 +1614,12 @@ static int fb_probe(struct platform_device *device)
 		par->panel_power_ctrl = fb_pdata->panel_power_ctrl;
 		//par->panel_power_ctrl(1);
 	}
-  if (fb_pdata->spi){
-    par->spi = fb_pdata->spi;
-  }
+    if(fb_pdata->lcdc_psc_ctrl) {
+       par->lcdc_psc_ctrl = fb_pdata->lcdc_psc_ctrl;
+    }
+    if (fb_pdata->spi){
+       par->spi = fb_pdata->spi;
+    }
 
 	if (lcd_init(par, lcd_cfg, lcdc_info) < 0) {
 		dev_err(&device->dev, "lcd_init failed\n");

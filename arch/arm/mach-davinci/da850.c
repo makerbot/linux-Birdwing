@@ -312,6 +312,7 @@ static struct clk lcdc_clk = {
 	.lpsc		= DA8XX_LPSC1_LCDC,
 	.gpsc		= 1,
 };
+struct clk *lcd_clk = &lcdc_clk;
 
 static struct clk mmcsd0_clk = {
 	.name		= "mmcsd0",
