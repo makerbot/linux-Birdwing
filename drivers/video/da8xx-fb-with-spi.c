@@ -1101,6 +1101,8 @@ static irqreturn_t lcdc_irq_handler_rev02(int irq, void *arg)
 	return IRQ_HANDLED;
 }
 
+
+bool schedule_lcd_reset = false;
 /* IRQ handler for version 1 LCDC */
 static irqreturn_t lcdc_irq_handler_rev01(int irq, void *arg)
 {
@@ -1112,6 +1114,9 @@ static irqreturn_t lcdc_irq_handler_rev01(int irq, void *arg)
 		lcd_disable_raster(false);
 		lcdc_write(stat, LCD_STAT_REG);
 		lcd_enable_raster();
+        //if (par->lcdc_psc_ctrl) {
+        //    par->lcdc_psc_ctrl(true);
+        //}
 	} else if (stat & LCD_PL_LOAD_DONE) {
 		/*
 		 * Must disable raster before changing state of any control bit.
@@ -1127,11 +1132,20 @@ static irqreturn_t lcdc_irq_handler_rev01(int irq, void *arg)
 		reg_ras  = lcdc_read(LCD_RASTER_CTRL_REG);
 		reg_ras &= ~LCD_V1_PL_INT_ENA;
 		lcdc_write(reg_ras, LCD_RASTER_CTRL_REG);
-
+    
 		/* Setup and start data loading mode */
 		lcd_blit(LOAD_DATA, par);
 	} else if ((stat & LCD_END_OF_FRAME0) || (stat & LCD_END_OF_FRAME1)){
 		lcdc_write(stat, LCD_STAT_REG);
+
+        if (0) {//schedule_lcd_reset) {
+            lcd_disable_raster(false);
+            if (par->lcdc_psc_ctrl) {
+                par->lcdc_psc_ctrl(true);
+            }
+            schedule_lcd_reset = false;
+            lcd_enable_raster();
+        }
 
 		if (stat & LCD_END_OF_FRAME0) {
 			par->which_dma_channel_done = 0;
@@ -1152,17 +1166,13 @@ static irqreturn_t lcdc_irq_handler_rev01(int irq, void *arg)
 			par->vsync_flag = 1;
 			wake_up_interruptible(&par->vsync_wait);
 		}
+
+
 	}else if (stat & LCD_FIFO_UNDERFLOW) {
-		lcd_disable_raster(false);
-        if (par->lcdc_psc_ctrl) {
-            par->lcdc_psc_ctrl(false);
-        }
 		lcdc_write(stat, LCD_STAT_REG);
-        if (par->lcdc_psc_ctrl) {
-            par->lcdc_psc_ctrl(true);
-        }
-		lcd_enable_raster();
-    }else {
+        
+        schedule_lcd_reset = true;
+   }else {
 		lcdc_write(stat, LCD_STAT_REG);
     }
        

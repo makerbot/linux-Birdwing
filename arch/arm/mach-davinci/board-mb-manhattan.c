@@ -37,6 +37,7 @@
 #include <linux/i2c-gpio.h>
 #include <linux/workqueue.h>
 
+
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
 
@@ -520,14 +521,12 @@ static void da850_panel_power_ctrl(int val)
 // There are sometimes underflow issues in the LCDC fifo and we need to reset the LCD peripheral
 static void lcdc_psc_ctrl(bool on)
 {
-
-    if (on) {
-        davinci_psc_config(lcd_clk->domain, lcd_clk->gpsc, lcd_clk->lpsc,
-            true, lcd_clk->flags);
-    } else {
-        davinci_psc_config(lcd_clk->domain, lcd_clk->gpsc, lcd_clk->lpsc,
-            false, lcd_clk->flags);
-    }
+        
+    pr_err("lcd psc ctrl");
+    davinci_psc_config(lcd_clk->domain, lcd_clk->gpsc, lcd_clk->lpsc,
+        false, lcd_clk->flags);
+    davinci_psc_config(lcd_clk->domain, lcd_clk->gpsc, lcd_clk->lpsc,
+        true, lcd_clk->flags);
     
 }
 
