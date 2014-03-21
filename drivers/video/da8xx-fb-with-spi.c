@@ -454,7 +454,6 @@ int mb_serializer_compat_init(struct platform_device *device)
                 pr_err("init error in spi !!\n");
                 return ret;
         }
-        mdelay(900);
 
         ret = lcd_ssd2119_spi_init(fb_pdata->spi);
         if (ret < 0){
@@ -976,7 +975,6 @@ static void lcd_calc_clk_divider(struct da8xx_fb_par *par)
 	unsigned int lcd_clk, div;
 
 	lcd_clk = clk_get_rate(par->lcdc_clk);
-    pr_err("lcd_get clock: %d\n", lcd_clk);
 	div = lcd_clk / par->pxl_clk;
 
 	/* Configure the LCD clock divisor. */

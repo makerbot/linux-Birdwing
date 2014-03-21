@@ -600,7 +600,7 @@ int __init da8xx_register_uio_pruss(void)
 static struct lcd_ctrl_config lcd_cfg = {
 	.panel_shade	= COLOR_ACTIVE,
 	.bpp			= 16,
-	.fifo_th		= 6, // 512 dwords
+	.fifo_th		= 5, // 256 dwords
 };
 
 struct da8xx_lcdc_platform_data sharp_lcd035q3dg01_pdata = {
