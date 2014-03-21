@@ -523,10 +523,10 @@ static void lcdc_psc_ctrl(bool on)
 {
         
     pr_err("lcd psc ctrl");
-    davinci_psc_config(lcd_clk->domain, lcd_clk->gpsc, lcd_clk->lpsc,
-        false, lcd_clk->flags);
-    davinci_psc_config(lcd_clk->domain, lcd_clk->gpsc, lcd_clk->lpsc,
-        true, lcd_clk->flags);
+    //davinci_psc_config(lcd_clk->domain, lcd_clk->gpsc, lcd_clk->lpsc,
+    //    false, lcd_clk->flags);
+    //davinci_psc_config(lcd_clk->domain, lcd_clk->gpsc, lcd_clk->lpsc,
+    //    true, lcd_clk->flags);
     
 }
 
@@ -565,9 +565,13 @@ static int da850_lcd_hw_init(void)
 	return 0;
 }
 
+#define LCDC_PRIORITY 0x70000000
+#define LCDC_PRIORITY_LEVEL 0x10000000
+
 static __init int mb_lcd_init(void){
 
 	int ret;
+	u32 mstpri2;
 
 	//Configure LCD controler pins
 	ret = davinci_cfg_reg_list(da850_lcdcntl_pins);	
@@ -575,6 +579,12 @@ static __init int mb_lcd_init(void){
 		pr_warn("%s: LCDC pin mux setup failed: %d\n", __func__, ret);
 //		return ret;
 	}
+
+    // Increase the priority for the LCD controller
+	mstpri2 = __raw_readl(DA8XX_SYSCFG0_VIRT(DA8XX_MSTPRI2_REG));
+	mstpri2 &= ~LCDC_PRIORITY;
+	mstpri2 |= LCDC_PRIORITY_LEVEL;
+	__raw_writel(mstpri2, DA8XX_SYSCFG0_VIRT(DA8XX_MSTPRI2_REG));
 
 	//Configure LCD power and configuration (SPI) pins
 	ret = davinci_cfg_reg_list(mb_lcd_pins);

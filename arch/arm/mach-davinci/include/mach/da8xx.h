@@ -58,6 +58,9 @@ extern unsigned int da850_max_speed;
 #define DA8XX_CFGCHIP0_REG	0x17c
 #define DA8XX_CFGCHIP2_REG	0x184
 #define DA8XX_CFGCHIP3_REG	0x188
+#define DA8XX_MSTPRI0_REG	0x110
+#define DA8XX_MSTPRI1_REG	0x114
+#define DA8XX_MSTPRI2_REG	0x118
 
 #define DA8XX_SYSCFG1_BASE	(IO_PHYS + 0x22C000)
 #define DA8XX_SYSCFG1_VIRT(x)	(da8xx_syscfg1_base + (x))

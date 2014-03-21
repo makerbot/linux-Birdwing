@@ -454,6 +454,7 @@ int mb_serializer_compat_init(struct platform_device *device)
                 pr_err("init error in spi !!\n");
                 return ret;
         }
+        mdelay(900);
 
         ret = lcd_ssd2119_spi_init(fb_pdata->spi);
         if (ret < 0){
@@ -975,6 +976,7 @@ static void lcd_calc_clk_divider(struct da8xx_fb_par *par)
 	unsigned int lcd_clk, div;
 
 	lcd_clk = clk_get_rate(par->lcdc_clk);
+    pr_err("lcd_get clock: %d\n", lcd_clk);
 	div = lcd_clk / par->pxl_clk;
 
 	/* Configure the LCD clock divisor. */
@@ -1103,6 +1105,8 @@ static irqreturn_t lcdc_irq_handler_rev02(int irq, void *arg)
 
 
 bool schedule_lcd_reset = false;
+uint32_t last_stat_ = 0;
+uint32_t underflow_count_ = 0;
 /* IRQ handler for version 1 LCDC */
 static irqreturn_t lcdc_irq_handler_rev01(int irq, void *arg)
 {
@@ -1110,13 +1114,12 @@ static irqreturn_t lcdc_irq_handler_rev01(int irq, void *arg)
 	u32 stat = lcdc_read(LCD_STAT_REG);
 	u32 reg_ras;
 
+    last_stat_ = stat;
+
 	if ((stat & LCD_SYNC_LOST) && (stat & LCD_FIFO_UNDERFLOW)) {
 		lcd_disable_raster(false);
 		lcdc_write(stat, LCD_STAT_REG);
 		lcd_enable_raster();
-        //if (par->lcdc_psc_ctrl) {
-        //    par->lcdc_psc_ctrl(true);
-        //}
 	} else if (stat & LCD_PL_LOAD_DONE) {
 		/*
 		 * Must disable raster before changing state of any control bit.
@@ -1138,15 +1141,6 @@ static irqreturn_t lcdc_irq_handler_rev01(int irq, void *arg)
 	} else if ((stat & LCD_END_OF_FRAME0) || (stat & LCD_END_OF_FRAME1)){
 		lcdc_write(stat, LCD_STAT_REG);
 
-        if (0) {//schedule_lcd_reset) {
-            lcd_disable_raster(false);
-            if (par->lcdc_psc_ctrl) {
-                par->lcdc_psc_ctrl(true);
-            }
-            schedule_lcd_reset = false;
-            lcd_enable_raster();
-        }
-
 		if (stat & LCD_END_OF_FRAME0) {
 			par->which_dma_channel_done = 0;
 			lcdc_write(par->dma_start,
@@ -1167,11 +1161,18 @@ static irqreturn_t lcdc_irq_handler_rev01(int irq, void *arg)
 			wake_up_interruptible(&par->vsync_wait);
 		}
 
-
 	}else if (stat & LCD_FIFO_UNDERFLOW) {
+        underflow_count_++;
 		lcdc_write(stat, LCD_STAT_REG);
-        
-        schedule_lcd_reset = true;
+
+    /*    lcd_disable_raster(false);
+		lcdc_write(stat, LCD_STAT_REG);
+        if (par->lcdc_psc_ctrl) {
+            par->lcdc_psc_ctrl(true);
+        }
+        lcd_enable_raster();
+      */  
+
    }else {
 		lcdc_write(stat, LCD_STAT_REG);
     }
@@ -1407,20 +1408,18 @@ static int cfb_blank(int blank, struct fb_info *info)
 	case FB_BLANK_UNBLANK:
 		lcd_enable_raster();
 
-		//if (par->panel_power_ctrl)
-		//	par->panel_power_ctrl(1);
-
-        msleep(100);
-        mb_serializer_compat_par_init(par);
+        //msleep(100);
+        //mb_serializer_compat_par_init(par);
         
 		break;
 	case FB_BLANK_NORMAL:
 	case FB_BLANK_VSYNC_SUSPEND:
 	case FB_BLANK_HSYNC_SUSPEND:
 	case FB_BLANK_POWERDOWN:
-		if (par->panel_power_ctrl)
-			par->panel_power_ctrl(0);
 
+		//if (par->panel_power_ctrl)
+		//	par->panel_power_ctrl(0);
+        
 		lcd_disable_raster(true);
 		break;
 	default:
