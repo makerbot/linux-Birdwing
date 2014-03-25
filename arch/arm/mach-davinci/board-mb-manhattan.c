@@ -250,13 +250,13 @@ static short stepper_pru_pins[] = {
     DA850_PRU0_R30_22,	//x dir
     DA850_PRU0_R30_24,	//x en
     DA850_PRU0_R30_25,	//x vref
-    DA850_GPIO0_13,	//x load
+    DA850_PRU0_R31_20, //DA850_GPIO0_13,	//x load
 
     DA850_PRU0_R30_20,	//y step
     DA850_PRU0_R30_19,	//y dir
     DA850_PRU0_R30_17,	//y en
     DA850_PRU0_R30_16,	//y vref
-    DA850_GPIO0_12,	//y load
+    DA850_PRU0_R31_19,  //DA850_GPIO0_12,	//y load
 
     DA850_PRU0_R30_21,	//z step
     DA850_PRU0_R30_5,	//z dir
