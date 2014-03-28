@@ -50,6 +50,7 @@
 #include <linux/makerbot/buzzer.h>
 
 #include "clock.h"
+#include "pru/pru_init.h"
 
 #define MANHATTAN_PHY_ID		NULL
 
@@ -970,6 +971,45 @@ usb11_setup_oc_fail:
 	gpio_free(DA850_USB1_VBUS_PIN);
 }
 
+static __init void  mb_init_pruss(void) {
+
+	void __iomem *pru_data_address;
+	void __iomem *pru_control_register;
+    u32* program_data;
+    int ret;
+    int i;
+    int word_length;
+
+	/* Register PRUSS device */
+	ret = da8xx_register_uio_pruss();
+	if (ret)
+		pr_warn("pruss init failed %d\n", ret);
+
+    
+    pru_control_register = ioremap(DA8XX_PRU_CONTROL_BASE, SZ_1K);
+    //disable pru
+   // __raw_writel(1, pru_control_register);
+
+    //write program memory
+    pru_data_address = ioremap(DA8XX_PRU_IRAM_BASE, SZ_4K);
+    word_length = (pru_init_program_length + 3) >> 2;
+    program_data = (u32*)pru_init_program;  
+    for (i = 0; i < word_length; i++) {
+        __raw_writel(*(program_data + i) , pru_data_address + 4 * i);
+    }
+
+    //enable_pru
+    __raw_writel(2, pru_control_register);
+
+    iounmap(pru_control_register);
+    iounmap(pru_data_address);
+
+	ret = davinci_cfg_reg_list(stepper_pru_pins);						//Configure PRU pins
+	if (ret)
+		pr_warn("%s: stepper pins initialization failed: %d\n", __func__, ret);
+
+}
+
 //====================UART Configuration=================================
 
 static struct davinci_uart_config mb_manhattan_uart_config __initdata = {
@@ -987,6 +1027,13 @@ static __init void mb_manhattan_init(void)
 {
 	int ret;
 	u32 cfgchip3;
+
+	/*PRUs */
+	 // Disable pull-ups on MS2/Sense inputs on the steppers (CP0 & CP16 in PUPD_ENA reg)
+	// default pull up configuration: 0xC3FFFFFF
+	__raw_writel(0xCFFEFFFE,  ioremap(DA8XX_PUPD_ENA, SZ_1K) );
+
+    mb_init_pruss();
 
 	/*UART*/
 	ret = davinci_cfg_reg_list(uart_pins);
@@ -1102,22 +1149,7 @@ static __init void mb_manhattan_init(void)
 	if (ret)
 		pr_warn("%s: rotary encoder device initialization failed!: %d\n", __func__, ret);
 
-	/*PRUs */
-	ret = davinci_cfg_reg_list(stepper_pru_pins);						//Configure PRU pins
-	if (ret)
-		pr_warn("%s: stepper pins initialization failed: %d\n", __func__, ret);
 
-	 // Disable pull-ups on MS2/Sense inputs on the steppers (CP0 & CP16 in PUPD_ENA reg)
-	// default pull up configuration: 0xC3FFFFFF
-	__raw_writel(0xCFFEFFFE,  ioremap(DA8XX_PUPD_ENA, SZ_1K) );
-
-	/* Register PRUSS device */
-	da8xx_register_uio_pruss();
-	if (ret)
-		pr_warn("pruss init failed %d\n", ret);
-
-	/* read the pruss clock */
-	davinci_psc_is_clk_active(0,13);
 }
 
 #ifdef CONFIG_SERIAL_8250_CONSOLE
