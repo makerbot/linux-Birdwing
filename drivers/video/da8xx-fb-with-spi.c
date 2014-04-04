@@ -1406,8 +1406,8 @@ static int cfb_blank(int blank, struct fb_info *info)
 	case FB_BLANK_UNBLANK:
 		lcd_enable_raster();
 
-        //msleep(100);
-        //mb_serializer_compat_par_init(par);
+        msleep(300);
+        mb_serializer_compat_par_init(par);
         
 		break;
 	case FB_BLANK_NORMAL:
@@ -1415,8 +1415,8 @@ static int cfb_blank(int blank, struct fb_info *info)
 	case FB_BLANK_HSYNC_SUSPEND:
 	case FB_BLANK_POWERDOWN:
 
-		//if (par->panel_power_ctrl)
-		//	par->panel_power_ctrl(0);
+		if (par->panel_power_ctrl)
+			par->panel_power_ctrl(0);
         
 		lcd_disable_raster(true);
 		break;
