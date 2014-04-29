@@ -810,7 +810,7 @@ static int __ref kernel_init(void *unused)
 	/* need to finish all async __init code before freeing the memory */
 	async_synchronize_full();
 	free_initmem();
-    do_execve("/usr/apps/early_led/early_led");
+    do_execve("/usr/apps/early_led/early_led", NULL, NULL);
 	mark_rodata_ro();
 	system_state = SYSTEM_RUNNING;
 	numa_default_policy();
