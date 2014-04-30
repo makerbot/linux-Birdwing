@@ -620,7 +620,7 @@ static __init int mb_lcd_init(void){
 
 	//Configure LCD power / config pins
 
-	ret = davinci_cfg_reg_list(interface_i2c_pins);
+	/*ret = davinci_cfg_reg_list(interface_i2c_pins);
 	if (ret){
 		pr_warn("%s: LCD i2c pins initialization failed: %d\n", __func__, ret);
 	//TODO undo stuff
@@ -633,7 +633,7 @@ static __init int mb_lcd_init(void){
 		pr_warn("%s: LCD i2c driver initialization failed: %d\n", __func__, ret);
 	//TODO undo thigns
 //		return ret;
-	}
+	}*/
 
 	return ret;
 }
