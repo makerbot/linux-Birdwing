@@ -667,6 +667,13 @@ endif
 
 # Add user supplied CPPFLAGS, AFLAGS and CFLAGS as the last assignments
 KBUILD_CPPFLAGS += $(KCPPFLAGS)
+
+# If DO_STARTUP_BLINK=<something_which_doesn't_matter> is in the make call
+# Then we enable the startup button blink for the tink
+ifeq ("$(origin DO_STARTUP_BLINK)", "command line")
+    KBUILD_CPPFLAGS += -DDO_STARTUP_BLINK
+endif
+
 KBUILD_AFLAGS += $(KAFLAGS)
 KBUILD_CFLAGS += $(KCFLAGS)
 
