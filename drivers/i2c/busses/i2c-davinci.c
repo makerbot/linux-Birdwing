@@ -639,9 +639,72 @@ static const struct of_device_id davinci_i2c_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, davinci_i2c_of_match);
 
+
+void setup_led_driver(struct i2c_adapter * adapter)
+{
+    //Auto increment masks
+    const static __u8 kAINone_mask = 0x0<<5;
+    const static __u8 kAIAll_mask = 0x4<<5;
+
+    const static __u8 kMODE1_base = 0x00;
+    const static __u8 kMODE2_base = 0x05;
+
+    const static uint8_t kGroupIndividualWithDimmingAndOverride_mask = (0x3 << 0) + (0x3 << 2) + (0x3<< 4) + (0x1 << 6);
+
+    const static __u8 kMODE1WakeUp_mask = 0x0 << 4;
+    const static __u8 kMODE2BlinkEnable = 0x1<<5;
+
+    const static __u8 kMODE1_addr = 0x0;
+
+    const static __u8 kGRPPWM_addr = 0x0a;
+
+    const static __u8 kKnob_addr = 0x02; //PWM0
+
+    struct i2c_msg msgs[3];
+
+/*    __u8 init_buffer[] = {kAIAll_mask | kMODE1_addr, kMODE1_base | kMODE1WakeUp_mask, kMODE2_base,
+                            0,0,0,0,0,0,0,0, //8 LEDS set to 0
+                            kGroupIndividualWithOverride_mask, kGroupIndividualWithOverride_mask, //Individual brightness
+                            0,0,0,0 //No subaddresses or allcall
+    };*/
+
+    __u8 init_buffer[] = {kAIAll_mask | kMODE1_addr, kMODE1_base | kMODE1WakeUp_mask, kMODE2_base | kMODE2BlinkEnable}; //init LCD driver with blinking mode enabled
+    __u8 period_buffer[] = {kAIAll_mask | kGRPPWM_addr, 127, 23}; //Period of blink set to 1 seconds, Duty Cycle set to about 50%
+    __u8 blink_buffer[] = {kAINone_mask | (kKnob_addr+0xa), kGroupIndividualWithDimmingAndOverride_mask};
+
+   struct i2c_msg init_msg = {
+        .addr=0x06,
+        .flags=0,
+        .len=sizeof(init_buffer),
+        .buf=init_buffer
+    };
+
+    struct i2c_msg period_msg = {
+        .addr=0x06,
+        .flags=0,
+        .len=sizeof(period_buffer),
+        .buf=period_buffer
+    };
+
+    struct i2c_msg blink_msg = {
+        .addr=0x06,
+        .flags=0,
+        .len=sizeof(blink_buffer),
+        .buf=blink_buffer
+    };
+
+    msgs[0] = init_msg;
+    msgs[1] = period_msg;
+    msgs[2] = blink_msg;
+
+    i2c_davinci_xfer(adapter, msgs, 3);
+}
+
+
+
 static int davinci_i2c_probe(struct platform_device *pdev)
 {
-	struct davinci_i2c_dev *dev;
+    struct davinci_i2c_dev *dev;
 	struct i2c_adapter *adap;
 	struct resource *mem, *irq, *ioarea;
 	int r;
@@ -744,6 +807,10 @@ static int davinci_i2c_probe(struct platform_device *pdev)
 	}
 	of_i2c_register_devices(adap);
 
+    #ifdef DO_STARTUP_BLINK
+        setup_led_driver(adap);
+    #endif
+
 	return 0;
 
 err_free_irq:
@@ -763,6 +830,7 @@ err_release_region:
 
 	return r;
 }
+
 
 static int davinci_i2c_remove(struct platform_device *pdev)
 {
