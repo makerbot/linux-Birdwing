@@ -645,6 +645,7 @@ void setup_led_driver(struct i2c_adapter * adapter)
     //Auto increment masks
     const static __u8 kAINone_mask = 0x0<<5;
     const static __u8 kAIAll_mask = 0x4<<5;
+    const static __u8 kAIBrightness_mask = 0x5 << 5;
 
     const static __u8 kMODE1_base = 0x00;
     const static __u8 kMODE2_base = 0x05;
@@ -660,15 +661,10 @@ void setup_led_driver(struct i2c_adapter * adapter)
 
     const static __u8 kKnob_addr = 0x02; //PWM0
 
-    struct i2c_msg msgs[3];
-
-/*    __u8 init_buffer[] = {kAIAll_mask | kMODE1_addr, kMODE1_base | kMODE1WakeUp_mask, kMODE2_base,
-                            0,0,0,0,0,0,0,0, //8 LEDS set to 0
-                            kGroupIndividualWithOverride_mask, kGroupIndividualWithOverride_mask, //Individual brightness
-                            0,0,0,0 //No subaddresses or allcall
-    };*/
+    struct i2c_msg msgs[4];
 
     __u8 init_buffer[] = {kAIAll_mask | kMODE1_addr, kMODE1_base | kMODE1WakeUp_mask, kMODE2_base | kMODE2BlinkEnable}; //init LCD driver with blinking mode enabled
+    __u8 color_buffer[] = {kAIBrightness_mask | kKnob_addr, 255, 255, 255, 255}; //Set LED to white (this prevents certain bots from not blinking)
     __u8 period_buffer[] = {kAIAll_mask | kGRPPWM_addr, 127, 23}; //Period of blink set to 1 seconds, Duty Cycle set to about 50%
     __u8 blink_buffer[] = {kAINone_mask | (kKnob_addr+0xa), kGroupIndividualWithDimmingAndOverride_mask};
 
@@ -677,6 +673,13 @@ void setup_led_driver(struct i2c_adapter * adapter)
         .flags=0,
         .len=sizeof(init_buffer),
         .buf=init_buffer
+    };
+
+    struct i2c_msg color_msg = {
+        .addr=0x06,
+        .flags=0,
+        .len=sizeof(color_buffer),
+        .buf=color_buffer
     };
 
     struct i2c_msg period_msg = {
@@ -694,10 +697,11 @@ void setup_led_driver(struct i2c_adapter * adapter)
     };
 
     msgs[0] = init_msg;
-    msgs[1] = period_msg;
-    msgs[2] = blink_msg;
+    msgs[1] = color_msg;
+    msgs[2] = period_msg;
+    msgs[3] = blink_msg;
 
-    i2c_davinci_xfer(adapter, msgs, 3);
+    i2c_davinci_xfer(adapter, msgs, 4);
 }
 
 
