@@ -1,5 +1,5 @@
 //	Header file for buzzer driver
-//	MSS 8 Nov 2013
+//	MSS 30 Jul 2014
 
 #ifndef _BUZZER_H_
 #define _BUZZER_H_
@@ -8,7 +8,7 @@
 
 //Defines
 #ifndef BUZZER_MAJOR
-#define BUZZER_MAJOR 0		//TODO change this to 14 (sound) later
+#define BUZZER_MAJOR 14		//TODO change this to 14 (sound) later
 #endif
 
 #ifndef BUZZER_MINOR

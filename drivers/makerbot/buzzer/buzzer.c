@@ -3,6 +3,7 @@
 *
 *	Copyright (c) 2013 Makerbot Industries LLC
 *
+*	Last updated: 30 Jul 2014
 */
 
 
@@ -30,11 +31,14 @@
 #include <asm/io.h>				//io
 
 
-#include <linux/makerbot/buzzer.h>		//buzzer files
+#include <linux/makerbot/buzzer.h>		//buzzer include file accessible to other files
 
-#include "buzzer.h"
+#include "buzzer.h"				//buzzer include local to this file
 #include "notes.h"				//Standard note frequencies and MIDI note numbers
+//TODO make this read from file
 #include "sequences.h"				//Sequences from MusicForMakerbots
+
+#define DEBUG
 
 
 struct buzzer_dev buzzer;
@@ -42,12 +46,16 @@ static struct class *buzzer_class;
 
 static int buzzer_open(struct inode *i, struct file *f){
 	//nothing to do here...
+	#ifdef DEBUG
+	pr_info("Buzzer open\n");	
+	#endif
 	return 0;
 }
 
 static ssize_t buzzer_read(struct file *f, char __user *buf, size_t len, loff_t *off){
 	//Don't really need this, nothing to read particularly, though could get last sequence
 	char c;
+	#ifdef DEBUG
 	pr_info("Buzzer Read\n");
 	pr_info("Len: %d\n", len);
 	pr_info("Offset: %lld\n", *off);
@@ -62,16 +70,24 @@ static ssize_t buzzer_read(struct file *f, char __user *buf, size_t len, loff_t 
 			return 1;
 		}
 	}
+	#endif
 	return 0;
 }
 
 //Write one of the synth indexes or return -1 for invalid 
 static ssize_t buzzer_write(struct file *f, const char __user *buf, size_t len, loff_t *off){
 	int ret;
+
 	//TODO don't let this get too big, maybe max out at 32
 	char c[len+1];		//buffer for characters, needs to be len+1 to hold end NULL char
 	int i;
 	unsigned int index;
+
+	#ifdef DEBUG
+	pr_info("Buzzer Write %d\n", index);
+	#endif
+
+	//Check if mutex is needed
 	mutex_lock(&buzzer.mutex);
 	i = 0;
 	ret = 0;
@@ -79,12 +95,12 @@ static ssize_t buzzer_write(struct file *f, const char __user *buf, size_t len, 
 	if(copy_from_user(&c, buf, len))
 		return -EFAULT;
 
-	c[len]=0;				//NULL char termination
-
-	if(!(kstrtouint(c, 0, &index))){	//0 = successful conversion
+	c[len]=0;							//NULL char termination
+									//kstrtouint converts strings to unsigned ints
+	if(!(kstrtouint(c, 0, &index))){				//0 = successful conversion
 		if(index<SEQ_COUNT ){
 			pr_info("Play Seq %d\n", index);
-			preempt_disable();		//bad
+			//preempt_disable();				//bad
 			do{
 			//TODO reduce the size of the sequence arrays (or pad) to make this a bitshift
 			//synth() doesn't return untill it has completed it's note
@@ -92,14 +108,14 @@ static ssize_t buzzer_write(struct file *f, const char __user *buf, size_t len, 
 					sequences[index][i+1],		//Freq
 					sequences[index][i+3],		//Wave
 					sequences[index][i+4]);		//Npts
-				i+=6;
+				i+=6;					//FIXME why? I think there are some extra junk at the end of seq
 			}while(sequences[index][i]);			//Always end with a row of zeros or this won't break
-			preempt_enable();		//also...bad.
+			//preempt_enable();				//also...bad.
 		} else {
 			pr_info("Invalid sequence number. Values are 1-%d\n", SEQ_COUNT); 
-			return -EINVAL; //may need to pick something else since kstrtouint could return this too
+			return -EINVAL; 				//may need to pick something else since kstrtouint could return this too
 		}
-	} else {		//else kstrtouint returned some error
+	} else {							//else kstrtouint returned some error
 		pr_info("Got: %s\n", c);
 		if(ret == -EINVAL)
 			pr_info("kstrtouint returned parse error\n");
@@ -115,6 +131,9 @@ static ssize_t buzzer_write(struct file *f, const char __user *buf, size_t len, 
 
 static int buzzer_release(struct inode *i, struct file *f){
 	//nothing to do here?
+	#ifdef DEBUG
+	pr_info("Buzzer Release\n");
+	#endif
 	return 0;
 }
 
@@ -122,7 +141,7 @@ static int buzzer_release(struct inode *i, struct file *f){
 static void synth(uint16_t dur, uint16_t freq, uint16_t wave, uint16_t npts){
 	//Dur in msec, freq in Hz, per = 1/freq, wave and pts are dimensionless
 	//wave could be a complex binary value, but is 1 for all seqs currently
-	//npts effectively sets the modulation rate of the wave. 
+	//npts effectively sets the modulation rate of the wave.  
 	//Assume Wave = 1
 	// npts = 2 -> 50% duty cycle
 	// npts = 4 -> 25% duty cycle
@@ -172,6 +191,9 @@ static const struct file_operations buzzer_fops = {
 };
 
 static int __init buzzer_create_node(void){
+	#ifdef DEBUG
+	pr_info ("Create Buzzer Class\n");
+	#endif
 	if(!buzzer_class){
 		buzzer_class = class_create(THIS_MODULE, "buzzer_class");
 		if(!buzzer_class){
@@ -190,6 +212,9 @@ static int __init buzzer_create_node(void){
 }
 
 static int __init buzzer_destroy_node(void){
+	#ifdef DEBUG
+	pr_info("Destroy Buzzer Class\n");
+	#endif
 	if(buzzer.device)
 		device_destroy(buzzer_class, buzzer.devt);
 	class_destroy(buzzer_class);
@@ -226,6 +251,9 @@ static int __init buzzer_dev_config(void){
 }
 
 static void buzzer_dev_cleanup(void){
+	#ifdef DEBUG
+	pr_info("Buzzer Dev Cleanup\n");
+	#endif
 	buzzer_destroy_node();
 	cdev_del(&buzzer.cdev);
 	unregister_chrdev_region(buzzer.devt, 1);
@@ -234,6 +262,9 @@ static void buzzer_dev_cleanup(void){
 static int __init buzzer_init(void){
 
 	int ret;
+	#ifdef DEBUG
+	pr_info("Buzzer init\n");
+	#endif
 	mutex_init(&buzzer.mutex);		//Mutex is used to lock the write operation
 	spin_lock_init(&buzzer.spin_lock);	//spin lock is used to lock the synth
 	ret = buzzer_dev_config();		//changed the name of this to avoid confusion
@@ -257,6 +288,9 @@ static int __init buzzer_init(void){
 }
 
 static void __exit buzzer_exit(void){
+	#ifdef DEBUG
+	pr_info("Buzzer exit\n");
+	#endif
 	buzzer_dev_cleanup();
 }
 module_init(buzzer_init);
