@@ -26,6 +26,7 @@
 #include <linux/gpio.h>				//gpio...how fast is this?
 #include <linux/delay.h>			//delay / sleep
 #include <linux/spinlock.h>			//spinlockit
+#include <linux/sched.h>			//scheduling fun!
 
 #include <asm/uaccess.h>			//copy to / copy from user
 #include <asm/io.h>				//io
@@ -74,6 +75,26 @@ static ssize_t buzzer_read(struct file *f, char __user *buf, size_t len, loff_t 
 	return 0;
 }
 
+//TODO need to remember how to pass values to delayed work functions
+static void buzzer_pin_write(){
+		char index;
+		index = 0;
+		//this should be recursive function
+			pr_info("Play Seq %d\n", index);
+			//preempt_disable();				//bad
+			do{
+			//TODO reduce the size of the sequence arrays (or pad) to make this a bitshift
+			//synth() doesn't return untill it has completed it's note
+				synth(sequences[index][i],		//Duration
+					sequences[index][i+1],		//Freq
+					sequences[index][i+3],		//Wave
+					sequences[index][i+4]);		//Npts
+				i+=6;					//FIXME why? I think there are some extra junk at the end of seq
+			}while(sequences[index][i]);			//Always end with a row of zeros or this won't break
+			//preempt_enable();				//also...bad.
+	return;
+}
+
 //Write one of the synth indexes or return -1 for invalid 
 static ssize_t buzzer_write(struct file *f, const char __user *buf, size_t len, loff_t *off){
 	int ret;
@@ -96,21 +117,11 @@ static ssize_t buzzer_write(struct file *f, const char __user *buf, size_t len, 
 		return -EFAULT;
 
 	c[len]=0;							//NULL char termination
-									//kstrtouint converts strings to unsigned ints
+
+								//kstrtouint converts strings to unsigned ints
 	if(!(kstrtouint(c, 0, &index))){				//0 = successful conversion
 		if(index<SEQ_COUNT ){
-			pr_info("Play Seq %d\n", index);
-			//preempt_disable();				//bad
-			do{
-			//TODO reduce the size of the sequence arrays (or pad) to make this a bitshift
-			//synth() doesn't return untill it has completed it's note
-				synth(sequences[index][i],		//Duration
-					sequences[index][i+1],		//Freq
-					sequences[index][i+3],		//Wave
-					sequences[index][i+4]);		//Npts
-				i+=6;					//FIXME why? I think there are some extra junk at the end of seq
-			}while(sequences[index][i]);			//Always end with a row of zeros or this won't break
-			//preempt_enable();				//also...bad.
+			schdule_delayed_work(&buzzer_pin_write, msecs_to_jiffies(100));
 		} else {
 			pr_info("Invalid sequence number. Values are 1-%d\n", SEQ_COUNT); 
 			return -EINVAL; 				//may need to pick something else since kstrtouint could return this too
@@ -153,7 +164,7 @@ static void synth(uint16_t dur, uint16_t freq, uint16_t wave, uint16_t npts){
 	long long start_time, curr_time, end_time, next_event, us_per;
 	uint8_t mod_index;
 	unsigned long flags;
-	spin_lock_irqsave(&buzzer.spin_lock, flags);		// spinlock works, but it probably chews up system process
+	//spin_lock_irqsave(&buzzer.spin_lock, flags);		// spinlock works, but it probably chews up system process
 	start_time = ktime_to_us(ktime_get());			// get the current time
 	curr_time = start_time;					// current time
 //FIXME change dur to pass msec to remove this multiply
@@ -176,7 +187,7 @@ static void synth(uint16_t dur, uint16_t freq, uint16_t wave, uint16_t npts){
 	}
 
 	gpio_set_value(BUZZER_OUT, 0);				//make sure the pin is set low when we exit
-	spin_unlock_irqrestore(&buzzer.spin_lock, flags);	//release the lock
+	//spin_unlock_irqrestore(&buzzer.spin_lock, flags);	//release the lock
 }
 
 //TODO parse MIDI file to synth
