@@ -113,8 +113,8 @@ static ssize_t buzzer_write(struct file *f, const char __user *buf, size_t len, 
 	int ret;
 
 	//TODO don't let this get too big, maybe max out at 32
-	char c[len+1];		//buffer for characters, needs to be len+1 to hold end NULL char
-	unsigned int song_num;	//song number read from userland
+	char c[len+1];						//buffer for characters, needs to be len+1 to hold end NULL char
+	unsigned int song_num;					//song number read from userland
 
 
 	//Check if mutex is needed
@@ -162,6 +162,25 @@ static int buzzer_release(struct inode *i, struct file *f){
 	return 0;
 }
 
+//Dur_time = Duration. Total duration of the note
+//ctrl_time = time for PWM, e.g. number of slices per freq cycle
+//cycle_time = 1/freq. Base frequency.
+static void synth_2(struct work_struct *work){
+	struct buzzer_dev *b = container_of(
+		container_of(work, struct delayed_work, work),
+		 struct buzzer_dev,
+		 b_work);
+
+	//this schedule should be the smallest time-slice for an output change
+	//e.g. 1/2 the freq for 50% duty cycle
+	if(buzzer.countdown){
+		schedule_delayed_work(&buzzer.s_work, usecs_to_jiffies(500)); //1Khz = 1000usec
+		gpio_set_value(BUZZER_OUT, buzzer.value);
+		buzzer.value=~b->value;	//toggle the value
+		buzzer.countdown--;	//reduce the number of times lef to toggle
+	}
+
+}
 
 static void synth(uint16_t dur, uint16_t freq, uint16_t wave, uint16_t npts){
 	//Dur in msec, freq in Hz, per = 1/freq, wave and pts are dimensionless
@@ -177,8 +196,6 @@ static void synth(uint16_t dur, uint16_t freq, uint16_t wave, uint16_t npts){
 //FIXME Would like to make this sleep for some time, but needs to have gauranteed wake up time
 	long long start_time, curr_time, end_time, next_event, us_per;
 	uint8_t mod_index;
-	//unsigned long flags;
-	//spin_lock_irqsave(&buzzer.spin_lock, flags);		// spinlock works, but it probably chews up system process
 	start_time = ktime_to_us(ktime_get());			// get the current time
 	curr_time = start_time;					// current time
 //FIXME change dur to pass msec to remove this multiply
@@ -190,6 +207,9 @@ static void synth(uint16_t dur, uint16_t freq, uint16_t wave, uint16_t npts){
 	mod_index = 0;						// Used for modulation
 	next_event = curr_time+(us_per);			// calculate the first
 //FIXME make this usleep_range or something that doesn't hold the kernel
+
+//FIXME this needs to be scheduled rather than wait
+//FIXME can this be a timer?
 	while(curr_time < end_time){				// check if we should still run the loop
 		if(curr_time >= next_event){			// check if the next event should happen
 			mod_index = (mod_index+1)%npts;		// increment our mod index
@@ -201,7 +221,6 @@ static void synth(uint16_t dur, uint16_t freq, uint16_t wave, uint16_t npts){
 	}
 
 	gpio_set_value(BUZZER_OUT, 0);				//make sure the pin is set low when we exit
-	//spin_unlock_irqrestore(&buzzer.spin_lock, flags);	//release the lock
 }
 
 //TODO parse MIDI file to synth
@@ -292,9 +311,9 @@ static int __init buzzer_init(void){
 	pr_info("Buzzer init\n");
 	#endif
 	mutex_init(&buzzer.mutex);		//Mutex is used to lock the write operation
-	spin_lock_init(&buzzer.spin_lock);	//spin lock is used to lock the synth
+	//spin_lock_init(&buzzer.spin_lock);	//spin lock is used to lock the synth
 	INIT_DELAYED_WORK(&buzzer.b_work, buzzer_pin_write);
-
+	INIT_DELAYED_WORK(&buzzer.s_work, synth_2);
 	ret = buzzer_dev_config();		//changed the name of this to avoid confusion
 	if(ret !=0){
 		pr_err("Buzzer Device Init failed\n");

@@ -30,7 +30,6 @@
 
 //Functions
 static void synth(uint16_t, uint16_t, uint16_t, uint16_t);
-//static void buzzer_pin_write(struct work_struct *work);
 
 //Structs
 struct buzzer_dev{
@@ -38,7 +37,7 @@ struct buzzer_dev{
 	dev_t devt;				//device type
 	struct cdev cdev;			//character driver
 	struct mutex mutex;			//mutual exclusion semaphore
-	spinlock_t spin_lock;			//spinlock
+	//spinlock_t spin_lock;			//spinlock
 	struct device *device;			//hmm, what is this?
 	struct buzzer_platform_data *pdata;	//platform data
 	//Buzzer specific 
@@ -47,7 +46,10 @@ struct buzzer_dev{
 	unsigned int duration;			//duration of the note (time)
 	unsigned int polywave;			//"polywave", this changes the timber of the note
 	struct delayed_work b_work;		//holds the scheduling work que
+	struct delayed_work s_work;		//synth work
 	unsigned int song;			//current song to play
+	unsigned int countdown;
+	unsigned int value;
 	//array of notes (pitches)
 	//array of tones (timbres)
 };
