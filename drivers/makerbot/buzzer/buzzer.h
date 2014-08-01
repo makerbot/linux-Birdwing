@@ -5,7 +5,7 @@
 #define _BUZZER_H_
 
 #include <linux/makerbot/buzzer.h>
-
+#include <linux/workqueue.h>
 //Defines
 #ifndef BUZZER_MAJOR
 #define BUZZER_MAJOR 14		//TODO change this to 14 (sound) later
@@ -28,6 +28,10 @@
 #define GPIO_OUT_BIT 0xF	//15
 #define GPIO_ADDR 0x1E2604F	//Exact address for GPIO
 
+//Functions
+static void synth(uint16_t, uint16_t, uint16_t, uint16_t);
+//static void buzzer_pin_write(struct work_struct *work);
+
 //Structs
 struct buzzer_dev{
 	//Universal device/driver bits
@@ -42,7 +46,8 @@ struct buzzer_dev{
 	unsigned int freq;			//current frequency (pitch)
 	unsigned int duration;			//duration of the note (time)
 	unsigned int polywave;			//"polywave", this changes the timber of the note
-
+	struct delayed_work b_work;		//holds the scheduling work que
+	unsigned int song;			//current song to play
 	//array of notes (pitches)
 	//array of tones (timbres)
 };
@@ -56,8 +61,5 @@ struct buzzer_ops{
 	void	(*release)(struct buzzer_dev *dev);
 	struct module *owner;
 };
-
-//Functions
-static void synth(uint16_t, uint16_t, uint16_t, uint16_t);
 
 #endif

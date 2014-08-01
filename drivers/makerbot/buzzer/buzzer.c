@@ -27,6 +27,7 @@
 #include <linux/delay.h>			//delay / sleep
 #include <linux/spinlock.h>			//spinlockit
 #include <linux/sched.h>			//scheduling fun!
+#include <linux/workqueue.h>
 
 #include <asm/uaccess.h>			//copy to / copy from user
 #include <asm/io.h>				//io
@@ -75,25 +76,37 @@ static ssize_t buzzer_read(struct file *f, char __user *buf, size_t len, loff_t 
 	return 0;
 }
 
-//TODO need to remember how to pass values to delayed work functions
-static void buzzer_pin_write(){
-		char index;
-		index = 0;
-		//this should be recursive function
-			pr_info("Play Seq %d\n", index);
-			//preempt_disable();				//bad
-			do{
-			//TODO reduce the size of the sequence arrays (or pad) to make this a bitshift
-			//synth() doesn't return untill it has completed it's note
-				synth(sequences[index][i],		//Duration
-					sequences[index][i+1],		//Freq
-					sequences[index][i+3],		//Wave
-					sequences[index][i+4]);		//Npts
-				i+=6;					//FIXME why? I think there are some extra junk at the end of seq
-			}while(sequences[index][i]);			//Always end with a row of zeros or this won't break
-			//preempt_enable();				//also...bad.
+
+static void buzzer_pin_write(struct work_struct *work){
+		struct buzzer_dev *b = container_of(
+					container_of(work, struct delayed_work, work),
+					struct buzzer_dev,
+					b_work);
+
+		//this should be recursive function...or at least should call itself
+			pr_info("Play Seq %d at %d\n", b->song,b->index);
+			if(!sequences[b->song][b->index+6]){		//if this evaluates to zero, end of seq
+				synth(sequences[b->song][b->index],	//Duration
+					sequences[b->song][b->index+1],	//Freq
+					sequences[b->song][b->index+3],	//Wave
+					sequences[b->song][b->index+4]	//Npts
+				);
+			} else {
+				//schedule the work before calling the synth function
+				//schedule_delayed_work(&buzzer.b_work, msecs_to_jiffies(20));
+				schedule_delayed_work(&buzzer.b_work, msecs_to_jiffies(sequences[b->song][b->index]));
+				synth(sequences[b->song][b->index],	//Duration
+					sequences[b->song][b->index+1],	//Freq
+					sequences[b->song][b->index+3],	//Wave
+					sequences[b->song][b->index+4]	//Npts
+				);
+				b->index+=6;
+			}
+
 	return;
 }
+
+
 
 //Write one of the synth indexes or return -1 for invalid 
 static ssize_t buzzer_write(struct file *f, const char __user *buf, size_t len, loff_t *off){
@@ -101,16 +114,11 @@ static ssize_t buzzer_write(struct file *f, const char __user *buf, size_t len, 
 
 	//TODO don't let this get too big, maybe max out at 32
 	char c[len+1];		//buffer for characters, needs to be len+1 to hold end NULL char
-	int i;
-	unsigned int index;
+	unsigned int song_num;	//song number read from userland
 
-	#ifdef DEBUG
-	pr_info("Buzzer Write %d\n", index);
-	#endif
 
 	//Check if mutex is needed
 	mutex_lock(&buzzer.mutex);
-	i = 0;
 	ret = 0;
 
 	if(copy_from_user(&c, buf, len))
@@ -118,13 +126,19 @@ static ssize_t buzzer_write(struct file *f, const char __user *buf, size_t len, 
 
 	c[len]=0;							//NULL char termination
 
-								//kstrtouint converts strings to unsigned ints
-	if(!(kstrtouint(c, 0, &index))){				//0 = successful conversion
-		if(index<SEQ_COUNT ){
-			schdule_delayed_work(&buzzer_pin_write, msecs_to_jiffies(100));
+									//kstrtouint converts strings to unsigned ints
+	if(!(kstrtouint(c, 0, &song_num))){				//0 = successful conversion
+	#ifdef DEBUG
+	pr_info("Buzzer Write %d\n", song_num);
+	#endif
+
+		if(song_num<SEQ_COUNT ){
+			buzzer.song = song_num;				//song to play
+			buzzer.index = 0;				//reset the index
+			schedule_delayed_work(&buzzer.b_work, msecs_to_jiffies(20));
 		} else {
 			pr_info("Invalid sequence number. Values are 1-%d\n", SEQ_COUNT); 
-			return -EINVAL; 				//may need to pick something else since kstrtouint could return this too
+			return -ENXIO;
 		}
 	} else {							//else kstrtouint returned some error
 		pr_info("Got: %s\n", c);
@@ -163,7 +177,7 @@ static void synth(uint16_t dur, uint16_t freq, uint16_t wave, uint16_t npts){
 //FIXME Would like to make this sleep for some time, but needs to have gauranteed wake up time
 	long long start_time, curr_time, end_time, next_event, us_per;
 	uint8_t mod_index;
-	unsigned long flags;
+	//unsigned long flags;
 	//spin_lock_irqsave(&buzzer.spin_lock, flags);		// spinlock works, but it probably chews up system process
 	start_time = ktime_to_us(ktime_get());			// get the current time
 	curr_time = start_time;					// current time
@@ -254,6 +268,7 @@ static int __init buzzer_dev_config(void){
 		unregister_chrdev_region(buzzer.devt, 1);
 		return -1;
 	}
+	//FIXME issue here. doesn't seem to be correct major/minor
 	pr_info("Registered with <%d, %d>\n", MAJOR(buzzer.devt), MINOR(buzzer.devt));
 
 	buzzer_create_node();
@@ -271,21 +286,20 @@ static void buzzer_dev_cleanup(void){
 }
 
 static int __init buzzer_init(void){
-
+//TODO probably want to check the return values of the various init routines
 	int ret;
 	#ifdef DEBUG
 	pr_info("Buzzer init\n");
 	#endif
 	mutex_init(&buzzer.mutex);		//Mutex is used to lock the write operation
 	spin_lock_init(&buzzer.spin_lock);	//spin lock is used to lock the synth
+	INIT_DELAYED_WORK(&buzzer.b_work, buzzer_pin_write);
+
 	ret = buzzer_dev_config();		//changed the name of this to avoid confusion
 	if(ret !=0){
 		pr_err("Buzzer Device Init failed\n");
 		return -1;
 	}
-
-
-//TODO init low level stuff here
 
 	//Assign defaults
 	//TODO need set and get methods for this
@@ -310,4 +324,4 @@ module_exit(buzzer_exit);
 MODULE_AUTHOR("Matt Sterling");
 MODULE_DESCRIPTION("Makerbot Buzzer Driver");
 MODULE_LICENSE("GPL");
-MODULE_VERSION("0.6");
+MODULE_VERSION("0.7");
