@@ -6,6 +6,8 @@
 
 #include <linux/makerbot/buzzer.h>
 #include <linux/workqueue.h>
+#include <linux/cdev.h>
+#include <linux/mutex.h>
 //Defines
 #ifndef BUZZER_MAJOR
 #define BUZZER_MAJOR 14		//TODO change this to 14 (sound) later
@@ -29,23 +31,25 @@
 #define GPIO_ADDR 0x1E2604F	//Exact address for GPIO
 
 //Functions
-static void synth(uint16_t, uint16_t, uint16_t, uint16_t);
-
+//static void synth(uint16_t, uint16_t, uint16_t, uint16_t);
+//static void buzzer_play_seq(struct work_struct *);
+//static void buzzer_synth_2(struct work_struct *);
 //Structs
 struct buzzer_dev{
 	//Universal device/driver bits
-	dev_t devt;				//device type
+	dev_t dev;				//device type, this is actually just a number
+	//TODO add class here?
 	struct cdev cdev;			//character driver
 	struct mutex mutex;			//mutual exclusion semaphore
 	//spinlock_t spin_lock;			//spinlock
 	struct device *device;			//hmm, what is this?
-	struct buzzer_platform_data *pdata;	//platform data
+	//struct buzzer_platform_data *pdata;	//platform data
 	//Buzzer specific 
 	unsigned int index;			//index to be used with frequency
 	unsigned int freq;			//current frequency (pitch)
 	unsigned int duration;			//duration of the note (time)
 	unsigned int polywave;			//"polywave", this changes the timber of the note
-	struct delayed_work b_work;		//holds the scheduling work que
+	struct delayed_work seq_work;		//holds the scheduling work que
 	struct delayed_work s_work;		//synth work
 	unsigned int song;			//current song to play
 	unsigned int countdown;

@@ -674,6 +674,7 @@ static struct platform_device leds_gpio = {
 #define BUZZER_OUT GPIO_TO_PIN(2,15)
 
 const short buzzer_pins[] = {
+//	DA850_GPIO0_8,		//DUMMY
 	DA850_GPIO2_15,		//GPIO
 	-1
 };
@@ -689,20 +690,23 @@ static __init int buzzer_init(void){
 		return ret;
 	}
 
-	pr_debug("buzzer: Output pin request\n");
-	ret = gpio_request_one(BUZZER_OUT, GPIOF_OUT_INIT_LOW, "buzzer_out");
-	if(ret){
-		pr_err("ERROR: Could not request buzzer output gpio: %d\n", ret);
-		goto exit;
-	}
+//	pr_debug("buzzer: Output pin request\n");
+//	ret = gpio_request_one(BUZZER_OUT, GPIOF_OUT_INIT_LOW, "buzzer_out");
+//	if(ret){
+//		pr_err("ERROR: Could not request buzzer output gpio: %d\n", ret);
+//		goto exit;
+//	}
+
+//TODO May just be able to export this
+//GPIOF_EXPORT | GPIOF_OUT_INIT_LOW
 
 	//platform data
 	pr_debug("buzzer: init finished\n");
 	return ret;
 
-exit:
-	gpio_free(BUZZER_OUT);
-	return ret;
+//exit:
+//	gpio_free(BUZZER_OUT);
+//	return ret;
 }
 
 //====================NAND Flash Configuration=================================

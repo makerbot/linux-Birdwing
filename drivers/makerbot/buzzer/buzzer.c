@@ -1,346 +1,195 @@
 /*
 *	Buzzer Driver for Birdwing platform
 *
-*	Copyright (c) 2013 Makerbot Industries LLC
+*	Copyright (c) 2013-2014 Makerbot Industries LLC
 *
-*	Last updated: 30 Jul 2014
+*	Last updated: 3 Aug 2014
 */
 
+#include <linux/init.h>			//init functions
+#include <linux/module.h>		//dynamically loadable modules
 
-#include <linux/init.h>				//init functions
-#include <linux/module.h>			//allows dynamically loadable modules
-#include <linux/moduleparam.h>
+#include <linux/kernel.h>		//printk,etc
+#include <linux/fs.h>			//file operations
+#include <linux/errno.h>		//errors
+#include <linux/types.h>		//type defs, macros, etc
+#include <linux/cdev.h>			//character device
+#include <linux/device.h>		//class, devices, generic device model
+#include <linux/gpio.h>			//gpio manipulation
+#include <linux/mutex.h>		//mutexalicious
 
-#include <linux/kernel.h>			//printk and other kernel-based lib functions
-#include <linux/slab.h>				//Memory allocation function
-#include <linux/fs.h>				//file operations
-#include <linux/errno.h>			//errors
-#include <linux/version.h>			//linux version numbers
-#include <linux/types.h>			//type defs, macros, etc
-#include <linux/kdev_t.h>			//kernel device macros (major, minor, etc)
-#include <linux/device.h>			//generic device driver model
-#include <linux/platform_device.h>		//allows device drivers to register with the platform
-#include <linux/cdev.h>				//character drivers
-#include <linux/sched.h>			//scheduling and timing related things
-#include <linux/mutex.h>			//mutexes
-#include <linux/gpio.h>				//gpio...how fast is this?
-#include <linux/delay.h>			//delay / sleep
-#include <linux/spinlock.h>			//spinlockit
-#include <linux/sched.h>			//scheduling fun!
-#include <linux/workqueue.h>
+#include <asm/uaccess.h>		//copy to /from user space
 
-#include <asm/uaccess.h>			//copy to / copy from user
-#include <asm/io.h>				//io
+#include "buzzer.h"
+#include "sequences.h"
+
+struct buzzer_dev buzzer;		//our main man
+static struct class *buzzer_class;	//class seen by the kernel
 
 
-#include <linux/makerbot/buzzer.h>		//buzzer include file accessible to other files
+static void buzzer_play_seq(struct work_struct *work){
 
-#include "buzzer.h"				//buzzer include local to this file
-#include "notes.h"				//Standard note frequencies and MIDI note numbers
-//TODO make this read from file
-#include "sequences.h"				//Sequences from MusicForMakerbots
-
-#define DEBUG
-
-
-struct buzzer_dev buzzer;
-static struct class *buzzer_class;
-
-static int buzzer_open(struct inode *i, struct file *f){
-	//nothing to do here...
-	#ifdef DEBUG
-	pr_info("Buzzer open\n");	
-	#endif
-	return 0;
-}
-
-static ssize_t buzzer_read(struct file *f, char __user *buf, size_t len, loff_t *off){
-	//Don't really need this, nothing to read particularly, though could get last sequence
-	char c;
-	#ifdef DEBUG
-	pr_info("Buzzer Read\n");
-	pr_info("Len: %d\n", len);
-	pr_info("Offset: %lld\n", *off);
-	if(*off > 0){
-		pr_info("Freq: %d\n", buzzer.freq);
-		return 0;
-	}else{
-		if(copy_to_user(buf, &c, 1) != 0){
-			return -EFAULT;
-		} else{
-			(*off)++;
-			return 1;
-		}
-	}
-	#endif
-	return 0;
-}
-
-
-static void buzzer_pin_write(struct work_struct *work){
-		struct buzzer_dev *b = container_of(
-					container_of(work, struct delayed_work, work),
-					struct buzzer_dev,
-					b_work);
-
-		//this should be recursive function...or at least should call itself
-			pr_info("Play Seq %d at %d\n", b->song,b->index);
-			if(!sequences[b->song][b->index+6]){		//if this evaluates to zero, end of seq
-				synth(sequences[b->song][b->index],	//Duration
-					sequences[b->song][b->index+1],	//Freq
-					sequences[b->song][b->index+3],	//Wave
-					sequences[b->song][b->index+4]	//Npts
-				);
-			} else {
-				//schedule the work before calling the synth function
-				//schedule_delayed_work(&buzzer.b_work, msecs_to_jiffies(20));
-				schedule_delayed_work(&buzzer.b_work, msecs_to_jiffies(sequences[b->song][b->index]));
-				synth(sequences[b->song][b->index],	//Duration
-					sequences[b->song][b->index+1],	//Freq
-					sequences[b->song][b->index+3],	//Wave
-					sequences[b->song][b->index+4]	//Npts
-				);
-				b->index+=6;
-			}
-
+	pr_debug("Play Seq %d at %d\n", buzzer.song, buzzer.index);
 	return;
 }
 
+static void buzzer_synth(struct work_struct *work){
+	pr_debug("synthy synthy\n");
+	return;
+}
 
+static int buzzer_open(struct inode *i, struct file *f){
+	pr_debug("Buzzer open\n");
+	return 0;
+}
 
-//Write one of the synth indexes or return -1 for invalid 
 static ssize_t buzzer_write(struct file *f, const char __user *buf, size_t len, loff_t *off){
 	int ret;
 
-	//TODO don't let this get too big, maybe max out at 32
-	char c[len+1];						//buffer for characters, needs to be len+1 to hold end NULL char
-	unsigned int song_num;					//song number read from userland
+	char c[len+1];					//buffer for reading characters
+	unsigned int song_num;				//which song do you want?
 
-
-	//Check if mutex is needed
-	mutex_lock(&buzzer.mutex);
+	mutex_lock(&buzzer.mutex);			//one at a time now boys
 	ret = 0;
 
-	if(copy_from_user(&c, buf, len))
-		return -EFAULT;
-
-	c[len]=0;							//NULL char termination
-
-									//kstrtouint converts strings to unsigned ints
-	if(!(kstrtouint(c, 0, &song_num))){				//0 = successful conversion
-	#ifdef DEBUG
-	pr_info("Buzzer Write %d\n", song_num);
-	#endif
-
-		if(song_num<SEQ_COUNT ){
-			buzzer.song = song_num;				//song to play
-			buzzer.index = 0;				//reset the index
-			schedule_delayed_work(&buzzer.b_work, msecs_to_jiffies(20));
+	if(copy_from_user(&c, buf, len))		//read from user space
+		return -EFAULT;				//something went wrong
+	c[len] = 0;					//NULL termination for the array
+	if(!(kstrtouint(c,0,&song_num))){		//0 = successful conversion
+		pr_debug("Buzzer write %d\n", song_num);
+		if(song_num<SEQ_COUNT){
+			buzzer.song = song_num;		//which tune would you like to hear
+			buzzer.index = 0;		//reset the position in the song
+			schedule_delayed_work(&buzzer.seq_work, msecs_to_jiffies(20)); //toss it on the que
 		} else {
-			pr_info("Invalid sequence number. Values are 1-%d\n", SEQ_COUNT); 
+			pr_err("Invalid sequence number. Valid range is 1-%d\n", SEQ_COUNT);
 			return -ENXIO;
 		}
-	} else {							//else kstrtouint returned some error
-		pr_info("Got: %s\n", c);
+	} else {					//else kstrtouint threw some error
+		pr_err("Read %s from user\n", c);
 		if(ret == -EINVAL)
-			pr_info("kstrtouint returned parse error\n");
+			pr_err("Integer parse error\n");
 		if(ret == -ERANGE)
-			pr_info("kstrtouint returned overflow\n");
-		//TODO parse the file
-		//TODO file parse might be spun off in to a different function
+			pr_err("Overflow Error\n");
 	}
-
 	mutex_unlock(&buzzer.mutex);
+
 	return len;
 }
 
 static int buzzer_release(struct inode *i, struct file *f){
-	//nothing to do here?
-	#ifdef DEBUG
-	pr_info("Buzzer Release\n");
-	#endif
+	pr_debug("Buzzer release\n");
 	return 0;
 }
 
-//Dur_time = Duration. Total duration of the note
-//ctrl_time = time for PWM, e.g. number of slices per freq cycle
-//cycle_time = 1/freq. Base frequency.
-static void synth_2(struct work_struct *work){
-	struct buzzer_dev *b = container_of(
-		container_of(work, struct delayed_work, work),
-		 struct buzzer_dev,
-		 b_work);
+static long buzzer_ioctl(struct file *file, unsigned int cmd, unsigned long arg){
 
-	//this schedule should be the smallest time-slice for an output change
-	//e.g. 1/2 the freq for 50% duty cycle
-	if(buzzer.countdown){
-		schedule_delayed_work(&buzzer.s_work, usecs_to_jiffies(500)); //1Khz = 1000usec
-		gpio_set_value(BUZZER_OUT, buzzer.value);
-		buzzer.value=~b->value;	//toggle the value
-		buzzer.countdown--;	//reduce the number of times lef to toggle
+	switch(cmd){
+	case 0:
+		pr_debug("IOCTL: 0\n");
+		return 0;
+	case 1:
+		pr_debug("IOCTL: 1\n");
+		return 1;
+	default:
+		pr_debug("IOCTL: wrong\n");
+		return -ENOTTY;
 	}
+	return 0;
 
 }
-
-static void synth(uint16_t dur, uint16_t freq, uint16_t wave, uint16_t npts){
-	//Dur in msec, freq in Hz, per = 1/freq, wave and pts are dimensionless
-	//wave could be a complex binary value, but is 1 for all seqs currently
-	//npts effectively sets the modulation rate of the wave.  
-	//Assume Wave = 1
-	// npts = 2 -> 50% duty cycle
-	// npts = 4 -> 25% duty cycle
-
-		/*CAUTION KERNEL DOES NOT LIKE FLOATING POINT MATH*/
-
-//FIXME Currently uses spinlock, but spends a lot of time waiting for the next event time
-//FIXME Would like to make this sleep for some time, but needs to have gauranteed wake up time
-	long long start_time, curr_time, end_time, next_event, us_per;
-	uint8_t mod_index;
-	start_time = ktime_to_us(ktime_get());			// get the current time
-	curr_time = start_time;					// current time
-//FIXME change dur to pass msec to remove this multiply
-	end_time = start_time + (dur*1000);			// calc the end time (in usec)
-	us_per = 1000000 / (npts*freq);				// Event period: when pin might change next (in us)
-
-	//Freq log: ln(f2/f1), only needed if there's a slide
-	//event frequency: 1/(end-start), only needed if there's a slide
-	mod_index = 0;						// Used for modulation
-	next_event = curr_time+(us_per);			// calculate the first
-//FIXME make this usleep_range or something that doesn't hold the kernel
-
-//FIXME this needs to be scheduled rather than wait
-//FIXME can this be a timer?
-	while(curr_time < end_time){				// check if we should still run the loop
-		if(curr_time >= next_event){			// check if the next event should happen
-			mod_index = (mod_index+1)%npts;		// increment our mod index
-			gpio_set_value(BUZZER_OUT, (wave>>mod_index)&1);	//set the output
-			next_event = curr_time+(us_per);	// calc next event time
-
-		}
-		curr_time = ktime_to_us(ktime_get());
-	}
-
-	gpio_set_value(BUZZER_OUT, 0);				//make sure the pin is set low when we exit
-}
-
-//TODO parse MIDI file to synth
 
 static const struct file_operations buzzer_fops = {
-	.owner = 	THIS_MODULE,
-	.open = 	buzzer_open,		//called on first operation, may not need
-	.read = 	buzzer_read,		//read from the device? possibly the currently loaded sequence
-	.release = 	buzzer_release,		//called when all versions are done, may not need
-	.write = 	buzzer_write,		//write data to the device
-	//TODO IOCTRL...maybe
+	.owner = THIS_MODULE,
+	.open = buzzer_open,
+	.release = buzzer_release,
+	.write = buzzer_write,
+	.unlocked_ioctl= buzzer_ioctl,
 };
 
-static int __init buzzer_create_node(void){
-	#ifdef DEBUG
-	pr_info ("Create Buzzer Class\n");
-	#endif
-	if(!buzzer_class){
-		buzzer_class = class_create(THIS_MODULE, "buzzer_class");
-		if(!buzzer_class){
-			pr_err("Buzzer class creation failed.\n");
-			return -1;
-		}
-	}
-
-	buzzer.device = device_create(buzzer_class, NULL, buzzer.devt, NULL, "buzzer_dv");
-	if(!buzzer.device){
-		pr_err("Buzzer device creation failed.\n");
-		return -1;
-	}
-
-	return 0;
-}
-
-static int __init buzzer_destroy_node(void){
-	#ifdef DEBUG
-	pr_info("Destroy Buzzer Class\n");
-	#endif
-	if(buzzer.device)
-		device_destroy(buzzer_class, buzzer.devt);
-	class_destroy(buzzer_class);
-
-	return 0;
-}
-
 static int __init buzzer_dev_config(void){
-
 	int ret;
-
-	pr_info("Buzzer Device Config\n");
+	pr_debug("Buzzer Device Config\n");
 
 	cdev_init(&buzzer.cdev, &buzzer_fops);
 	buzzer.cdev.owner = THIS_MODULE;
 
-	ret = alloc_chrdev_region(&buzzer.devt, 0, 1, "buzzer_cr");
-	if (ret < 0){
-		pr_err("Chrdev Allocation failed: %d\n", ret);
-		return -1;
-	}
-
-	ret = cdev_add(&buzzer.cdev, buzzer.devt, 1);
+	//buzzer.dev = MKDEV(BUZZER_MAJOR,BUZZER_MINOR)
+	//maybe this should be 
+	//ret = register_chrdev_region(MKDEV(BUZZER_MAJOR, 0), 1, "buzzer_cdev");
+	//ret = cdev_add(&buzzer.cdev, buzzer.dev, 1);
+	ret = register_chrdev(BUZZER_MAJOR, "buzzer_cdev", &buzzer_fops);
 	if(ret){
-		pr_err("Cdev add failed: %d\n", ret);
-		unregister_chrdev_region(buzzer.devt, 1);
+		pr_err("Char Dev Registration Failed: %d\n", ret);
 		return -1;
 	}
-	//FIXME issue here. doesn't seem to be correct major/minor
-	pr_info("Registered with <%d, %d>\n", MAJOR(buzzer.devt), MINOR(buzzer.devt));
+	pr_debug("Registered with <%d, %d>\n", MAJOR(buzzer.dev), MINOR(buzzer.dev));
 
-	buzzer_create_node();
+	pr_debug("Create Buzzer Class\n");
+	if(!buzzer_class){
+		buzzer_class= class_create(THIS_MODULE, "buzzer_class");
+		if(!buzzer_class){
+			pr_err("Buzzer class creation failed\n");
+			return -2;
+		}
+	}
+	pr_debug("Create buzzer device\n");
+	buzzer.device = device_create(buzzer_class, NULL, buzzer.dev, NULL, "buzzer");
+	if(!buzzer.device){
+		pr_err("Buzzer device creation failed\n");
+		return -3;
+	}
+
+	pr_debug("Request buzzer GPIO\n");
+	ret = gpio_request_one(BUZZER_OUT, GPIOF_OUT_INIT_LOW, "buzzer_gpio");
+	if(ret){
+		pr_err("GPIO Request failed: %d\n", ret);
+		return -4;
+	}
 
 	return 0;
+//TODO this needs a bunch of gotos for cleaning up if something fails
+
 }
 
-static void buzzer_dev_cleanup(void){
-	#ifdef DEBUG
-	pr_info("Buzzer Dev Cleanup\n");
-	#endif
-	buzzer_destroy_node();
-	cdev_del(&buzzer.cdev);
-	unregister_chrdev_region(buzzer.devt, 1);
-}
 
 static int __init buzzer_init(void){
-//TODO probably want to check the return values of the various init routines
 	int ret;
-	#ifdef DEBUG
 	pr_info("Buzzer init\n");
-	#endif
-	mutex_init(&buzzer.mutex);		//Mutex is used to lock the write operation
-	//spin_lock_init(&buzzer.spin_lock);	//spin lock is used to lock the synth
-	INIT_DELAYED_WORK(&buzzer.b_work, buzzer_pin_write);
-	INIT_DELAYED_WORK(&buzzer.s_work, synth_2);
-	ret = buzzer_dev_config();		//changed the name of this to avoid confusion
-	if(ret !=0){
-		pr_err("Buzzer Device Init failed\n");
+
+	//TODO init mutex, spinlock, workqueues
+	mutex_init(&buzzer.mutex);
+	INIT_DELAYED_WORK(&buzzer.seq_work, buzzer_play_seq);
+	ret = buzzer_dev_config();
+	if(ret!=0){
+		pr_err("Buzzer Config Failed\n");
 		return -1;
 	}
 
-	//Assign defaults
-	//TODO need set and get methods for this
-//FIXME these don't get used, can probably remove and remove from struct
-	buzzer.index = 1;	//
-	buzzer.freq = 440;	//Hz
-	buzzer.duration = 50;	//msec? sure
-	buzzer.polywave = 1;	//good enough
+	//TODO init struct values: index, freq, duration, etc
 
 	return 0;
 }
 
 static void __exit buzzer_exit(void){
-	#ifdef DEBUG
-	pr_info("Buzzer exit\n");
-	#endif
-	buzzer_dev_cleanup();
+	pr_debug("Buzzer exit\n");
+
+	pr_debug("Destroy Buzzer Device\n");
+	if(buzzer.device)
+		device_destroy(buzzer_class, buzzer.dev);
+	pr_debug("Destroy Buzzer Class\n");
+	class_destroy(buzzer_class);
+	pr_debug("Delete cdev\n");
+	cdev_del(&buzzer.cdev);
+	pr_debug("Unregister region\n");
+	unregister_chrdev_region(buzzer.dev, 1);
 }
+
 module_init(buzzer_init);
 module_exit(buzzer_exit);
 
 MODULE_AUTHOR("Matt Sterling");
 MODULE_DESCRIPTION("Makerbot Buzzer Driver");
 MODULE_LICENSE("GPL");
-MODULE_VERSION("0.7");
+MODULE_VERSION("0.8");
+
