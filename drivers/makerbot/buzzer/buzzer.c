@@ -19,23 +19,58 @@
 #include <linux/mutex.h>		//mutexalicious
 #include <linux/kthread.h>		//worker threads
 #include <linux/sched.h>		//scheduler
+#include <linux/delay.h>		//sleep zzz
 
 #include <asm/uaccess.h>		//copy to /from user space
 
 #include "buzzer.h"
 #include "sequences.h"
 
+#define BUZZER_VERSION 21
+
 struct buzzer_dev buzzer;		//our main man
 static struct class *buzzer_class;	//class seen by the kernel
 
 
-static void buzzer_synth(struct kthread_work *work){
-	pr_info("synthy synthy\n");
+static void buzzer_synth(struct work_struct *work){
+//should probably be spin locked
+	pr_info("synthy synth %d\n", buzzer.countdown);
+	buzzer.countdown--;
+	if(buzzer.countdown){
+		//not fast enough by a long shot.
+		schedule_delayed_work(&buzzer.synth_work,
+				usecs_to_jiffies((unsigned int)buzzer.event_dur_usec));
+		}
+
+	gpio_set_value(BUZZER_OUT, buzzer.pin_state);
+	if(buzzer.pin_state)
+		buzzer.pin_state = 0;
+	else
+		buzzer.pin_state = 1;
 	return;
 }
 
 int toggle_pin(void *data){
-	pr_info("toggle pin\n");
+	int* synth_p = (int*)data;
+	int countdown=  synth_p[0];
+	int duration = synth_p[1];
+	pr_info("togpin: %d, %d\n", countdown, duration);
+
+	while(countdown){	//TODO make this countdown
+		//pr_info("toggle pin\n");
+		//TODO need away to have this kill itself, probably use the countdown
+		//Countdown needs to be atomic / locked
+		gpio_set_value(BUZZER_OUT, buzzer.pin_state);
+		countdown--;
+		if(buzzer.pin_state)
+			buzzer.pin_state = 0;
+		else
+			buzzer.pin_state = 1;
+
+		udelay(125);
+		if(kthread_should_stop())
+			return 0;
+	}
 	return 0;
 }
 
@@ -45,37 +80,37 @@ static void buzzer_play_seq(struct work_struct *work){
 				container_of(work, struct delayed_work, work),
 				struct buzzer_dev,
 				seq_work);
+	int synth_params[2];
 	struct sched_param priority = { .sched_priority = MAX_RT_PRIO - 1 };
+	synth_params[0] = 1000;
+	synth_params[1] = 125;
 
 	pr_info("Play Seq %d at %d\n", b->song, b->index);
 
-	//fi there's still notes in the song, schedule the next one
+	//if there's still notes in the song, schedule the next one
 	if(sequences[b->song][b->index+6])
 		schedule_delayed_work(&b->seq_work, msecs_to_jiffies(sequences[b->song][b->index]));
 
 	//update the synth params
 	buzzer.duration = sequences[buzzer.song][buzzer.index];
 	buzzer.freq = sequences[buzzer.song][buzzer.index+1];
-	buzzer.polywave = sequences[buzzer.song][buzzer.index+3];	//what's 2 i forget
+	buzzer.polywave = sequences[buzzer.song][buzzer.index+3];	//2 is end freq
 	buzzer.npts = sequences[buzzer.song][buzzer.index+4];
-	//set up the worker thread
-	//Needed?
-	//init_kthread_worker(&b->kworker);
+	buzzer.countdown = 1000; //(buzzer.freq*(buzzer.duration/1000))*2;
+	buzzer.pin_state = 0;
+	buzzer.event_dur_usec = 100;//(unsigned long)1000000/(unsigned long)buzzer.freq;
+	//schedule_delayed_work(&b->synth_work, 0);	//start right away
+
+//set up the worker thread
+//Check if task is valid / still around
 	b->kworker_task = kthread_run(toggle_pin,
-					NULL,//&b->kworker,
+					&synth_params,//&b->kworker,
 					"synth");
 	if(IS_ERR(b->kworker_task)){
 		pr_err("Cannot create synth task\n");
 		return;
 	}
-	//Needed?
-	//init_kthread_work(&b->synth, buzzer_synth);
 	sched_setscheduler(b->kworker_task, SCHED_FIFO, &priority);
-//	buzzer_synth(sequences[buzzer.song][buzzer.index],		//duration
-//			sequences[buzzer.song][buzzer.index+1],		//Freq
-//			sequences[buzzer.song][buzzer.index+3],		//Wave
-//			sequences[buzzer.song][buzzer.index+4]);	//Npts
-		//call this one last time then end. Nothign else to do.
 	buzzer.index+=6;
 
 	return;
@@ -106,6 +141,7 @@ static ssize_t buzzer_write(struct file *f, const char __user *buf, size_t len, 
 		if(song_num<SEQ_COUNT){
 			buzzer.song = song_num;		//which tune would you like to hear
 			buzzer.index = 0;		//reset the position in the song
+			buzzer.pin_state = 0;
 			schedule_delayed_work(&buzzer.seq_work, msecs_to_jiffies(20)); //toss it on the que
 		} else {
 			pr_err("Invalid sequence number. Valid range is 1-%d\n", (SEQ_COUNT-1));
@@ -137,7 +173,6 @@ static int buzzer_release(struct inode *i, struct file *f){
 static long buzzer_ioctl(struct file *file, unsigned int cmd, unsigned long arg){
 
 
-	
 	switch(cmd){
 	case 0:
 		pr_info("IOCTL: 0\n");
@@ -215,11 +250,12 @@ static int __init buzzer_dev_config(void){
 static int __init buzzer_init(void){
 	int ret;
 	pr_info("Buzzer init\n");
-	pr_info("Buzzer v 0.7\n");
+	pr_info("Buzzer v %d\n", BUZZER_VERSION);
 
-	//TODO init mutex, spinlock, workqueues
 	mutex_init(&buzzer.buzzer_lock_mutex);
+	//spin_lock_init(&buzzer.spin_lock);
 	INIT_DELAYED_WORK(&buzzer.seq_work, buzzer_play_seq);
+	INIT_DELAYED_WORK(&buzzer.synth_work, buzzer_synth);
 	ret = buzzer_dev_config();
 	if(ret!=0){
 		pr_err("Buzzer Config Failed\n");

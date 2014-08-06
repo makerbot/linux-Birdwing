@@ -52,14 +52,18 @@ struct buzzer_dev{
 	unsigned int duration;			//duration of the note (time)
 	unsigned int polywave;			//"polywave", this changes the timber of the note
 	unsigned int npts;			//npts works with polywave to determine timbre
+	unsigned int countdown;			//this should basically be duration*freq*2
+	unsigned int pin_state;			//what state are we in?
+	unsigned long event_dur_usec;		//how long is each event in uSec
 	//work structs / threads
 	struct delayed_work seq_work;		//holds the scheduling work que
 	struct delayed_work synth_work;		//synth work
 	bool synth_running;
 	struct kthread_worker kworker;
 	struct task_struct *kworker_task;
-	struct kthread_work synth;
-	struct sched_param priority;
+	//struct kthread_work synth;
+	//struct sched_param priority;
+
 	//Song/sequence params
 	unsigned int index;			//note number in the sequence
 	unsigned int song;			//current song to play
@@ -69,12 +73,12 @@ struct buzzer_dev{
 
 //Sequence struct?
 
-struct buzzer_ops{
-	int	(*open)(struct buzzer_dev *dev);
-	int	(*read)(struct buzzer_dev *dev);
-	void	(*write)(struct buzzer_dev *dev);
-	void	(*release)(struct buzzer_dev *dev);
-	struct module *owner;
-};
+//struct buzzer_ops{
+//	int	(*open)(struct buzzer_dev *dev);
+//	int	(*read)(struct buzzer_dev *dev);
+//	void	(*write)(struct buzzer_dev *dev);
+//	void	(*release)(struct buzzer_dev *dev);
+//	struct module *owner;
+//};
 
 #endif
