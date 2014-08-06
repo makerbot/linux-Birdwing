@@ -32,24 +32,6 @@ struct buzzer_dev buzzer;		//our main man
 static struct class *buzzer_class;	//class seen by the kernel
 
 
-static void buzzer_synth(struct work_struct *work){
-//should probably be spin locked
-	pr_info("synthy synth %d\n", buzzer.countdown);
-	buzzer.countdown--;
-	if(buzzer.countdown){
-		//not fast enough by a long shot.
-		schedule_delayed_work(&buzzer.synth_work,
-				usecs_to_jiffies((unsigned int)buzzer.event_dur_usec));
-		}
-
-	gpio_set_value(BUZZER_OUT, buzzer.pin_state);
-	if(buzzer.pin_state)
-		buzzer.pin_state = 0;
-	else
-		buzzer.pin_state = 1;
-	return;
-}
-
 int toggle_pin(void *data){
 	int* synth_p = (int*)data;
 	int countdown=  synth_p[0];
