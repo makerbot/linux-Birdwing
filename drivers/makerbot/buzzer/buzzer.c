@@ -3,7 +3,7 @@
 *
 *	Copyright (c) 2013-2014 Makerbot Industries LLC
 *
-*	Last updated: 5 Aug 2014
+*	Last updated: 6 Aug 2014
 */
 
 #include <linux/init.h>			//init functions
@@ -20,52 +20,56 @@
 #include <linux/kthread.h>		//worker threads
 #include <linux/sched.h>		//scheduler
 #include <linux/delay.h>		//sleep zzz
+#include <linux/time.h>			//time functions
 
 #include <asm/uaccess.h>		//copy to /from user space
 
 #include "buzzer.h"
 #include "sequences.h"
 
-#define BUZZER_VERSION 21
+#define BUZZER_VERSION 32
 
 struct buzzer_dev buzzer;		//our main man
 static struct class *buzzer_class;	//class seen by the kernel
 
-
 int toggle_pin(void *data){
-	int* synth_p = (int*)data;
-	int countdown=  synth_p[0];
-	int duration = synth_p[1];
-	pr_info("togpin: %d, %d\n", countdown, duration);
+	unsigned int errno;
+	struct timespec deadline;
+	unsigned int* synth_p = (unsigned int*)data;
+	unsigned int countdown=  synth_p[0];
+	unsigned int dur = synth_p[1];
+	unsigned long dur_ns = dur*1000;
+	ktime_get_ts(&deadline);	//maybe use CLOCK_REALTIME
 
-	while(countdown){	//TODO make this countdown
-		//pr_info("toggle pin\n");
-		//TODO need away to have this kill itself, probably use the countdown
-		//Countdown needs to be atomic / locked
+	while(countdown){
+		deadline.tv_nsec += dur_ns;				//calculate next value
+		deadline.tv_sec += deadline.tv_nsec / NSEC_PER_SEC;	//account for wrapping
+		deadline.tv_nsec %= NSEC_PER_SEC;			//reset this value
 		gpio_set_value(BUZZER_OUT, buzzer.pin_state);
 		countdown--;
 		if(buzzer.pin_state)
 			buzzer.pin_state = 0;
 		else
 			buzzer.pin_state = 1;
+		//sleep for a few ns
+		while(nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &deadline, NULL)!=0)
+			if (errno != EINTR) return 0;
 
-		udelay(125);
-		if(kthread_should_stop())
+		if(kthread_should_stop()){
 			return 0;
+		}
 	}
+	buzzer.synth_running = 0;
 	return 0;
 }
-
 
 static void buzzer_play_seq(struct work_struct *work){
 	struct buzzer_dev *b = container_of(
 				container_of(work, struct delayed_work, work),
 				struct buzzer_dev,
 				seq_work);
-	int synth_params[2];
+	unsigned int synth_params[2];
 	struct sched_param priority = { .sched_priority = MAX_RT_PRIO - 1 };
-	synth_params[0] = 1000;
-	synth_params[1] = 125;
 
 	pr_info("Play Seq %d at %d\n", b->song, b->index);
 
@@ -74,25 +78,32 @@ static void buzzer_play_seq(struct work_struct *work){
 		schedule_delayed_work(&b->seq_work, msecs_to_jiffies(sequences[b->song][b->index]));
 
 	//update the synth params
-	buzzer.duration = sequences[buzzer.song][buzzer.index];
-	buzzer.freq = sequences[buzzer.song][buzzer.index+1];
-	buzzer.polywave = sequences[buzzer.song][buzzer.index+3];	//2 is end freq
-	buzzer.npts = sequences[buzzer.song][buzzer.index+4];
-	buzzer.countdown = 1000; //(buzzer.freq*(buzzer.duration/1000))*2;
+	buzzer.duration = sequences[buzzer.song][buzzer.index];		//dur in ms
+	buzzer.freq = sequences[buzzer.song][buzzer.index+1];		//freq in hz
+	//buzzer.polywave = sequences[buzzer.song][buzzer.index+3];	//2 is end freq
+	//buzzer.npts = sequences[buzzer.song][buzzer.index+4];
+	buzzer.countdown = ((buzzer.freq*buzzer.duration)/1000)*2;
 	buzzer.pin_state = 0;
-	buzzer.event_dur_usec = 100;//(unsigned long)1000000/(unsigned long)buzzer.freq;
-	//schedule_delayed_work(&b->synth_work, 0);	//start right away
+	buzzer.event_dur_usec = ((unsigned long)1000000/(unsigned long)buzzer.freq)>>1;
 
+	synth_params[0] = (unsigned int)buzzer.countdown;
+	synth_params[1] = (unsigned int)buzzer.event_dur_usec;
 //set up the worker thread
 //Check if task is valid / still around
+	//pr_info("Kworker: %d\n",task_nice(b->kworker_task));
+	if(!buzzer.synth_running){
 	b->kworker_task = kthread_run(toggle_pin,
-					&synth_params,//&b->kworker,
+					&synth_params,
 					"synth");
 	if(IS_ERR(b->kworker_task)){
 		pr_err("Cannot create synth task\n");
 		return;
 	}
+	buzzer.synth_running = 1;
 	sched_setscheduler(b->kworker_task, SCHED_FIFO, &priority);
+	} else {
+		pr_info("nope synth is synthing\n");
+	}
 	buzzer.index+=6;
 
 	return;
@@ -237,7 +248,6 @@ static int __init buzzer_init(void){
 	mutex_init(&buzzer.buzzer_lock_mutex);
 	//spin_lock_init(&buzzer.spin_lock);
 	INIT_DELAYED_WORK(&buzzer.seq_work, buzzer_play_seq);
-	INIT_DELAYED_WORK(&buzzer.synth_work, buzzer_synth);
 	ret = buzzer_dev_config();
 	if(ret!=0){
 		pr_err("Buzzer Config Failed\n");

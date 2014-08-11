@@ -57,9 +57,9 @@ struct buzzer_dev{
 	unsigned long event_dur_usec;		//how long is each event in uSec
 	//work structs / threads
 	struct delayed_work seq_work;		//holds the scheduling work que
-	struct delayed_work synth_work;		//synth work
+	//struct delayed_work synth_work;		//synth work
 	bool synth_running;
-	struct kthread_worker kworker;
+	//struct kthread_worker kworker;
 	struct task_struct *kworker_task;
 	//struct kthread_work synth;
 	//struct sched_param priority;
