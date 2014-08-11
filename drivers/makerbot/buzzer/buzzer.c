@@ -33,13 +33,13 @@ struct buzzer_dev buzzer;		//our main man
 static struct class *buzzer_class;	//class seen by the kernel
 
 int toggle_pin(void *data){
-	unsigned int errno;
+	//unsigned int errno;
 	struct timespec deadline;
 	unsigned int* synth_p = (unsigned int*)data;
 	unsigned int countdown=  synth_p[0];
 	unsigned int dur = synth_p[1];
 	unsigned long dur_ns = dur*1000;
-	ktime_get_ts(&deadline);	//maybe use CLOCK_REALTIME
+	ktime_get_ts(&deadline);
 
 	while(countdown){
 		deadline.tv_nsec += dur_ns;				//calculate next value
@@ -52,8 +52,7 @@ int toggle_pin(void *data){
 		else
 			buzzer.pin_state = 1;
 		//sleep for a few ns
-		while(nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &deadline, NULL)!=0)
-			if (errno != EINTR) return 0;
+		while(hrtimer_nanosleep(&deadline,NULL,HRTIMER_MODE_ABS,CLOCK_MONOTONIC)!=0)
 
 		if(kthread_should_stop()){
 			return 0;
