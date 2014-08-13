@@ -760,6 +760,8 @@ enum davinci_da850_index {
 	/* UART2 function */
 	DA850_UART2_RXD,
 	DA850_UART2_TXD,
+	DA850_NUART2_CTS,
+	DA850_NUART2_RTS,
 	/* I2C1 function */
 	DA850_I2C1_SCL,
 	DA850_I2C1_SDA,

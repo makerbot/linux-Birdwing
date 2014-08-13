@@ -242,8 +242,23 @@ free_wlan_en:
 exit:
 	return ret;
 }
+<<<<<<< Updated upstream
 
 //=============Motor Control (PRU)=============================================
+=======
+//=============Bluetooth======================================================
+
+#define BT_EN  GPIO_TO_PIN(6,14)
+
+static const short mb_BT_pins[] __initconst = {
+
+	DA850_UART2_TXD,
+	DA850_UART2_RXD,
+	DA850_GPIO6_14,
+	DA850_NUART2_RTS,
+	DA850_NUART2_CTS,
+	-1
+>>>>>>> Stashed changes
 
 //Updated for Rev C
 static short stepper_pru_pins[] = {
@@ -315,6 +330,7 @@ static struct spi_board_info toolhead_spi_info[] = {
 
 //====================Chamber Heater===============================
 
+<<<<<<< Updated upstream
 #define CH_MISO     GPIO_TO_PIN(3, 4)
 #define CH_MOSI     GPIO_TO_PIN(3, 2)
 #define CH_SCK      GPIO_TO_PIN(0, 7)
@@ -344,6 +360,31 @@ static struct platform_device chamber_heater_device = {
         .id                = 2,
         .dev.platform_data = &chamber_heater_pdata,
 };
+=======
+//	printk("Gpio value is :%d\n", BT_EN);
+//	gpio_direction_output(BT_EN, 0);
+//	mdelay(100);
+//	gpio_direction_output(BT_EN, 1);
+//	printk("WL1271: BT Enable\n");
+//	gpio_set_value(BT_EN, 1);
+//	mdelay(500);
+
+	int ret;
+
+	pr_debug("Bluetooth: Start Pin Mux\n");
+	ret = davinci_cfg_reg_list(mb_BT_pins);
+	if (ret) {
+		pr_err("Bluetooth mux setup failed: %d\n", ret);
+        	goto exit;
+        }
+
+	pr_debug("wl12xx: BT Enable GPIO\n");
+	ret = gpio_request_one(BT_EN, GPIOF_OUT_INIT_LOW, "BT_en");
+	if (ret) {
+		pr_err("Could not request BT enable gpio: %d\n", ret);
+		goto exit;
+	}
+>>>>>>> Stashed changes
 
 static struct spi_board_info chamber_heater_info[] ={
         {
@@ -358,7 +399,10 @@ static struct spi_board_info chamber_heater_info[] ={
 
 static __init int chamber_heater_init(void){
 
+<<<<<<< Updated upstream
         int ret;
+=======
+>>>>>>> Stashed changes
 
         pr_debug("Chamber heater pin mux\n");
         ret = davinci_cfg_reg_list(chamber_heater_pins);
@@ -374,12 +418,16 @@ static __init int chamber_heater_init(void){
                 goto exit;
         }
 
+<<<<<<< Updated upstream
         pr_debug("Chamber heater platform register\n");
         ret = platform_device_register(&chamber_heater_device);
         if(ret){
                 pr_warn("ERROR platform device registration failed %d\n", ret);
                 goto exit;
         }
+=======
+
+>>>>>>> Stashed changes
 
         return 0;
 exit:
@@ -988,7 +1036,7 @@ static __init void  mb_init_pruss(void) {
     
     pru_control_register = ioremap(DA8XX_PRU_CONTROL_BASE, SZ_1K);
     //disable pru
-   // __raw_writel(1, pru_control_register);
+    __raw_writel(1, pru_control_register);
 
     //write program memory
     pru_data_address = ioremap(DA8XX_PRU_IRAM_BASE, SZ_4K);
@@ -1016,11 +1064,6 @@ static struct davinci_uart_config mb_manhattan_uart_config __initdata = {
 	.enabled_uarts = 0x7,
 };
 
-static const short uart_pins[]  ={
-	DA850_UART2_TXD,
-	-1
-};
-
 
 
 static __init void mb_manhattan_init(void)
@@ -1036,7 +1079,7 @@ static __init void mb_manhattan_init(void)
     mb_init_pruss();
 
 	/*UART*/
-	ret = davinci_cfg_reg_list(uart_pins);
+	ret = davinci_cfg_reg_list(mb_BT_pins);
 	if(ret)
 		pr_warn("%s: UART 2 pin mux failed: %d\n", __func__, ret);
 
@@ -1060,6 +1103,17 @@ static __init void mb_manhattan_init(void)
 	if (ret)
 		pr_warn("%s: WL12xx initialization failed: %d\n",__func__, ret);
 
+<<<<<<< Updated upstream
+=======
+	/*Bluetooth*/
+
+	ret = da850_BT_init();
+	if(ret)
+		pr_warn("%s: BT initialization failed: %d\n",__func__,ret);
+
+
+
+>>>>>>> Stashed changes
 	/*USB*/
 	mb_manhattan_usb_init();							//Init USB
 

@@ -126,9 +126,9 @@ struct ktermios {
 //Terminal programs only report the index, not the actual speed
 //Setting to 4800 = 9600 actual bps (default)
 //Setting to 9600 = 14400 actual bps
-//#define  B4800	0000014
-#define  B9600	0000014
-#define  B14400 0000015
+#define  B4800	0000014
+#define  B9600	0000015
+//#define  B14400 0000015
 #define  B19200 0000016
 #define  B38400	0000017
 #define EXTA B19200
