@@ -245,6 +245,12 @@ config MACH_OMAPL138_HAWKBOARD
 	  Information of this board may be found at
 	  http://www.hawkboard.org/
 
+config MACH_DAVINCI_MANHATTAN_A07
+	bool "TI AM1808 / Makerbot Development platform"
+	depends on ARCH_DAVINCI_DA850
+	help
+	  Say Y here to select the TI AM1808 / Makerbot Development platform .
+
 config DAVINCI_MUX
 	bool "DAVINCI multiplexing support"
 	depends on ARCH_DAVINCI
