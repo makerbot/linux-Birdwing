@@ -13,6 +13,15 @@
 #include <linux/init.h>
 #include <linux/console.h>
 #include <linux/gpio.h>
+#include <linux/mtd/mtd.h>
+#include <linux/mtd/nand.h>
+#include <linux/mtd/partitions.h>
+#include <linux/mtd/physmap.h>
+#include <linux/platform_device.h>
+#include <linux/platform_data/mtd-davinci.h>
+#include <linux/platform_data/mtd-davinci-aemif.h>
+#include <linux/platform_data/spi-davinci.h>
+#include <linux/platform_data/uio_pruss.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -21,12 +30,95 @@
 #include <mach/da8xx.h>
 #include <mach/mux.h>
 
-#define HAWKBOARD_PHY_ID		"davinci_mdio-0:07"
+#define MANHATTAN_PHY_ID		NULL
 #define DA850_HAWK_MMCSD_CD_PIN		GPIO_TO_PIN(3, 12)
 #define DA850_HAWK_MMCSD_WP_PIN		GPIO_TO_PIN(3, 13)
 
 #define DA850_USB1_VBUS_PIN		GPIO_TO_PIN(2, 4)
 #define DA850_USB1_OC_PIN		GPIO_TO_PIN(6, 13)
+
+
+static struct mtd_partition da850_evm_nandflash_partition[] = {
+	{
+		.name		= "u-boot env",
+		.offset		= 0,
+		.size		= SZ_1M,
+		.mask_flags	= MTD_WRITEABLE,
+	 },
+	{
+		.name		= "UBL",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= SZ_1M,
+		.mask_flags	= MTD_WRITEABLE,
+	},
+	{
+		.name		= "u-boot",
+		.offset		= 6 * SZ_1M,
+		.size		= SZ_1M,
+		.mask_flags	= MTD_WRITEABLE,
+	},
+	{
+		.name		= "kernel",
+		.offset		= 0x1000000,
+		.size		= SZ_4M,
+		.mask_flags	= 0,
+	},
+	{
+		.name		= "filesystem",
+		.offset		= 0x1500000,
+		.size		= MTDPART_SIZ_FULL,
+		.mask_flags	= 0,
+	},
+};
+
+static struct davinci_aemif_timing da850_evm_nandflash_timing = {
+	.wsetup		= 24,
+	.wstrobe	= 21,
+	.whold		= 14,
+	.rsetup		= 19,
+	.rstrobe	= 50,
+	.rhold		= 0,
+	.ta		= 20,
+};
+
+static struct davinci_nand_pdata da850_evm_nandflash_data = {
+	.parts		= da850_evm_nandflash_partition,
+	.nr_parts	= ARRAY_SIZE(da850_evm_nandflash_partition),
+	.ecc_mode	= NAND_ECC_HW,
+	.ecc_bits	= 1,
+	.bbt_options	= NAND_BBT_USE_FLASH,
+	.timing		= &da850_evm_nandflash_timing,
+};
+
+static struct resource da850_evm_nandflash_resource[] = {
+	{
+		.start	= DA8XX_AEMIF_CS3_BASE,
+		.end	= DA8XX_AEMIF_CS3_BASE + SZ_512K + 2 * SZ_1K - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+	{
+		.start	= DA8XX_AEMIF_CTL_BASE,
+		.end	= DA8XX_AEMIF_CTL_BASE + SZ_32K - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+};
+
+static struct platform_device da850_evm_nandflash_device = {
+	.name		= "davinci_nand",
+	.id		= 1,
+	.dev		= {
+		.platform_data	= &da850_evm_nandflash_data,
+	},
+	.num_resources	= ARRAY_SIZE(da850_evm_nandflash_resource),
+	.resource	= da850_evm_nandflash_resource,
+};
+
+static struct platform_device *da850_evm_devices[] = {
+	&da850_evm_nandflash_device,
+};
+
+#define DA8XX_AEMIF_CE2CFG_OFFSET	0x10
+#define DA8XX_AEMIF_ASIZE_16BIT		0x1
 
 static short omapl138_hawk_mii_pins[] __initdata = {
 	DA850_MII_TXEN, DA850_MII_TXCLK, DA850_MII_COL, DA850_MII_TXD_3,
@@ -56,7 +148,7 @@ static __init void omapl138_hawk_config_emac(void)
 	__raw_writel(val, cfgchip3);
 	pr_info("EMAC: MII PHY configured\n");
 
-	soc_info->emac_pdata->phy_id = HAWKBOARD_PHY_ID;
+	soc_info->emac_pdata->phy_id = MANHATTAN_PHY_ID;
 
 	ret = da8xx_register_emac();
 	if (ret)
@@ -113,71 +205,6 @@ static struct edma_rsv_info *da850_edma_rsv[2] = {
 	&da850_edma_cc1_rsv,
 };
 
-static const short hawk_mmcsd0_pins[] = {
-	DA850_MMCSD0_DAT_0, DA850_MMCSD0_DAT_1, DA850_MMCSD0_DAT_2,
-	DA850_MMCSD0_DAT_3, DA850_MMCSD0_CLK, DA850_MMCSD0_CMD,
-	DA850_GPIO3_12, DA850_GPIO3_13,
-	-1
-};
-
-static int da850_hawk_mmc_get_ro(int index)
-{
-	return gpio_get_value(DA850_HAWK_MMCSD_WP_PIN);
-}
-
-static int da850_hawk_mmc_get_cd(int index)
-{
-	return !gpio_get_value(DA850_HAWK_MMCSD_CD_PIN);
-}
-
-static struct davinci_mmc_config da850_mmc_config = {
-	.get_ro		= da850_hawk_mmc_get_ro,
-	.get_cd		= da850_hawk_mmc_get_cd,
-	.wires		= 4,
-	.max_freq	= 50000000,
-	.caps		= MMC_CAP_MMC_HIGHSPEED | MMC_CAP_SD_HIGHSPEED,
-	.version	= MMC_CTLR_VERSION_2,
-};
-
-static __init void omapl138_hawk_mmc_init(void)
-{
-	int ret;
-
-	ret = davinci_cfg_reg_list(hawk_mmcsd0_pins);
-	if (ret) {
-		pr_warn("%s: MMC/SD0 mux setup failed: %d\n", __func__, ret);
-		return;
-	}
-
-	ret = gpio_request_one(DA850_HAWK_MMCSD_CD_PIN,
-			GPIOF_DIR_IN, "MMC CD");
-	if (ret < 0) {
-		pr_warn("%s: can not open GPIO %d\n",
-			__func__, DA850_HAWK_MMCSD_CD_PIN);
-		return;
-	}
-
-	ret = gpio_request_one(DA850_HAWK_MMCSD_WP_PIN,
-			GPIOF_DIR_IN, "MMC WP");
-	if (ret < 0) {
-		pr_warn("%s: can not open GPIO %d\n",
-			__func__, DA850_HAWK_MMCSD_WP_PIN);
-		goto mmc_setup_wp_fail;
-	}
-
-	ret = da8xx_register_mmcsd0(&da850_mmc_config);
-	if (ret) {
-		pr_warn("%s: MMC/SD0 registration failed: %d\n", __func__, ret);
-		goto mmc_setup_mmcsd_fail;
-	}
-
-	return;
-
-mmc_setup_mmcsd_fail:
-	gpio_free(DA850_HAWK_MMCSD_WP_PIN);
-mmc_setup_wp_fail:
-	gpio_free(DA850_HAWK_MMCSD_CD_PIN);
-}
 
 static irqreturn_t omapl138_hawk_usb_ocic_irq(int irq, void *dev_id);
 static da8xx_ocic_handler_t hawk_usb_ocic_handler;
@@ -303,9 +330,10 @@ static __init void omapl138_hawk_init(void)
 	if (ret)
 		pr_warn("%s: EDMA registration failed: %d\n", __func__, ret);
 
-	omapl138_hawk_mmc_init();
-
 	omapl138_hawk_usb_init();
+
+  platform_add_devices(da850_evm_devices,
+        ARRAY_SIZE(da850_evm_devices));
 
 	ret = da8xx_register_watchdog();
 	if (ret)
@@ -316,10 +344,8 @@ static __init void omapl138_hawk_init(void)
 #ifdef CONFIG_SERIAL_8250_CONSOLE
 static int __init omapl138_hawk_console_init(void)
 {
-	if (!machine_is_omapl138_hawkboard())
-		return 0;
 
-	return add_preferred_console("ttyS", 2, "115200");
+	return add_preferred_console("ttyS", 1, "115200");
 }
 console_initcall(omapl138_hawk_console_init);
 #endif
@@ -329,7 +355,7 @@ static void __init omapl138_hawk_map_io(void)
 	da850_init();
 }
 
-MACHINE_START(OMAPL138_HAWKBOARD, "AM18x/OMAP-L138 Hawkboard")
+MACHINE_START(DAVINCI_MANHATTAN_A07, "Makerbot Controller Manhattan A07 on DaVinci AM18xx")
 	.atag_offset	= 0x100,
 	.map_io		= omapl138_hawk_map_io,
 	.init_irq	= cp_intc_init,
