@@ -157,6 +157,7 @@ static void edma_execute(struct edma_chan *echan)
 static int edma_terminate_all(struct edma_chan *echan)
 {
 	unsigned long flags;
+	struct edma_desc *edesc;
 	LIST_HEAD(head);
 
 	spin_lock_irqsave(&echan->vchan.lock, flags);
@@ -166,9 +167,11 @@ static int edma_terminate_all(struct edma_chan *echan)
 	 * after edma_dma() returns (even if it does, it will see
 	 * echan->edesc is NULL and exit.)
 	 */
-	if (echan->edesc) {
+	edesc = echan->edesc;
+	if (edesc) {
 		echan->edesc = NULL;
 		edma_stop(echan->ch_num);
+		kfree(edesc);
 	}
 
 	vchan_get_all_descriptors(&echan->vchan, &head);
@@ -271,6 +274,7 @@ static struct dma_async_tx_descriptor *edma_prep_slave_sg(
 						EDMA_SLOT_ANY);
 			if (echan->slot[i] < 0) {
 				dev_err(dev, "Failed to allocate slot\n");
+				kfree(edesc);
 				return NULL;
 			}
 		}
@@ -306,6 +310,7 @@ static struct dma_async_tx_descriptor *edma_prep_slave_sg(
 			ccnt = sg_dma_len(sg) / (acnt * bcnt);
 			if (ccnt > (SZ_64K - 1)) {
 				dev_err(dev, "Exceeded max SG segment size\n");
+				kfree(edesc);
 				return NULL;
 			}
 			cidx = acnt * bcnt;
