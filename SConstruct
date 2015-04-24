@@ -47,7 +47,8 @@ subenv = os.environ.copy()
 angstrom = os.path.join(baseDir, 'Birdwing-Cross-Compile-Tools', 'angstrom', 'arm')
 tool_prefix = 'arm-angstrom-linux-gnueabi'
 env.PrependENVPath('PATH', os.path.join(angstrom, 'bin'))
-env.PrependENVPath('CPATH', os.path.join(angstrom, tool_prefix, 'usr', 'include'))
+# I hope we don't actually need this, since it breaks builds on most systems
+#env.PrependENVPath('CPATH', os.path.join(angstrom, tool_prefix, 'usr', 'include'))
 env['ENV']['LIBTOOL_SYSROOT_PATH'] = os.path.join(angstrom, tool_prefix)
 env['ENV']['PKG_CONFIG_SYSROOT_DIR'] = os.path.join(angstrom, tool_prefix)
 env['ENV']['PKG_CONFIG_PATH'] = os.path.join(angstrom, tool_prefix, 'usr', 'lib', 'pkgconfig')
