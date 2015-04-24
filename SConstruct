@@ -2,6 +2,12 @@ import sys
 import os
 import fnmatch
 
+# No point in runnnig multiple jobs in SCons, lets pass this on to make
+NUM_JOBS = GetOption('num_jobs')
+# TODO: For some reason this does not work.  For now this file has a
+#       strictly linear dependency chain so it is not a big deal?
+SetOption('num_jobs', 1)
+
 bw_scons_path = os.environ.get('BWSCONSTOOLS_PATH')
 if bw_scons_path:
     env = Environment(
@@ -94,7 +100,7 @@ config_targets = [
     'scripts/kconfig/zconf.tab.o',
 ]
 
-env.Command(config_targets, config_sources, make_cmd('mb_manhattan_defconfig'))
+config = env.Command(config_targets, config_sources, make_cmd('mb_manhattan_defconfig'))
 
 gen_sources = [
     'arch/arm/boot/compressed/ashldi3.S',
@@ -117,13 +123,16 @@ gen_sources = [
 ]
 gen_sources.extend(env.MBRecursiveFileGlob('drivers/video/logo', '*.c', 'logo.c'))
 
-build_sources = []
+build_sources = [
+    config,
+]
 
 build_targets = [
     'arch/arm/boot/uImage',
 ]
 
-main_args = ('uImage', 'modules', 'DO_STARTUP_BLINK=true')
+main_args = ['uImage', 'modules', 'DO_STARTUP_BLINK=true']
+if NUM_JOBS > 1: main_args.append('-j%s' % NUM_JOBS)
 build = env.Command(build_targets, build_sources, make_cmd(*main_args))
 AlwaysBuild(build) # Let make determine what needs to be built
 
