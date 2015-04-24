@@ -110,7 +110,7 @@ build_targets = [
     'arch/arm/boot/uImage',
 ]
 
-build = env.Command(build_targets, build_sources, make_cmd('uImage', '-j4'))
+build = env.Command(build_targets, build_sources, make_cmd('uImage'))
 AlwaysBuild(build) # Let make determine what needs to be built
 
 clean_targets = [
