@@ -177,6 +177,6 @@ env.Clean(build, clean_targets)
 if bw_scons_path:
     mod_target = env.BWPath('/lib/modules')
     mod_args = ('INSTALL_MOD_PATH=' + mod_target, 'modules_install')
-    mod_cmd = env.Command(mod_target, build, make_cmd(*main_args))
+    mod_cmd = env.Command(mod_target, build, make_cmd(*mod_args))
     env.AlwaysBuild(mod_cmd)
     env.Alias('install', mod_cmd)
