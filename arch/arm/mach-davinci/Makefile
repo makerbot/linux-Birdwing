@@ -3,6 +3,9 @@
 #
 #
 
+# Flags for determining LCD to build
+ccflags-y                       := -DMB_LCD=$(MB_LCD)
+
 # Common objects
 obj-y 			:= time.o clock.o serial.o psc.o \
 			   dma.o usb.o common.o sram.o aemif.o

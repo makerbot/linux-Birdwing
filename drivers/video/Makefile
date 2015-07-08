@@ -4,6 +4,9 @@
 
 # Each configuration option enables a list of files.
 
+#Option for which lcd to build
+ccflags-y                         := -DMB_LCD=$(MB_LCD)
+
 obj-$(CONFIG_VGASTATE)            += vgastate.o
 obj-y                             += fb_notify.o
 obj-$(CONFIG_FB)                  += fb.o
