@@ -33,7 +33,6 @@
 #include <linux/cpufreq.h>
 #include <linux/console.h>
 #include <linux/spinlock.h>
-#include <linux/spi/spi.h>
 #include <linux/slab.h>
 #include <linux/delay.h>
 #include <linux/lcm.h>
@@ -300,14 +299,14 @@ static struct fb_videomode known_lcd_panels[] = {
 
 
 // set the chip select line
-static void ssd2119_spi_set_cs(struct da8xx_spi_pin_data *spi, u8 val){
+static void lcd_spi_set_cs(struct da8xx_spi_pin_data *spi, u8 val){
 
   gpio_set_value(spi->cs, val);
 
 }
 
 // send one bit of data
-static void ssd2119_spi_send_bit(struct da8xx_spi_pin_data *spi, u8 val){
+static void lcd_spi_send_bit(struct da8xx_spi_pin_data *spi, u8 val){
 
   gpio_set_value(spi->sck, 0);
 
@@ -336,31 +335,18 @@ static u8 bit_reverse(u8 int_in){
 
 
 // send one byte of data, MSB first
-static void ssd2119_spi_send_byte(struct da8xx_spi_pin_data *spi, u8 val){
+static void lcd_spi_send_byte(struct da8xx_spi_pin_data *spi, u8 val){
 
   u8 rev_val = bit_reverse(val);
   u8 i; 
  
   for (i = 0; i < 8; i++){
-    ssd2119_spi_send_bit(spi, rev_val & 0x01);
+    lcd_spi_send_bit(spi, rev_val & 0x01);
     rev_val >>= 1;
   }
 }
 
-// data_type is "0" for command and "1" for data
-static void ssd2119_spi_send_packet(struct da8xx_spi_pin_data * spi, u8 data, u8 data_type){
-
-  ssd2119_spi_set_cs(spi, 0);
-
-  ssd2119_spi_send_bit(spi, data_type); // command code;
-
-  ssd2119_spi_send_byte(spi, data);
-
-  ssd2119_spi_set_cs(spi, 1);
-
-}
-
-static int ssd2119_spi_init(struct da8xx_spi_pin_data *spi){
+static int lcd_spi_init(struct da8xx_spi_pin_data *spi){
  
     int ret = -1;
  
@@ -374,6 +360,20 @@ static int ssd2119_spi_init(struct da8xx_spi_pin_data *spi){
         ret = gpio_direction_output(spi->sck, 1);
     }
     return ret;
+}
+
+/* HERE BEGINS THE JAIL FOR SSD2119 */
+// data_type is "0" for command and "1" for data
+static void ssd2119_spi_send_packet(struct da8xx_spi_pin_data * spi, u8 data, u8 data_type){
+
+  lcd_spi_set_cs(spi, 0);
+
+  lcd_spi_send_bit(spi, data_type); // command code;
+
+  lcd_spi_send_byte(spi, data);
+
+  lcd_spi_set_cs(spi, 1);
+
 }
 
 static int ssd2119_spi_write_reg(struct da8xx_spi_pin_data *spi, u8 reg, u16 val)
@@ -400,7 +400,7 @@ static int ssd2119_spi_write_reg(struct da8xx_spi_pin_data *spi, u8 reg, u16 val
 }
 
 
-static int lcd_ssd2119_spi_init(struct da8xx_spi_pin_data *spi) {
+static int ssd2119_spi_init(struct da8xx_spi_pin_data *spi) {
 
     int ret = 0;
 
@@ -439,6 +439,8 @@ static int lcd_ssd2119_spi_init(struct da8xx_spi_pin_data *spi) {
 
 }
 
+/* HERE ENDS THE JAIL FOR SSD2119 */
+
 int mb_serializer_compat_init(struct platform_device *device)
 {
 	struct da8xx_lcdc_spi_platform_data *fb_pdata;
@@ -449,7 +451,7 @@ int mb_serializer_compat_init(struct platform_device *device)
         pr_debug(">>>LCD: Switcing panel power on\n");
         fb_pdata->panel_power_ctrl(1);
 
-        ret = ssd2119_spi_init(fb_pdata->spi);
+        ret = lcd_spi_init(fb_pdata->spi);
         if (ret < 0){
                 pr_err("init error in spi !!\n");
                 return ret;
@@ -468,13 +470,13 @@ int mb_serializer_compat_par_init(struct da8xx_fb_par *par)
 {
     int ret = 0;
     par->panel_power_ctrl(1);
-    ret = ssd2119_spi_init(par->spi);
+    ret = lcd_spi_init(par->spi);
     if (ret < 0){
         pr_err("init error in spi !!\n");
         return ret;
     }
 
-    ret = lcd_ssd2119_spi_init(par->spi);
+    ret = ssd2119_spi_init(par->spi);
     if (ret < 0){
         pr_err("init error in spi lcd sequence!!\n");
         return ret;
