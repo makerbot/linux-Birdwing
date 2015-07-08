@@ -501,21 +501,46 @@ static void mb_lcd_enable_backlight(struct work_struct *work){
 	gpio_set_value(LCD_BACKLIGHT, 1);
 }
 
-DECLARE_DELAYED_WORK(backlight_work, &mb_lcd_enable_backlight);
+static void mb_lcd_disable_backlight(struct work_struct *work) {
+    gpio_set_value(LCD_BACKLIGHT, 0);
+}
 
-static void da850_panel_power_ctrl(int val)
+DECLARE_DELAYED_WORK(enable_backlight_work, &mb_lcd_enable_backlight);
+DECLARE_DELAYED_WORK(disable_backlight_work, &mb_lcd_disable_backlight);
+
+static void sharplq043_panel_power_ctrl(int backlight, int reset) {
+    if(backlight != -1) {
+        // Backlight is SHUTDOWN for the sharp
+        if(backlight) {
+            gpio_set_value(LCD_BACKLIGHT, backlight);
+            pr_info("Sharp LCD power panel turning backlight ON");
+        } else {
+            pr_info("Sharp LCD power panel scheduling backlight OFF");
+            schedule_delayed_work(&disable_backlight_work,
+                                  msecs_to_jiffies(50));
+        }
+    }
+    if (reset != -1) {
+        // RESET is RESB for the sharp
+        gpio_set_value(LCD_RESET, reset);
+    }
+    
+}
+
+static void ssd2119_panel_power_ctrl(int backlight, int reset)
 {
 	/* lcd_reset */
-	gpio_set_value(LCD_RESET, val);
-
-	pr_debug("switching lcd power to : %d\n", val);
+	gpio_set_value(LCD_RESET, backlight);
 
 	/* lcd backlight */
-	if(val){	//Need to wait before turning on the backlight
-		schedule_delayed_work(&backlight_work, msecs_to_jiffies(1000)); //delay in jiffies
+	if(backlight){	//Need to wait before turning on the backlight
+        gpio_set_value(LCD_BACKLIGHT, 1);
+        schedule_delayed_work(&enable_backlight_work,
+                              msecs_to_jiffies(1000));
 	}
-	else{		//Else we can turn it off immediately
-		gpio_set_value(LCD_BACKLIGHT, 0);
+	else{
+        //Else we can turn it off immediately
+        gpio_set_value(LCD_BACKLIGHT, 0);
 	}
 }
 
@@ -534,35 +559,39 @@ static void lcdc_psc_ctrl(bool on)
 static int da850_lcd_hw_init(void)
 {
 	int status;
-
 	pr_debug("LCD: register backlight\n");
-	status = gpio_request_one(LCD_BACKLIGHT, GPIOF_OUT_INIT_LOW, "lcd backlight");
+	status = gpio_request_one(LCD_BACKLIGHT,
+                              GPIOF_OUT_INIT_LOW,
+                              "lcd backlight");
 	if(status < 0)
 		return status;
 
 	pr_debug("LCD register reset\n");
-	status = gpio_request(LCD_RESET, "lcd reset\n");
+	status = gpio_request_one(LCD_RESET,
+                              GPIOF_OUT_INIT_HIGH,
+                              "lcd reset\n");
 	if (status < 0)
 		return status;
 
-	gpio_direction_output(LCD_RESET, 0);
+	//gpio_direction_output(LCD_RESET, 0);
 
 	pr_debug("LCD register display type\n");
-	status = gpio_request(LCD_DISPLAY_TYPE, "lcd type\n");
-	if (status < 0)
-		return status;
 
-    // 0 level for type pin indicates AZ display
-	if(gpio_get_value(LCD_DISPLAY_TYPE) == 0) {
-		lcd_pdata = &az_hx8238_pdata;
-	} else {
-		lcd_pdata = &ssd2119_spi_pdata;
-	}
-
-	/* Switch off panel power and backlight */
-	//TODO might not need/want this
-	da850_panel_power_ctrl(0);
-
+#if MB_LCD == Sharp_LQ043
+#warning "MB LCD config: Using Sharp LQ043"
+    lcd_pdata = &sharp_lq043t1dg29_pdata;
+    lcd_pdata->panel_power_ctrl = sharplq043_panel_power_ctrl;
+#elif MB_LCD == ATM_0430
+#warning "MB LCD config: Using ATM 0430"
+    lcd_pdata = &atm_0430d12b_pdata;
+    lcd_pdata->panel_power_ctrl = ssd2119_panel_power_ctrl;
+#else
+#warning "MB LCD config: Falling back to default LCD!"
+    lcd_pdata = &az_hx8238_pdata;
+    lcd_pdata->panel_power_ctrl = ssd2119_panel_power_ctrl;
+    // or maybe this
+    // lcd_pdata = &ssd2119_spi_pdata;
+#endif
 	return 0;
 }
 
@@ -573,7 +602,6 @@ static __init int mb_lcd_init(void){
 
 	int ret;
 	u32 mstpri2;
-
 	//Configure LCD controler pins
 	ret = davinci_cfg_reg_list(da850_lcdcntl_pins);	
 	if (ret){
@@ -605,7 +633,6 @@ static __init int mb_lcd_init(void){
 	}
 
 	//Associate power control functions with platform data
-	lcd_pdata->panel_power_ctrl = da850_panel_power_ctrl;
 	lcd_pdata->lcdc_psc_ctrl = lcdc_psc_ctrl;
 
 	//Associate set up SPI with 
@@ -634,7 +661,6 @@ static __init int mb_lcd_init(void){
 	//TODO undo thigns
 //		return ret;
 	}
-
 	return ret;
 }
 

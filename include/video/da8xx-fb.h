@@ -27,7 +27,7 @@ struct da8xx_lcdc_platform_data {
 	const char manu_name[10];
 	void *controller_data;
 	const char type[25];
-	void (*panel_power_ctrl)(int);
+	void (*panel_power_ctrl)(int, int);
 };
 
 struct da8xx_spi_pin_data {
@@ -41,9 +41,10 @@ struct da8xx_lcdc_spi_platform_data {
 	const char manu_name[10];
 	void *controller_data;
 	const char type[25];
-	void (*panel_power_ctrl)(int);
+	void (*panel_power_ctrl)(int, int);
 	void (*lcdc_psc_ctrl)(bool);
   struct da8xx_spi_pin_data *spi;
+    int (*lcdc_spi_init)(struct da8xx_spi_pin_data*);
 };
 
 struct lcd_ctrl_config {

@@ -607,10 +607,16 @@ struct da8xx_lcdc_spi_platform_data az_hx8238_pdata = {
 	.type		    	= "HX8238",
 };
 
-struct da8xx_lcdc_platform_data ssd2119_pdata = {
-	.manu_name	    	= "ssd2119",
-	.controller_data	= &lcd_cfg,
-	.type		    	= "SSD2119",
+struct da8xx_lcdc_spi_platform_data sharp_lq043t1dg29_pdata = {
+    .manu_name          = "sharp",
+    .controller_data    = &lcd_cfg,
+    .type               = "Sharp_LQ043T1DG29",
+};
+
+struct da8xx_lcdc_platform_data atm_0430d12b_pdata = {
+    .manu_name          = "az",
+    .controller_data    = &lcd_cfg,
+    .type               = "ATM_0430D12B",
 };
 
 static struct resource da8xx_lcdc_resources[] = {

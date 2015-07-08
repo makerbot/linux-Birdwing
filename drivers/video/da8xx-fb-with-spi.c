@@ -183,8 +183,9 @@ struct da8xx_fb_par {
 	struct notifier_block	freq_transition;
 	unsigned int		lcd_fck_rate;
 #endif
-	void (*panel_power_ctrl)(int);
+	void (*panel_power_ctrl)(int, int);
 	void (*lcdc_psc_ctrl)(bool);
+    int (*lcdc_spi_init)(struct da8xx_spi_pin_data*);
 	u32 pseudo_palette[16];
 };
 
@@ -217,84 +218,78 @@ static struct fb_fix_screeninfo da8xx_fb_fix = {
 	.accel = FB_ACCEL_NONE
 };
 
-static struct fb_videomode known_lcd_panels[] = {
+// A struct that holds not only the videomode data for the framebuffer
+// driver but also an initialization function used here for the SPI
+// portion of initializing an LCD panel. This may be NULL, if no SPI
+// initialization is required for that panel. It will be copied into
+// the platform data when probe() is called.
+
+struct lcdc_panel_config {
+    struct fb_videomode panel;
+    int (*spi_init)(struct da8xx_spi_pin_data*);
+};
+
+// Forward declare spi initialization functions for panels that need
+// it - the functions are defined below.
+static int ssd2119_spi_init(struct da8xx_spi_pin_data*);
+static int sharplq043_spi_init(struct da8xx_spi_pin_data*);
+
+static struct lcdc_panel_config known_lcd_panels[] = {
 	/* Sharp LCD035Q3DG01 */
-	[0] = {
-		.name           = "Sharp_LCD035Q3DG01",
-		.xres           = 320,
-		.yres           = 240,
-		.pixclock       = 4608000,
-		.left_margin    = 6,
-		.right_margin   = 8,
-		.upper_margin   = 2,
-		.lower_margin   = 2,
-		.hsync_len      = 0,
-		.vsync_len      = 0,
-		.sync           = FB_SYNC_CLK_INVERT |
-			FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
-	},
-	/* Sharp LK043T1DG01 */
-	[1] = {
-		.name           = "Sharp_LK043T1DG01",
-		.xres           = 480,
-		.yres           = 272,
-		.pixclock       = 7833600,
-		.left_margin    = 2,
-		.right_margin   = 2,
-		.upper_margin   = 2,
-		.lower_margin   = 2,
-		.hsync_len      = 41,
-		.vsync_len      = 10,
-		.sync           = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
-		.flag           = 0,
-	},
-	[2] = {
-		/* Hitachi SP10Q010 */
-		.name           = "SP10Q010",
-		.xres           = 320,
-		.yres           = 240,
-		.pixclock       = 7833600,
-		.left_margin    = 10,
-		.right_margin   = 10,
-		.upper_margin   = 10,
-		.lower_margin   = 10,
-		.hsync_len      = 10,
-		.vsync_len      = 10,
-		.sync           = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
-		.flag           = 0,
-	},
-   [3] = {
-		/* Solomon Systech SSD2119 Driver + UMSH-8252MD-T LCD Module */
-		.name           = "SSD2119",
-		.xres           = 320,
-		.yres           = 240,
-		.pixclock	    = 5000000,
-		.left_margin    = 30,
-		.right_margin   = 30,
-		.upper_margin   = 4,
-		.lower_margin   = 4,
-		.hsync_len      = 1,
-		.vsync_len      = 1,
-		.sync           = 0,
-		.flag           = 0,
-	},
-   [4] = {
-		/* AZ display LCD Module */
-		.name           = "HX8238",
-		.xres           = 320,
-		.yres           = 240,
-		.pixclock	    = 5000000,
-		.left_margin    = 20,
-		.right_margin   = 68,
-		.upper_margin   = 4,
-		.lower_margin   = 18,
-		.hsync_len      = 1,
-		.vsync_len      = 1,
-		.sync           = 0,
-		.flag           = 0,
-	},
-        
-    
+    [0] = {
+        .panel = {
+            /* Solomon Systech SSD2119 Driver + UMSH-8252MD-T LCD Module */
+            .name           = "SSD2119",
+            .xres           = 320,
+            .yres           = 240,
+            .pixclock	    = 5000000,
+            .left_margin    = 30,
+            .right_margin   = 30,
+            .upper_margin   = 4,
+            .lower_margin   = 4,
+            .hsync_len      = 1,
+            .vsync_len      = 1,
+            .sync           = 0,
+            .flag           = 0,
+        },
+        .spi_init = ssd2119_spi_init,
+    },
+    [1] = {
+        .panel = {
+            /* AZ display LCD Module */
+            .name           = "HX8238",
+            .xres           = 320,
+            .yres           = 240,
+            .pixclock	    = 5000000,
+            .left_margin    = 20,
+            .right_margin   = 68,
+            .upper_margin   = 4,
+            .lower_margin   = 18,
+            .hsync_len      = 1,
+            .vsync_len      = 1,
+            .sync           = 0,
+            .flag           = 0,
+        },
+        .spi_init = NULL,
+    },
+    [2] = {
+        .panel = {
+            /* Sharp LQ043T1DG29 LCD module - BW2.0 testing */
+            .name           = "Sharp_LQ043T1DG29",
+            .xres           = 480,
+            .yres           = 272,
+            .pixclock       = 8540000,
+            .left_margin    = 30,
+            .right_margin   = 30,
+            .upper_margin   = 4,
+            .lower_margin   = 4,
+            .hsync_len      = 1,
+            .vsync_len      = 1,
+            .sync           = 0,
+            .flag           = 0,
+        },
+        .spi_init = sharplq043_spi_init,
+    }
 };
 
 
@@ -403,7 +398,6 @@ static int ssd2119_spi_write_reg(struct da8xx_spi_pin_data *spi, u8 reg, u16 val
 static int ssd2119_spi_init(struct da8xx_spi_pin_data *spi) {
 
     int ret = 0;
-
 #define LCD_MODE_65K 0x6000
 #define LCD_WMODE_GENERIC 0x0400
 #define LCD_DOTCLOCK_ACTIVE 0x0100
@@ -441,6 +435,66 @@ static int ssd2119_spi_init(struct da8xx_spi_pin_data *spi) {
 
 /* HERE ENDS THE JAIL FOR SSD2119 */
 
+/* HERE BEGINS THE JAIL FOR SHARP LQ043 */
+
+static int sharplq043_spi_write_reg(struct da8xx_spi_pin_data *spi,
+                                     u8 reg, u16 data) {
+    if(!spi) {
+        return -1;
+    }
+    #define SHARP_LQ043_REG_PREFIX  0x7400
+    #define SHARP_LQ043_DATA_PREFIX 0x72
+    lcd_spi_set_cs(spi, 0);
+    lcd_spi_send_byte(spi, (SHARP_LQ043_REG_PREFIX>>8)&0xff);
+    lcd_spi_send_byte(spi, SHARP_LQ043_REG_PREFIX&0xff);
+    lcd_spi_send_byte(spi, reg);
+    lcd_spi_set_cs(spi, 1);
+    lcd_spi_set_cs(spi, 0);
+    lcd_spi_send_byte(spi, SHARP_LQ043_DATA_PREFIX);
+    lcd_spi_send_byte(spi, (data>>8)&0xff);
+    lcd_spi_send_byte(spi, data&0xff);
+    lcd_spi_set_cs(spi, 1);
+    return 0;
+}
+
+static int sharplq043_spi_init(struct da8xx_spi_pin_data *spi) {
+    if(!spi) {
+        pr_err("LCDC SPI; Sharp Panel: No SPI!");
+        return -1;
+    }
+    int ret = 0;
+
+    ret = sharplq043_spi_write_reg(spi, 0x0000, 0x0013);
+    ret = sharplq043_spi_write_reg(spi, 0x0001, 0x9a09);
+    ret = sharplq043_spi_write_reg(spi, 0x0002, 0x9a11);
+    ret = sharplq043_spi_write_reg(spi, 0x0003, 0x1100);
+    ret = sharplq043_spi_write_reg(spi, 0x0004, 0x1100);
+    ret = sharplq043_spi_write_reg(spi, 0x0005, 0x0232);
+    ret = sharplq043_spi_write_reg(spi, 0x0006, 0x000e);
+    ret = sharplq043_spi_write_reg(spi, 0x0007, 0x0004);
+    // There is nothing in register 0x0008
+    ret = sharplq043_spi_write_reg(spi, 0x0009, 0x0001);
+    ret = sharplq043_spi_write_reg(spi, 0x000a, 0x1a61);
+    ret = sharplq043_spi_write_reg(spi, 0x000b, 0xff9b);
+    ret = sharplq043_spi_write_reg(spi, 0x000c, 0x00b0);
+    ret = sharplq043_spi_write_reg(spi, 0x000d, 0xca53);
+    ret = sharplq043_spi_write_reg(spi, 0x000e, 0xca53);
+    // There is nothing in register 0x000F
+    ret = sharplq043_spi_write_reg(spi, 0x0010, 0x0616);
+    ret = sharplq043_spi_write_reg(spi, 0x0011, 0x7916);
+    ret = sharplq043_spi_write_reg(spi, 0x0012, 0x0805);
+    ret = sharplq043_spi_write_reg(spi, 0x0013, 0x0217);
+    ret = sharplq043_spi_write_reg(spi, 0x0014, 0x3121);
+    ret = sharplq043_spi_write_reg(spi, 0x0015, 0x1707);
+    ret = sharplq043_spi_write_reg(spi, 0x0016, 0x750f);
+    ret = sharplq043_spi_write_reg(spi, 0x0017, 0x1b0d);
+    ret = sharplq043_spi_write_reg(spi, 0x0018, 0x0106);
+    ret = sharplq043_spi_write_reg(spi, 0x0019, 0x1112);
+    return ret;
+}
+
+/* HERE ENDS THE JAIL FOR SHARP LQ043 */
+
 int mb_serializer_compat_init(struct platform_device *device)
 {
 	struct da8xx_lcdc_spi_platform_data *fb_pdata;
@@ -449,18 +503,22 @@ int mb_serializer_compat_init(struct platform_device *device)
     if (device) {
         fb_pdata = device->dev.platform_data;
         pr_debug(">>>LCD: Switcing panel power on\n");
-        fb_pdata->panel_power_ctrl(1);
+        //fb_pdata->panel_power_ctrl(1);
 
         ret = lcd_spi_init(fb_pdata->spi);
         if (ret < 0){
-                pr_err("init error in spi !!\n");
+                pr_err("LCDC: init error in spi !!\n");
                 return ret;
         }
-
-        ret = lcd_ssd2119_spi_init(fb_pdata->spi);
-        if (ret < 0){
-                pr_err("init error in spi lcd sequence!!\n");
+        if (fb_pdata->lcdc_spi_init) {
+            ret = fb_pdata->lcdc_spi_init(fb_pdata->spi);
+            fb_pdata->panel_power_ctrl(0, -1);
+            if (ret < 0){
+                pr_err("LCDC: init error in spi lcd sequence!!\n");
                 return ret;
+            }
+        } else {
+            dev_err(&device->dev, "LCDC: Platform device has no SPI initializer!");
         }
     }
     return ret;
@@ -469,17 +527,20 @@ int mb_serializer_compat_init(struct platform_device *device)
 int mb_serializer_compat_par_init(struct da8xx_fb_par *par)
 {
     int ret = 0;
-    par->panel_power_ctrl(1);
+    par->panel_power_ctrl(1, -1);
     ret = lcd_spi_init(par->spi);
     if (ret < 0){
         pr_err("init error in spi !!\n");
         return ret;
     }
-
-    ret = ssd2119_spi_init(par->spi);
-    if (ret < 0){
-        pr_err("init error in spi lcd sequence!!\n");
-        return ret;
+    if(par->lcdc_spi_init) {
+        ret = par->lcdc_spi_init(par->spi);
+        if (ret < 0){
+            pr_err("init error in spi lcd sequence!!\n");
+            return ret;
+        }
+    } else {
+        pr_err("par data structure has no initializer!");
     }
     return ret;
 }
@@ -537,7 +598,6 @@ static int lcd_ssd2119_wake(struct da8xx_fb_par *par){
 static inline void lcd_enable_raster(void)
 {
 	u32 reg;
-
 	/* Put LCDC in reset for several cycles */
 	if (lcd_revision == LCD_VERSION_2)
 		/* Write 1 to reset LCDC */
@@ -1300,7 +1360,7 @@ static int fb_remove(struct platform_device *dev)
 		lcd_da8xx_cpufreq_deregister(par);
 #endif
 		if (par->panel_power_ctrl)
-			par->panel_power_ctrl(0);
+			par->panel_power_ctrl(0, 0);
 
 		lcd_disable_raster(true);
 		lcdc_write(0, LCD_RASTER_CTRL_REG);
@@ -1418,7 +1478,7 @@ static int cfb_blank(int blank, struct fb_info *info)
 	case FB_BLANK_POWERDOWN:
 
 		if (par->panel_power_ctrl)
-			par->panel_power_ctrl(0);
+			par->panel_power_ctrl(0, 0);
         
 		lcd_disable_raster(true);
 		break;
@@ -1529,14 +1589,13 @@ static int fb_probe(struct platform_device *device)
 	struct da8xx_lcdc_spi_platform_data *fb_pdata =
 						device->dev.platform_data;
 	struct lcd_ctrl_config *lcd_cfg;
-	struct fb_videomode *lcdc_info;
+	struct lcdc_panel_config *lcdc_info;
 	struct fb_info *da8xx_fb_info;
 	struct clk *fb_clk = NULL;
 	struct da8xx_fb_par *par;
 	resource_size_t len;
 	int ret, i;
 	unsigned long ulcm;
-
 	if (fb_pdata == NULL) {
 		dev_err(&device->dev, "Can not get platform data\n");
 		return -ENOENT;
@@ -1591,10 +1650,10 @@ static int fb_probe(struct platform_device *device)
 	for (i = 0, lcdc_info = known_lcd_panels;
 		i < ARRAY_SIZE(known_lcd_panels);
 		i++, lcdc_info++) {
-		if (strcmp(fb_pdata->type, lcdc_info->name) == 0)
+		if (strcmp(fb_pdata->type, lcdc_info->panel.name) == 0)
 			break;
 	}
-
+    fb_pdata->lcdc_spi_init = lcdc_info->spi_init;
 	if (i == ARRAY_SIZE(known_lcd_panels)) {
 		dev_err(&device->dev, "GLCD: No valid panel found\n");
 		ret = -ENODEV;
@@ -1614,11 +1673,13 @@ static int fb_probe(struct platform_device *device)
 	}
 
 	par = da8xx_fb_info->par;
+    // Get the same SPI init function as the device does
+    par->lcdc_spi_init = lcdc_info->spi_init;
 	par->lcdc_clk = fb_clk;
 #ifdef CONFIG_CPU_FREQ
 	par->lcd_fck_rate = clk_get_rate(fb_clk);
 #endif
-	par->pxl_clk = lcdc_info->pixclock;
+	par->pxl_clk = lcdc_info->panel.pixclock;
 	if (fb_pdata->panel_power_ctrl) {
 		par->panel_power_ctrl = fb_pdata->panel_power_ctrl;
 		//par->panel_power_ctrl(1);
@@ -1630,15 +1691,15 @@ static int fb_probe(struct platform_device *device)
        par->spi = fb_pdata->spi;
     }
 
-	if (lcd_init(par, lcd_cfg, lcdc_info) < 0) {
+	if (lcd_init(par, lcd_cfg, &(lcdc_info->panel)) < 0) {
 		dev_err(&device->dev, "lcd_init failed\n");
 		ret = -EFAULT;
 		goto err_release_fb;
 	}
 
 	/* allocate frame buffer */
-	par->vram_size = lcdc_info->xres * lcdc_info->yres * lcd_cfg->bpp;
-	ulcm = lcm((lcdc_info->xres * lcd_cfg->bpp)/8, PAGE_SIZE);
+	par->vram_size = lcdc_info->panel.xres * lcdc_info->panel.yres * lcd_cfg->bpp;
+	ulcm = lcm((lcdc_info->panel.xres * lcd_cfg->bpp)/8, PAGE_SIZE);
 	par->vram_size = roundup(par->vram_size/8, ulcm);
 	par->vram_size = par->vram_size * LCD_NUM_BUFFERS;
 
@@ -1656,10 +1717,10 @@ static int fb_probe(struct platform_device *device)
 	da8xx_fb_info->screen_base = (char __iomem *) par->vram_virt;
 	da8xx_fb_fix.smem_start    = par->vram_phys;
 	da8xx_fb_fix.smem_len      = par->vram_size;
-	da8xx_fb_fix.line_length   = (lcdc_info->xres * lcd_cfg->bpp) / 8;
+	da8xx_fb_fix.line_length   = (lcdc_info->panel.xres * lcd_cfg->bpp) / 8;
 
 	par->dma_start = par->vram_phys;
-	par->dma_end   = par->dma_start + lcdc_info->yres *
+	par->dma_end   = par->dma_start + lcdc_info->panel.yres *
 		da8xx_fb_fix.line_length - 1;
 
 	/* allocate palette buffer */
@@ -1685,22 +1746,22 @@ static int fb_probe(struct platform_device *device)
 	/* Initialize par */
 	da8xx_fb_info->var.bits_per_pixel = lcd_cfg->bpp;
 
-	da8xx_fb_var.xres = lcdc_info->xres;
-	da8xx_fb_var.xres_virtual = lcdc_info->xres;
+	da8xx_fb_var.xres = lcdc_info->panel.xres;
+	da8xx_fb_var.xres_virtual = lcdc_info->panel.xres;
 
-	da8xx_fb_var.yres         = lcdc_info->yres;
-	da8xx_fb_var.yres_virtual = lcdc_info->yres * LCD_NUM_BUFFERS;
+	da8xx_fb_var.yres         = lcdc_info->panel.yres;
+	da8xx_fb_var.yres_virtual = lcdc_info->panel.yres * LCD_NUM_BUFFERS;
 
 	da8xx_fb_var.grayscale =
 	    lcd_cfg->panel_shade == MONOCHROME ? 1 : 0;
 	da8xx_fb_var.bits_per_pixel = lcd_cfg->bpp;
 
-	da8xx_fb_var.hsync_len = lcdc_info->hsync_len;
-	da8xx_fb_var.vsync_len = lcdc_info->vsync_len;
-	da8xx_fb_var.right_margin = lcdc_info->right_margin;
-	da8xx_fb_var.left_margin  = lcdc_info->left_margin;
-	da8xx_fb_var.lower_margin = lcdc_info->lower_margin;
-	da8xx_fb_var.upper_margin = lcdc_info->upper_margin;
+	da8xx_fb_var.hsync_len = lcdc_info->panel.hsync_len;
+	da8xx_fb_var.vsync_len = lcdc_info->panel.vsync_len;
+	da8xx_fb_var.right_margin = lcdc_info->panel.right_margin;
+	da8xx_fb_var.left_margin  = lcdc_info->panel.left_margin;
+	da8xx_fb_var.lower_margin = lcdc_info->panel.lower_margin;
+	da8xx_fb_var.upper_margin = lcdc_info->panel.upper_margin;
 	da8xx_fb_var.pixclock = da8xxfb_pixel_clk_period(par);
 
 	/* Initialize fbinfo */
@@ -1756,6 +1817,9 @@ static int fb_probe(struct platform_device *device)
 			DRIVER_NAME, par);
 	if (ret)
 		goto irq_freq;
+    // Begin the power up sequence here so we're ready when the
+    // LCDC begines raster
+    par->panel_power_ctrl(1, 1);
 	return 0;
 
 irq_freq:
@@ -1862,7 +1926,7 @@ static int fb_suspend(struct platform_device *dev, pm_message_t state)
 
 	console_lock();
 	if (par->panel_power_ctrl)
-		par->panel_power_ctrl(0);
+		par->panel_power_ctrl(0, 0);
 
 	fb_set_suspend(info, 1);
 	lcd_disable_raster(true);
@@ -1884,7 +1948,7 @@ static int fb_resume(struct platform_device *dev)
 		lcd_enable_raster();
 
 		if (par->panel_power_ctrl)
-			par->panel_power_ctrl(1);
+			par->panel_power_ctrl(1, 0);
 	}
 
 	fb_set_suspend(info, 0);

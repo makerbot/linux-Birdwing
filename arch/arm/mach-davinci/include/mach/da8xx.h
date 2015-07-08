@@ -124,6 +124,7 @@ extern struct da8xx_lcdc_platform_data sharp_lk043t1dg01_pdata;
 extern struct da8xx_lcdc_platform_data ssd2119_pdata;
 extern struct da8xx_lcdc_spi_platform_data ssd2119_spi_pdata;
 extern struct da8xx_lcdc_spi_platform_data az_hx8238_pdata;
+extern struct da8xx_lcdc_spi_platform_data sharp_lq043t1dg29_pdata;
 extern struct davinci_spi_platform_data da8xx_spi_pdata[];
 
 extern struct platform_device da8xx_wdt_device;
