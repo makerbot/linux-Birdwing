@@ -619,6 +619,12 @@ struct da8xx_lcdc_platform_data atm_0430d12b_pdata = {
     .type               = "ATM_0430D12B",
 };
 
+struct da8xx_lcdc_platform_data osd_043t1778_pdata = {
+    .manu_name          = "osd",
+    .controller_data    = &lcd_cfg,
+    .type               = "OSD_043T1778",
+};
+
 static struct resource da8xx_lcdc_resources[] = {
 	[0] = { /* registers */
 		.start  = DA8XX_LCD_CNTRL_BASE,

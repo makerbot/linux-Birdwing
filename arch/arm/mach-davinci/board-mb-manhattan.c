@@ -544,6 +544,15 @@ static void ssd2119_panel_power_ctrl(int backlight, int reset)
 	}
 }
 
+static void osd043t_panel_power_ctrl(int backlight, int reset) {
+    if(backlight != -1) {
+        gpio_set_value(LCD_BACKLIGHT, backlight);
+    }
+    if(reset != -1) {
+        gpio_set_value(LCD_RESET, reset);
+    }
+}
+
 // There are sometimes underflow issues in the LCDC fifo and we need to reset the LCD peripheral
 static void lcdc_psc_ctrl(bool on)
 {
@@ -585,6 +594,10 @@ static int da850_lcd_hw_init(void)
 #warning "MB LCD config: Using ATM 0430"
     lcd_pdata = &atm_0430d12b_pdata;
     lcd_pdata->panel_power_ctrl = ssd2119_panel_power_ctrl;
+#elif MB_LCD == OSD_043T
+#warning "MB LCD config: Using OSD 043T"
+    lcd_pdata = &osd_043t1778_pdata;
+    lcd_pdata->panel_power_ctrl = osd043t_panel_power_ctrl;
 #else
 #warning "MB LCD config: Falling back to default LCD!"
     lcd_pdata = &az_hx8238_pdata;

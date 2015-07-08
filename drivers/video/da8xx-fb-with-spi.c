@@ -289,7 +289,25 @@ static struct lcdc_panel_config known_lcd_panels[] = {
             .flag           = 0,
         },
         .spi_init = sharplq043_spi_init,
-    }
+    },
+    [3] = {
+        .panel = {
+            /* OSD 043T1778 - BW testing */
+            .name           = "OSD_043T1778",
+            .xres           = 480,
+            .yres           = 272,
+            .pixclock       = 10000000,
+            .left_margin    = 30,
+            .right_margin   = 30,
+            .upper_margin   = 4,
+            .lower_margin   = 4,
+            .hsync_len      = 1,
+            .vsync_len      = 1,
+            .sync           = 0,
+            .flag           = 0,
+        },
+        .spi_init = NULL,
+    },
 };
 
 
@@ -518,7 +536,7 @@ int mb_serializer_compat_init(struct platform_device *device)
                 return ret;
             }
         } else {
-            dev_err(&device->dev, "LCDC: Platform device has no SPI initializer!");
+            dev_info(&device->dev, "LCDC: Platform device has no SPI initializer!");
         }
     }
     return ret;
