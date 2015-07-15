@@ -36,8 +36,7 @@
 #include <linux/leds.h>
 #include <linux/i2c-gpio.h>
 #include <linux/workqueue.h>
-
-
+#include <linux/i2c/ft6x06_ts.h>
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
 
@@ -46,6 +45,7 @@
 #include <mach/mux.h>
 #include <mach/psc.h>
 #include <mach/serial.h>
+#include <mach/irqs.h>
 
 #include <linux/makerbot/buzzer.h>
 
@@ -84,8 +84,9 @@ static struct platform_device rotary_encoder = {
 
 #define OPTION_BUTTON   GPIO_TO_PIN(5, 12)
 #define BACK_BUTTON     GPIO_TO_PIN(5, 0)
+#define CAP_TOUCH_IRQ   GPIO_TO_PIN(5, 0)
 #define SELECT_BUTTON   GPIO_TO_PIN(5, 3)
-
+#define CAP_TOUCH_RESET GPIO_TO_PIN(5, 3)
 static short button_pins[] = {
 		DA850_GPIO5_0,	//button 1
 		DA850_GPIO5_3,	//quad switch
@@ -104,6 +105,7 @@ static struct gpio_keys_button gpio_keys[] = {
             .type = EV_KEY,
             //.active_low = 1,
         },
+#if !MB_USE_CAP_TOUCH
         {
             .code = KEY_BACKSPACE,
             .gpio = BACK_BUTTON,
@@ -120,6 +122,7 @@ static struct gpio_keys_button gpio_keys[] = {
             .type = EV_KEY,
             //.active_low = 1,
         },
+#endif
 };
 
 struct gpio_keys_platform_data gpio_key_info = {
@@ -476,12 +479,6 @@ static short mb_lcd_pins[] = {
 	-1,
 };
 
-static short interface_i2c_pins[] = {
-	DA850_I2C0_SDA,
-	DA850_I2C0_SCL,
-	-1,
-};
-
 //Platform data set up
 static struct da8xx_spi_pin_data lcd_spi_gpio_data = {
 	.sck = LCD_CLK,
@@ -491,9 +488,33 @@ static struct da8xx_spi_pin_data lcd_spi_gpio_data = {
 
 struct da8xx_lcdc_spi_platform_data *lcd_pdata;
 
+/* Interface I2C info - enumerates as bus 0.
+ * Hosts knob/chamber LED
+ * controller and (in BW2 architectures) touchscreen controllers.  */
+
+static short interface_i2c_pins[] = {
+	DA850_I2C0_SDA,
+	DA850_I2C0_SCL,
+	-1,
+};
+
 static struct davinci_i2c_platform_data mb_i2c0_pdata = {
 	.bus_freq	= 400,	/* kHz */
-	.bus_delay	= 0,	/* usec */
+	.bus_delay	= 1,	/* usec */
+    .sda_pin = DA850_I2C0_SDA,
+    .scl_pin = DA850_I2C0_SCL,
+};
+
+static struct ft6x06_platform_data ts_pdata = {
+    .x_max = 340,
+    .y_max = 480,
+};
+
+static struct i2c_board_info __initdata cap_touch_i2c_info[] = {
+    {
+        I2C_BOARD_INFO(FT6X06_NAME, 0x5c),
+        .platform_data = &ts_pdata,
+    },
 };
 
 //TODO this should be broken out to a dimmable driver
@@ -668,13 +689,40 @@ static __init int mb_lcd_init(void){
 	}
 
 	//Register the I2C bus?
+    #warning KNOB AND CHAMBER LED CONTROLLER DISABLED
+    pr_info("Registering i2c hardware device 0!");
 	ret = da8xx_register_i2c(0, &mb_i2c0_pdata);
 	if (ret){
 		pr_warn("%s: LCD i2c driver initialization failed: %d\n", __func__, ret);
 	//TODO undo thigns
 //		return ret;
 	}
+
+#if MB_USE_CAP_TOUCH
+    ret = gpio_request_one(CAP_TOUCH_RESET, GPIOF_OUT_INIT_LOW,
+                           "mb_cap_touch_reset");
+    gpio_set_value(CAP_TOUCH_RESET, 0);
+	ret = gpio_request_one(CAP_TOUCH_IRQ, GPIOF_IN,
+                           "ft6x06_ts_irq");
+	if (ret) {
+		pr_err("Could not request ft6x06_ts irq gpio: %d\n", ret);
+        return -1;
+	}
+    int ctirq = gpio_to_irq(CAP_TOUCH_IRQ);
+	cap_touch_i2c_info[0].irq = ctirq;
+    ts_pdata.irq=ctirq;
+    pr_info("Registering cap touch i2c with irq %d from pin %d",
+            ctirq,
+            CAP_TOUCH_IRQ);
+    msleep(2);
+    gpio_set_value(CAP_TOUCH_RESET, 1);
+
+    ret = i2c_register_board_info(1,
+                                  cap_touch_i2c_info,
+                                  ARRAY_SIZE(cap_touch_i2c_info));
+#endif
 	return ret;
+
 }
 
 
