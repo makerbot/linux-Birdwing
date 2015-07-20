@@ -72,12 +72,24 @@ env['ENV']['PKG_CONFIG_SYSROOT_DIR'] = os.path.join(angstrom, tool_prefix)
 env['ENV']['PKG_CONFIG_PATH'] = os.path.join(angstrom, tool_prefix, 'usr', 'lib', 'pkgconfig')
 env['ENV']['CONFIG_SITE'] = os.path.join(angstrom, 'site-config')
 
+# These are defined in arch/arm/mach-davinci/board-mb-manhattan.c
+lcds = {
+    "Birdwing LCD": 1,
+    "Sharp LQ043" : 2,
+    "Orient OTA5180": 3,
+    "ATM 0430e": 4,
+    "OSD 043T": 5
+}
+
+lcd_option=lcds['Birdwing LCD']
+
 # Yes, this is a scons script to call make
 def make_cmd(*args):
     makebaseCmd = ['make',
-        'ARCH=arm',
-        'CROSS_COMPILE=%s-' % (tool_prefix),
-    ]
+                   'ARCH=arm',
+                   'CROSS_COMPILE=%s-' % (tool_prefix),
+                   'MB_LCD={0}' .format(lcd_option),
+               ]
     makeCmd = makebaseCmd + list(args)
     return ' '.join(makeCmd)
 

@@ -589,42 +589,6 @@ int __init da8xx_register_uio_pruss(void)
 	return platform_device_register(&da8xx_uio_pruss_dev);
 }
 
-static struct lcd_ctrl_config lcd_cfg = {
-	.panel_shade	= COLOR_ACTIVE,
-	.bpp			= 16,
-	.fifo_th		= 6, // 256 dwords
-};
-
-struct da8xx_lcdc_spi_platform_data ssd2119_spi_pdata = {
-	.manu_name	    	= "ssd2119",
-	.controller_data	= &lcd_cfg,
-	.type		    	= "SSD2119",
-};
-
-struct da8xx_lcdc_spi_platform_data az_hx8238_pdata = {
-	.manu_name	    	= "az",
-	.controller_data	= &lcd_cfg,
-	.type		    	= "HX8238",
-};
-
-struct da8xx_lcdc_spi_platform_data sharp_lq043t1dg29_pdata = {
-    .manu_name          = "sharp",
-    .controller_data    = &lcd_cfg,
-    .type               = "Sharp_LQ043T1DG29",
-};
-
-struct da8xx_lcdc_platform_data atm_0430d12b_pdata = {
-    .manu_name          = "az",
-    .controller_data    = &lcd_cfg,
-    .type               = "ATM_0430D12B",
-};
-
-struct da8xx_lcdc_platform_data osd_043t1778_pdata = {
-    .manu_name          = "osd",
-    .controller_data    = &lcd_cfg,
-    .type               = "OSD_043T1778",
-};
-
 static struct resource da8xx_lcdc_resources[] = {
 	[0] = { /* registers */
 		.start  = DA8XX_LCD_CNTRL_BASE,

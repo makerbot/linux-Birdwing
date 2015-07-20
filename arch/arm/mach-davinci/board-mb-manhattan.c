@@ -37,6 +37,7 @@
 #include <linux/i2c-gpio.h>
 #include <linux/workqueue.h>
 #include <linux/i2c/ft6x06_ts.h>
+#include <linux/i2c/atmel_mxt_ts.h>
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
 
@@ -52,91 +53,16 @@
 #include "clock.h"
 #include "pru/pru_init.h"
 
+#define BIRDWING_LCD   1
+#define Sharp_LQ043    2
+#define Orient_OTA5180 3
+#define ATM_0430       4
+#define OSD_043T       5
+
 #define MANHATTAN_PHY_ID		NULL
 
 #define DA850_USB1_VBUS_PIN		GPIO_TO_PIN(6, 12)
 #define DA850_USB1_OC_PIN		GPIO_TO_PIN(6, 13)
-
-//========================Rotary & UI Buttons===============================
-
-#define GPIO_ROTARY_A GPIO_TO_PIN(5,9)
-#define GPIO_ROTARY_B GPIO_TO_PIN(5,6)
-
-static struct rotary_encoder_platform_data encoder_info = {
-    .steps      = 30,
-    .axis       = ABS_X,
-    .relative_axis  = true,
-    .rollover   = false,
-    .gpio_a     = GPIO_ROTARY_A,
-    .gpio_b     = GPIO_ROTARY_B,
-    .inverted_a = 0,
-    .inverted_b = 0,
-    .half_period    = true,
-};
-
-static struct platform_device rotary_encoder = {
-    .name       = "rotary-encoder",
-    .id     = -1,
-    .dev = {
-        .platform_data = &encoder_info,
-    }
-};
-
-#define OPTION_BUTTON   GPIO_TO_PIN(5, 12)
-#define BACK_BUTTON     GPIO_TO_PIN(5, 0)
-#define CAP_TOUCH_IRQ   GPIO_TO_PIN(5, 0)
-#define SELECT_BUTTON   GPIO_TO_PIN(5, 3)
-#define CAP_TOUCH_RESET GPIO_TO_PIN(5, 3)
-static short button_pins[] = {
-		DA850_GPIO5_0,	//button 1
-		DA850_GPIO5_3,	//quad switch
-		DA850_GPIO5_6,	//encoder 0
-		DA850_GPIO5_9,	//Encoder 1
-		DA850_GPIO5_12,	//button 0
-		-1
-};
-
-static struct gpio_keys_button gpio_keys[] = {
-        {
-            .code = KEY_ENTER,
-            .gpio = OPTION_BUTTON,
-            .desc = "Option",
-            .debounce_interval = 10,
-            .type = EV_KEY,
-            //.active_low = 1,
-        },
-#if !MB_USE_CAP_TOUCH
-        {
-            .code = KEY_BACKSPACE,
-            .gpio = BACK_BUTTON,
-            .desc = "Back",
-            .debounce_interval = 10,
-            .type = EV_KEY,
-            //.active_low = 1,
-        },
-        {
-            .code = KEY_SPACE,
-            .gpio = SELECT_BUTTON,
-            .desc = "Select",
-            .debounce_interval = 10,
-            .type = EV_KEY,
-            //.active_low = 1,
-        },
-#endif
-};
-
-struct gpio_keys_platform_data gpio_key_info = {
-    .buttons    = gpio_keys,
-    .nbuttons   = ARRAY_SIZE(gpio_keys),
-};
-
-struct platform_device keys_gpio = {
-    .name   = "gpio-keys",
-    .id = -1,
-    .dev    = {
-    .platform_data  = &gpio_key_info,
-    },
-};
 
 //==================Wireless====================================
 
@@ -479,6 +405,12 @@ static short mb_lcd_pins[] = {
 	-1,
 };
 
+static struct lcd_ctrl_config lcd_cfg = {
+	.panel_shade	= COLOR_ACTIVE,
+	.bpp			= 16,
+	.fifo_th		= 6, // 256 dwords
+};
+
 //Platform data set up
 static struct da8xx_spi_pin_data lcd_spi_gpio_data = {
 	.sck = LCD_CLK,
@@ -505,18 +437,6 @@ static struct davinci_i2c_platform_data mb_i2c0_pdata = {
     .scl_pin = DA850_I2C0_SCL,
 };
 
-static struct ft6x06_platform_data ts_pdata = {
-    .x_max = 340,
-    .y_max = 480,
-};
-
-static struct i2c_board_info __initdata cap_touch_i2c_info[] = {
-    {
-        I2C_BOARD_INFO(FT6X06_NAME, 0x5c),
-        .platform_data = &ts_pdata,
-    },
-};
-
 //TODO this should be broken out to a dimmable driver
 static void mb_lcd_enable_backlight(struct work_struct *work){
 	gpio_set_value(LCD_BACKLIGHT, 1);
@@ -529,6 +449,90 @@ static void mb_lcd_disable_backlight(struct work_struct *work) {
 DECLARE_DELAYED_WORK(enable_backlight_work, &mb_lcd_enable_backlight);
 DECLARE_DELAYED_WORK(disable_backlight_work, &mb_lcd_disable_backlight);
 
+#if MB_LCD == OSD_043T
+#define MB_USE_CAP_TOUCH
+#warning Using OSD_043 touch defines!
+static void osd043t_panel_power_ctrl(int backlight, int reset) {
+    if(backlight != -1) {
+        gpio_set_value(LCD_BACKLIGHT, backlight);
+    }
+    if(reset != -1) {
+        gpio_set_value(LCD_RESET, reset);
+    }
+}
+
+struct da8xx_lcdc_platform_data osd_043t1778_pdata = {
+    .manu_name          = "osd",
+    .controller_data    = &lcd_cfg,
+    .type               = "OSD_043T1778",
+};
+
+static struct ft6x06_platform_data ts_pdata = {
+    .x_max = 340,
+    .y_max = 480,
+};
+
+static struct i2c_board_info __initdata cap_touch_i2c_info[] = {
+    {
+        I2C_BOARD_INFO(FT6X06_NAME, 0x5c),
+        .platform_data = &ts_pdata,
+    },
+};
+
+#elif MB_LCD == Orient_OTA5180
+#define MB_USE_CAP_TOUCH
+#define MB_LCD_USES_SPI
+#warning Using Orient touch defines!
+
+struct da8xx_lcdc_spi_platform_data orient_ota5180_pdata = {
+    .manu_name          = "orient",
+    .controller_data    = &lcd_cfg,
+    .type               = "Orient_OTA5180",
+};
+
+static struct mxt_platform_data ts_pdata = {
+      .config = NULL,
+      .config_length = 0,
+      .x_line = 19,
+      .y_line = 11,
+      .x_size = 480,
+      .y_size = 240,
+      .blen = 16,
+      .threshold = 45,
+      .voltage = 0, // keep to default
+      .orient = MXT_NORMAL,
+      .irqflags = 0,
+};
+
+static struct i2c_board_info __initdata cap_touch_i2c_info[] = {
+    {
+        I2C_BOARD_INFO("atmel_mxt_ts", 0x4a),
+        .platform_data = &ts_pdata,
+    },
+};
+
+static void orientota5180_panel_power_ctrl(int backlight, int reset) {
+    if(backlight != -1) {
+        // Backlight is SHUTDOWN for the sharp
+        if(backlight) {
+            gpio_set_value(LCD_BACKLIGHT, backlight);
+            pr_info("Sharp LCD power panel turning backlight ON");
+        } else {
+            pr_info("Sharp LCD power panel scheduling backlight OFF");
+            schedule_delayed_work(&disable_backlight_work,
+                                  msecs_to_jiffies(50));
+        }
+    }
+    if (reset != -1) {
+        // RESET is RESB for the sharp
+        gpio_set_value(LCD_RESET, reset);
+    }
+    
+}
+
+#elif MB_LCD == Sharp_LQ043
+#define MB_LCD_USES_SPI
+#warning Using Sharp LQ043 LCD defines!
 static void sharplq043_panel_power_ctrl(int backlight, int reset) {
     if(backlight != -1) {
         // Backlight is SHUTDOWN for the sharp
@@ -548,6 +552,33 @@ static void sharplq043_panel_power_ctrl(int backlight, int reset) {
     
 }
 
+struct da8xx_lcdc_spi_platform_data sharp_lq043t1dg29_pdata = {
+    .manu_name          = "sharp",
+    .controller_data    = &lcd_cfg,
+    .type               = "Sharp_LQ043T1DG29",
+};
+
+#else
+#warning Using default defines!
+#define MB_LCD_USES_SPI
+struct da8xx_lcdc_spi_platform_data ssd2119_spi_pdata = {
+	.manu_name	    	= "ssd2119",
+	.controller_data	= &lcd_cfg,
+	.type		    	= "SSD2119",
+};
+
+struct da8xx_lcdc_spi_platform_data az_hx8238_pdata = {
+	.manu_name	    	= "az",
+	.controller_data	= &lcd_cfg,
+	.type		    	= "HX8238",
+};
+
+struct da8xx_lcdc_platform_data atm_0430d12b_pdata = {
+    .manu_name          = "az",
+    .controller_data    = &lcd_cfg,
+    .type               = "ATM_0430D12B",
+};
+
 static void ssd2119_panel_power_ctrl(int backlight, int reset)
 {
 	/* lcd_reset */
@@ -565,25 +596,12 @@ static void ssd2119_panel_power_ctrl(int backlight, int reset)
 	}
 }
 
-static void osd043t_panel_power_ctrl(int backlight, int reset) {
-    if(backlight != -1) {
-        gpio_set_value(LCD_BACKLIGHT, backlight);
-    }
-    if(reset != -1) {
-        gpio_set_value(LCD_RESET, reset);
-    }
-}
+#endif
 
 // There are sometimes underflow issues in the LCDC fifo and we need to reset the LCD peripheral
 static void lcdc_psc_ctrl(bool on)
 {
-        
     pr_err("lcd psc ctrl");
-    //davinci_psc_config(lcd_clk->domain, lcd_clk->gpsc, lcd_clk->lpsc,
-    //    false, lcd_clk->flags);
-    //davinci_psc_config(lcd_clk->domain, lcd_clk->gpsc, lcd_clk->lpsc,
-    //    true, lcd_clk->flags);
-    
 }
 
 static int da850_lcd_hw_init(void)
@@ -619,12 +637,16 @@ static int da850_lcd_hw_init(void)
 #warning "MB LCD config: Using OSD 043T"
     lcd_pdata = &osd_043t1778_pdata;
     lcd_pdata->panel_power_ctrl = osd043t_panel_power_ctrl;
-#else
+#elif MB_LCD == Orient_OTA5180
+#warning "MB LCD config: Using Orient_OTA5180"
+    lcd_pdata = &orient_ota5180_pdata;
+    lcd_pdata->panel_power_ctrl = orientota5180_panel_power_ctrl;
+#elif MB_LCD == Birdwing_LCD
 #warning "MB LCD config: Falling back to default LCD!"
     lcd_pdata = &az_hx8238_pdata;
     lcd_pdata->panel_power_ctrl = ssd2119_panel_power_ctrl;
-    // or maybe this
-    // lcd_pdata = &ssd2119_spi_pdata;
+#else
+#error MB_LCD not properly defined!
 #endif
 	return 0;
 }
@@ -668,10 +690,13 @@ static __init int mb_lcd_init(void){
 
 	//Associate power control functions with platform data
 	lcd_pdata->lcdc_psc_ctrl = lcdc_psc_ctrl;
-
+#ifdef MB_LCD_USES_SPI
 	//Associate set up SPI with 
 	lcd_pdata->spi = &lcd_spi_gpio_data;
 	ret = da8xx_register_lcdc_spi(lcd_pdata);
+#else
+    ret = da8xx_register_lcdc(lcd_pdata);
+#endif
 	if (ret){
 		pr_warn("%s: LCDC registration failed: %d\n", __func__, ret);
 	//TODO unregister lcdcntl
@@ -698,14 +723,14 @@ static __init int mb_lcd_init(void){
 //		return ret;
 	}
 
-#if MB_USE_CAP_TOUCH
+#ifdef MB_CAP_TOUCH
     ret = gpio_request_one(CAP_TOUCH_RESET, GPIOF_OUT_INIT_LOW,
                            "mb_cap_touch_reset");
     gpio_set_value(CAP_TOUCH_RESET, 0);
 	ret = gpio_request_one(CAP_TOUCH_IRQ, GPIOF_IN,
-                           "ft6x06_ts_irq");
+                           "cap_touch_irq");
 	if (ret) {
-		pr_err("Could not request ft6x06_ts irq gpio: %d\n", ret);
+		pr_err("Could not request cap touch irq gpio: %d\n", ret);
         return -1;
 	}
     int ctirq = gpio_to_irq(CAP_TOUCH_IRQ);
@@ -725,6 +750,85 @@ static __init int mb_lcd_init(void){
 
 }
 
+//========================Rotary & UI Buttons===============================
+#ifndef MB_USE_CAP_TOUCH
+#define GPIO_ROTARY_A GPIO_TO_PIN(5,9)
+#define GPIO_ROTARY_B GPIO_TO_PIN(5,6)
+#define OPTION_BUTTON   GPIO_TO_PIN(5, 12)
+#define BACK_BUTTON     GPIO_TO_PIN(5, 0)
+#define CAP_TOUCH_IRQ   GPIO_TO_PIN(5, 0)
+#define SELECT_BUTTON   GPIO_TO_PIN(5, 3)
+#define CAP_TOUCH_RESET GPIO_TO_PIN(5, 3)
+static short button_pins[] = {
+		DA850_GPIO5_0,	//button 1
+		DA850_GPIO5_3,	//quad switch
+		DA850_GPIO5_6,	//encoder 0
+		DA850_GPIO5_9,	//Encoder 1
+		DA850_GPIO5_12,	//button 0
+		-1
+};
+
+static struct rotary_encoder_platform_data encoder_info = {
+    .steps      = 30,
+    .axis       = ABS_X,
+    .relative_axis  = true,
+    .rollover   = false,
+    .gpio_a     = GPIO_ROTARY_A,
+    .gpio_b     = GPIO_ROTARY_B,
+    .inverted_a = 0,
+    .inverted_b = 0,
+    .half_period    = true,
+};
+
+static struct gpio_keys_button gpio_keys[] = {
+        {
+            .code = KEY_ENTER,
+            .gpio = OPTION_BUTTON,
+            .desc = "Option",
+            .debounce_interval = 10,
+            .type = EV_KEY,
+            //.active_low = 1,
+        },
+        {
+            .code = KEY_BACKSPACE,
+            .gpio = BACK_BUTTON,
+            .desc = "Back",
+            .debounce_interval = 10,
+            .type = EV_KEY,
+            //.active_low = 1,
+        },
+        {
+            .code = KEY_SPACE,
+            .gpio = SELECT_BUTTON,
+            .desc = "Select",
+            .debounce_interval = 10,
+            .type = EV_KEY,
+            //.active_low = 1,
+        },
+};
+struct gpio_keys_platform_data gpio_key_info = {
+    .buttons    = gpio_keys,
+    .nbuttons   = ARRAY_SIZE(gpio_keys),
+};
+
+struct platform_device keys_gpio = {
+    .name   = "gpio-keys",
+    .id = -1,
+    .dev    = {
+    .platform_data  = &gpio_key_info,
+    },
+};
+static struct platform_device rotary_encoder = {
+    .name       = "rotary-encoder",
+    .id     = -1,
+    .dev = {
+        .platform_data = &encoder_info,
+    }
+};
+#endif
+
+// gpio_keys defined above when configuring touchscreens, since they share
+// some pins
 
 //====================LED Indicator Configuration================================
 
@@ -1222,6 +1326,11 @@ static __init void mb_manhattan_init(void)
 	cfgchip3 |=  BIT(3);												//Change it
 	__raw_writel(cfgchip3, DA8XX_SYSCFG0_VIRT(DA8XX_CFGCHIP3_REG));		//Write it back
 
+#ifdef MB_USE_CAP_TOUCH
+#warning Cap touch support enabled, front panel will not work!
+    pr_err("Cap touch panel support enabled! Front panel will not work!");
+#else
+#warning Front panel UI support enabled! Cap touch will not work!
 	/* UI Buttons */
 	ret = davinci_cfg_reg_list(button_pins);							//Configure the UI pins
 	if (ret)
@@ -1235,7 +1344,7 @@ static __init void mb_manhattan_init(void)
 	ret = platform_device_register(&rotary_encoder);					//Register the encoder
 	if (ret)
 		pr_warn("%s: rotary encoder device initialization failed!: %d\n", __func__, ret);
-
+#endif
 
 }
 

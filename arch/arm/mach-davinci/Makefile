@@ -4,7 +4,7 @@
 #
 
 # Flags for determining LCD to build
-ccflags-y                       := -DMB_LCD=$(MB_LCD) -DMB_USE_CAP_TOUCH=$(MB_CAP_TOUCH)
+ccflags-y                       := -DMB_LCD=$(MB_LCD)
 
 # Common objects
 obj-y 			:= time.o clock.o serial.o psc.o \

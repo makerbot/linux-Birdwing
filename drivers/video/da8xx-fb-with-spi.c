@@ -233,6 +233,7 @@ struct lcdc_panel_config {
 // it - the functions are defined below.
 static int ssd2119_spi_init(struct da8xx_spi_pin_data*);
 static int sharplq043_spi_init(struct da8xx_spi_pin_data*);
+static int orientota5180_spi_init(struct da8xx_spi_pin_data*);
 
 static struct lcdc_panel_config known_lcd_panels[] = {
 	/* Sharp LCD035Q3DG01 */
@@ -307,6 +308,24 @@ static struct lcdc_panel_config known_lcd_panels[] = {
             .flag           = 0,
         },
         .spi_init = NULL,
+    },
+    [4] = {
+        .panel = {
+            /* Orient OTA5180 - BW testing */
+            .name           = "Orient_OTA5180",
+            .xres           = 480,
+            .yres           = 272,
+            .pixclock       = 10000000,
+            .left_margin    = 30,
+            .right_margin   = 30,
+            .upper_margin   = 4,
+            .lower_margin   = 4,
+            .hsync_len      = 1,
+            .vsync_len      = 1,
+            .sync           = 0,
+            .flag           = 0,
+        },
+        .spi_init = orientota5180_spi_init,
     },
 };
 
@@ -452,6 +471,22 @@ static int ssd2119_spi_init(struct da8xx_spi_pin_data *spi) {
 }
 
 /* HERE ENDS THE JAIL FOR SSD2119 */
+
+/* HERE BEGINS THE JAIL FOR ORIENT OTA5180 */
+
+static int orientota5180_spi_send_packet(struct da8xx_spi_pin_data* spi,
+                                         u8 reg, u8 data) {
+    lcd_spi_set_cs(spi, 0);
+    lcd_spi_send_byte(spi, (1<<8)|reg);
+    lcd_spi_send_byte(spi, data);
+    lcd_spi_set_cs(spi, 1);
+    return 0;
+}
+
+static int orientota5180_spi_init(struct da8xx_spi_pin_data* spi) {
+
+}
+/* HERE ENDS THE JAIL FOR ORIENT OTA5180 */
 
 /* HERE BEGINS THE JAIL FOR SHARP LQ043 */
 
