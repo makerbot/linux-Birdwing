@@ -482,6 +482,7 @@ static struct i2c_board_info __initdata cap_touch_i2c_info[] = {
 #elif MB_LCD == Orient_OTA5180
 #define MB_USE_CAP_TOUCH
 #define MB_LCD_USES_SPI
+#define MB_CAP_TOUCH_NO_IRQ
 #warning Using Orient touch defines!
 
 struct da8xx_lcdc_spi_platform_data orient_ota5180_pdata = {
@@ -653,11 +654,13 @@ static int da850_lcd_hw_init(void)
 
 #define LCDC_PRIORITY 0x70000000
 #define LCDC_PRIORITY_LEVEL 0x10000000
-
+#define CAP_TOUCH_RESET GPIO_TO_PIN(5, 3)
+#define CAP_TOUCH_IRQ   GPIO_TO_PIN(5, 0)
 static __init int mb_lcd_init(void){
 
 	int ret;
 	u32 mstpri2;
+    pr_info("Running LCD init function!\n");
 	//Configure LCD controler pins
 	ret = davinci_cfg_reg_list(da850_lcdcntl_pins);	
 	if (ret){
@@ -723,7 +726,7 @@ static __init int mb_lcd_init(void){
 //		return ret;
 	}
 
-#ifdef MB_CAP_TOUCH
+#ifdef MB_USE_CAP_TOUCH
     ret = gpio_request_one(CAP_TOUCH_RESET, GPIOF_OUT_INIT_LOW,
                            "mb_cap_touch_reset");
     gpio_set_value(CAP_TOUCH_RESET, 0);
@@ -733,15 +736,18 @@ static __init int mb_lcd_init(void){
 		pr_err("Could not request cap touch irq gpio: %d\n", ret);
         return -1;
 	}
+
     int ctirq = gpio_to_irq(CAP_TOUCH_IRQ);
 	cap_touch_i2c_info[0].irq = ctirq;
-    ts_pdata.irq=ctirq;
-    pr_info("Registering cap touch i2c with irq %d from pin %d",
+
+    pr_info("Registering cap touch i2c with irq %d from pin %d\n",
             ctirq,
             CAP_TOUCH_IRQ);
-    msleep(2);
+#ifndef MB_CAP_TOUCH_NO_IRQ
+    ts_pdata.irq=ctirq;
+#endif
     gpio_set_value(CAP_TOUCH_RESET, 1);
-
+    pr_info("Registering cap touch i2c device!\n");
     ret = i2c_register_board_info(1,
                                   cap_touch_i2c_info,
                                   ARRAY_SIZE(cap_touch_i2c_info));
@@ -756,9 +762,7 @@ static __init int mb_lcd_init(void){
 #define GPIO_ROTARY_B GPIO_TO_PIN(5,6)
 #define OPTION_BUTTON   GPIO_TO_PIN(5, 12)
 #define BACK_BUTTON     GPIO_TO_PIN(5, 0)
-#define CAP_TOUCH_IRQ   GPIO_TO_PIN(5, 0)
 #define SELECT_BUTTON   GPIO_TO_PIN(5, 3)
-#define CAP_TOUCH_RESET GPIO_TO_PIN(5, 3)
 static short button_pins[] = {
 		DA850_GPIO5_0,	//button 1
 		DA850_GPIO5_3,	//quad switch
