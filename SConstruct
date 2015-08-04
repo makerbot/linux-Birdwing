@@ -78,7 +78,8 @@ lcds = {
     "Sharp LQ043" : 2,
     "Orient OTA5180": 3,
     "ATM 0430e": 4,
-    "OSD 043T": 5
+    "OSD 043T": 5,
+    "TFC_A9430": 6
 }
 
 lcd_option=lcds['Birdwing LCD']

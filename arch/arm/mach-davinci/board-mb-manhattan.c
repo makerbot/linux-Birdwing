@@ -58,6 +58,7 @@
 #define Orient_OTA5180 3
 #define ATM_0430       4
 #define OSD_043T       5
+#define TFC_A9430      6
 
 #define MANHATTAN_PHY_ID		NULL
 
@@ -559,6 +560,57 @@ struct da8xx_lcdc_spi_platform_data sharp_lq043t1dg29_pdata = {
     .type               = "Sharp_LQ043T1DG29",
 };
 
+#elif MB_LCD == TFC_A9430
+#define MB_USE_CAP_TOUCH
+#define MB_LCD_USES_SPI
+#define MB_CAP_TOUCH_NO_IRQ
+#warning Using ThreeFive Corp A9430 LCD defines!
+
+struct da8xx_lcdc_spi_platform_data tfc_a9430rtwq35tc_pdata = {
+    .manu_name          = "tfc",
+    .controller_data    = &lcd_cfg,
+    .type               = "TFC_A9430RTWQ35TC",
+};
+
+static struct mxt_platform_data ts_pdata = {
+      .config = NULL,
+      .config_length = 0,
+      .x_line = 19,
+      .y_line = 11,
+      .x_size = 480,
+      .y_size = 240,
+      .blen = 16,
+      .threshold = 45,
+      .voltage = 0, // keep to default
+      .orient = MXT_NORMAL,
+      .irqflags = 0,
+};
+
+static struct i2c_board_info __initdata cap_touch_i2c_info[] = {
+    {
+        I2C_BOARD_INFO("atmel_mxt_ts", 0x4a),
+        .platform_data = &ts_pdata,
+    },
+};
+
+
+static void tfca9430rtwq335tf_panel_power_ctrl(int backlight, int reset) {
+    if(backlight != -1) {
+        if(backlight) {
+            gpio_set_value(LCD_BACKLIGHT, backlight);
+            pr_info("TFC LCD power panel turning backlight ON");
+        } else {
+            pr_info("TFC LCD power panel scheduling backlight OFF");
+            schedule_delayed_work(&disable_backlight_work,
+                                  msecs_to_jiffies(50));
+        }
+    }
+    if(reset != -1) {
+        pr_info("TFC LCD reset");
+        gpio_set_value(LCD_RESET, reset);
+    }
+}
+
 #else
 #warning Using default defines!
 #define MB_LCD_USES_SPI
@@ -642,6 +694,10 @@ static int da850_lcd_hw_init(void)
 #warning "MB LCD config: Using Orient_OTA5180"
     lcd_pdata = &orient_ota5180_pdata;
     lcd_pdata->panel_power_ctrl = orientota5180_panel_power_ctrl;
+#elif MB_LCD == TFC_A9430
+#warning "MB LCD config: Using ThreeFive Corp A9430RTWQ35TC-01"
+    lcd_pdata = &tfc_a9430rtwq35tc_pdata;
+    lcd_pdata->panel_power_ctrl = tfca9430rtwq335tf_panel_power_ctrl;
 #elif MB_LCD == Birdwing_LCD
 #warning "MB LCD config: Falling back to default LCD!"
     lcd_pdata = &az_hx8238_pdata;

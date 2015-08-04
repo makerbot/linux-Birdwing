@@ -234,6 +234,7 @@ struct lcdc_panel_config {
 static int ssd2119_spi_init(struct da8xx_spi_pin_data*);
 static int sharplq043_spi_init(struct da8xx_spi_pin_data*);
 static int orientota5180_spi_init(struct da8xx_spi_pin_data*);
+static int tfca9430rtwq35tc_spi_init(struct da8xx_spi_pin_data*);
 
 static struct lcdc_panel_config known_lcd_panels[] = {
 	/* Sharp LCD035Q3DG01 */
@@ -326,6 +327,24 @@ static struct lcdc_panel_config known_lcd_panels[] = {
             .flag           = 0,
         },
         .spi_init = orientota5180_spi_init,
+    },
+    [5] = {
+        .panel = {
+            /* ThreeFive Corp A9430RTWQ35TC */
+            .name           = "TFC_A9430RTWQ35TC",
+            .xres           = 480,
+            .yres           = 272,
+            .pixclock       = 9000000,
+            .left_margin    = 30,
+            .right_margin   = 30,
+            .upper_margin   = 4,
+            .lower_margin   = 4,
+            .hsync_len      = 1,
+            .vsync_len      = 1,
+            .sync           = 0,
+            .flag           = 0,
+        },
+        .spi_init = tfca9430rtwq35tc_spi_init,
     },
 };
 
@@ -484,9 +503,26 @@ static int orientota5180_spi_send_packet(struct da8xx_spi_pin_data* spi,
 }
 
 static int orientota5180_spi_init(struct da8xx_spi_pin_data* spi) {
-
+    return 0;
 }
 /* HERE ENDS THE JAIL FOR ORIENT OTA5180 */
+
+/* HERE BEGINS THE JAIL FOR TFC A9430 */
+
+static int tfca9430rtwq35tc_spi_send_packet(struct da8xx_spi_pin_data* spi,
+                                            u8 reg, u8 data) {
+    lcd_spi_set_cs(spi, 0);
+    lcd_spi_send_byte(spi, (1<<8)|reg);
+    lcd_spi_send_byte(spi, data);
+    lcd_spi_set_cs(spi, 1);
+    return 0;
+}
+
+static int tfca9430rtwq35tc_spi_init(struct da8xx_spi_pin_data* spi) {
+    return 0;
+}
+
+/* HERE ENDS THE JAIL FOR TFC A9430 */
 
 /* HERE BEGINS THE JAIL FOR SHARP LQ043 */
 
