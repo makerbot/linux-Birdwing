@@ -418,6 +418,8 @@ static int ehrpwm_pwm_probe(struct platform_device *pdev)
 	u16 status;
 	struct pinctrl *pinctrl;
 
+	dev_err(&pdev->dev, "start probing ehrpwm\n");	
+
 	pinctrl = devm_pinctrl_get_select_default(&pdev->dev);
 	if (IS_ERR(pinctrl))
 		dev_warn(&pdev->dev, "unable to select pin group\n");
@@ -429,11 +431,11 @@ static int ehrpwm_pwm_probe(struct platform_device *pdev)
 	}
 
 	clk = devm_clk_get(&pdev->dev, "fck");
-	if (IS_ERR(clk)) {
+/*	if (IS_ERR(clk)) {
 		dev_err(&pdev->dev, "failed to get clock\n");
 		return PTR_ERR(clk);
 	}
-
+*/
 	pc->clk_rate = clk_get_rate(clk);
 	if (!pc->clk_rate) {
 		dev_err(&pdev->dev, "failed to get clock rate\n");
@@ -459,11 +461,11 @@ static int ehrpwm_pwm_probe(struct platform_device *pdev)
 
 	/* Acquire tbclk for Time Base EHRPWM submodule */
 	pc->tbclk = devm_clk_get(&pdev->dev, "tbclk");
-	if (IS_ERR(pc->tbclk)) {
+/*	if (IS_ERR(pc->tbclk)) {
 		dev_err(&pdev->dev, "Failed to get tbclk\n");
 		return PTR_ERR(pc->tbclk);
 	}
-
+*/
 	ret = pwmchip_add(&pc->chip);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "pwmchip_add() failed: %d\n", ret);
@@ -472,7 +474,7 @@ static int ehrpwm_pwm_probe(struct platform_device *pdev)
 
 	pm_runtime_enable(&pdev->dev);
 	pm_runtime_get_sync(&pdev->dev);
-
+/*
 	status = pwmss_submodule_state_change(pdev->dev.parent,
 			PWMSS_EPWMCLK_EN);
 	if (!(status & PWMSS_EPWMCLK_EN_ACK)) {
@@ -480,10 +482,12 @@ static int ehrpwm_pwm_probe(struct platform_device *pdev)
 		ret = -EINVAL;
 		goto pwmss_clk_failure;
 	}
-
+*/
 	pm_runtime_put_sync(&pdev->dev);
 
 	platform_set_drvdata(pdev, pc);
+
+	dev_err(&pdev->dev, "actually probing ehrpwm\n");
 	return 0;
 
 pwmss_clk_failure:

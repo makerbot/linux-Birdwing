@@ -116,6 +116,8 @@ int __init da850_register_vpif_display
 int __init da850_register_vpif_capture
 			(struct vpif_capture_config *capture_config);
 void da8xx_restart(char mode, const char *cmd);
+int da8xx_register_ehrpwm(void);
+
 
 extern struct platform_device da8xx_serial_device;
 extern struct emac_platform_data da8xx_emac_pdata;

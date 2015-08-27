@@ -674,7 +674,7 @@ static struct platform_device leds_gpio = {
 #define BUZZER_OUT GPIO_TO_PIN(2,15)
 
 const short buzzer_pins[] = {
-	DA850_GPIO2_15,		//GPIO
+	DA850_EPWM1A,		//GPIO
 	-1
 };
 
@@ -690,18 +690,28 @@ static __init int buzzer_init(void){
 	}
 
 	pr_debug("buzzer: Output pin request\n");
-	ret = gpio_request_one(BUZZER_OUT, GPIOF_OUT_INIT_LOW, "buzzer_out");
+	//ret = gpio_request_one(BUZZER_OUT, GPIOF_OUT_INIT_LOW, "buzzer_out"); // Dont need GPIO anymore
 	if(ret){
 		pr_err("ERROR: Could not request buzzer output gpio: %d\n", ret);
 		goto exit;
 	}
+
+///////////////////
+	pr_info("Dont crash\n");
+	ret = da8xx_register_ehrpwm();
+	if(ret){
+		pr_err("ERROR: Could not request ehrpwm platform devices: %d\n", ret);
+		goto exit;
+	}
+	pr_info("PLZ dont crash\n");
+///////////////////
 
 	//platform data
 	pr_debug("buzzer: init finished\n");
 	return ret;
 
 exit:
-	gpio_free(BUZZER_OUT);
+	//gpio_free(BUZZER_OUT); // Dont need GPIO anymore
 	return ret;
 }
 
@@ -1128,7 +1138,9 @@ static __init void mb_manhattan_init(void)
 		pr_warn("da850_evm_init: led device initialization failed: %d\n", ret);
 
 	/*Buzzer*/
+	pr_warn("Going to buzzer_init\n");
 	buzzer_init();
+	pr_warn("Finish buzzer_init\n");	
 
 	/* Setup alternate events on the PRUs */
 	cfgchip3 = __raw_readl(DA8XX_SYSCFG0_VIRT(DA8XX_CFGCHIP3_REG));		//Read from one of the base registers

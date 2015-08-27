@@ -50,6 +50,9 @@
 #define DA850_SPI1_BASE			0x01f0e000
 #define DA8XX_DDR2_CTL_BASE		0xb0000000
 
+#define DA850_EHRPWM_BASE		0x01f02000 // for EHRPWM
+#define DA850_EHRPWM_END		0x01f03040 // for EHRPWM
+
 #define DA8XX_EMAC_CTRL_REG_OFFSET	0x3000
 #define DA8XX_EMAC_MOD_REG_OFFSET	0x2000
 #define DA8XX_EMAC_RAM_OFFSET		0x0000
@@ -257,6 +260,15 @@ static struct resource da850_edma_resources[] = {
 		.flags	= IORESOURCE_IRQ,
 	},
 };
+////////////////////////////////////////////////
+static struct resource da850_ehrpwm_resources[] = {
+	{
+		.name 	= "ehrpwm_register",
+		.start 	= DA850_EHRPWM_BASE,
+		.end 	= DA850_EHRPWM_BASE + 0x103f,
+		.flags 	= IORESOURCE_MEM,
+	},
+};
 
 static struct platform_device da830_edma_device = {
 	.name		= "edma",
@@ -277,7 +289,20 @@ static struct platform_device da850_edma_device = {
 	.num_resources	= ARRAY_SIZE(da850_edma_resources),
 	.resource	= da850_edma_resources,
 };
-
+/////////////////////////////////////////
+static struct platform_device da850_ehrpwm_device = {
+        .name           = "ehrpwm",
+        .id             = -1,
+        .dev = {
+                .platform_data = NULL,
+        },
+        .num_resources  = 1,
+        .resource       = da850_ehrpwm_resources,
+};
+////////////////////////////////////////
+int __init da8xx_register_ehrpwm(void) {
+	return platform_device_register(&da850_ehrpwm_device);
+}
 int __init da830_register_edma(struct edma_rsv_info *rsv)
 {
 	da830_edma_cc0_info.rsv = rsv;
@@ -294,7 +319,6 @@ int __init da850_register_edma(struct edma_rsv_info *rsv[2])
 
 	return platform_device_register(&da850_edma_device);
 }
-
 static struct resource da8xx_i2c_resources0[] = {
 	{
 		.start	= DA8XX_I2C0_BASE,
