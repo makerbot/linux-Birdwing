@@ -2,7 +2,21 @@ import sys
 import os
 import fnmatch
 
-env = Environment(ENV = os.environ)
+# No point in runnnig multiple jobs in SCons, lets pass this on to make
+NUM_JOBS = GetOption('num_jobs')
+# TODO: For some reason this does not work.  For now this file has a
+#       strictly linear dependency chain so it is not a big deal?
+SetOption('num_jobs', 1)
+
+bw_scons_path = os.environ.get('BWSCONSTOOLS_PATH')
+if bw_scons_path:
+    env = Environment(
+        ENV=os.environ,
+        tools=['birdwing_install'],
+        toolpath=[bw_scons_path]
+    )
+else:
+    env = Environment(ENV=os.environ)
 
 #TODO: Use mw_scons_tools rather than copy/pasting this
 # This is a special glob made by NicholasBishop
@@ -44,10 +58,15 @@ baseDir = os.path.abspath(os.path.join(linuxDir, os.pardir))
 subenv = os.environ.copy()
 
 # U-boot uses the angstrom toolchain
-angstrom = os.path.join(baseDir, 'Birdwing-Cross-Compile-Tools', 'angstrom', 'arm')
+if bw_scons_path:
+    toolchain_repo_path = os.path.join(baseDir, os.pardir, 'toolchain')
+else:
+    toolchain_repo_path = os.path.join(baseDir, 'Birdwing-Cross-Compile-Tools')
+angstrom = os.path.join(toolchain_repo_path, 'angstrom', 'arm')
 tool_prefix = 'arm-angstrom-linux-gnueabi'
 env.PrependENVPath('PATH', os.path.join(angstrom, 'bin'))
-env.PrependENVPath('CPATH', os.path.join(angstrom, tool_prefix, 'usr', 'include'))
+# I hope we don't actually need this, since it breaks builds on most systems
+#env.PrependENVPath('CPATH', os.path.join(angstrom, tool_prefix, 'usr', 'include'))
 env['ENV']['LIBTOOL_SYSROOT_PATH'] = os.path.join(angstrom, tool_prefix)
 env['ENV']['PKG_CONFIG_SYSROOT_DIR'] = os.path.join(angstrom, tool_prefix)
 env['ENV']['PKG_CONFIG_PATH'] = os.path.join(angstrom, tool_prefix, 'usr', 'lib', 'pkgconfig')
@@ -81,7 +100,7 @@ config_targets = [
     'scripts/kconfig/zconf.tab.o',
 ]
 
-env.Command(config_targets, config_sources, make_cmd('mb_manhattan_defconfig'))
+config = env.Command(config_targets, config_sources, make_cmd('mb_manhattan_defconfig'))
 
 gen_sources = [
     'arch/arm/boot/compressed/ashldi3.S',
@@ -104,13 +123,17 @@ gen_sources = [
 ]
 gen_sources.extend(env.MBRecursiveFileGlob('drivers/video/logo', '*.c', 'logo.c'))
 
-build_sources = []
+build_sources = [
+    config,
+]
 
 build_targets = [
     'arch/arm/boot/uImage',
 ]
 
-build = env.Command(build_targets, build_sources, make_cmd('uImage', '-j4'))
+main_args = ['uImage', 'modules', 'DO_STARTUP_BLINK=true']
+if NUM_JOBS > 1: main_args.append('-j%s' % NUM_JOBS)
+build = env.Command(build_targets, build_sources, make_cmd(*main_args))
 AlwaysBuild(build) # Let make determine what needs to be built
 
 clean_targets = [
@@ -151,3 +174,9 @@ clean_targets.extend(env.MBRecursiveFileGlob('.', '*.o'))
 clean_targets.extend(env.MBRecursiveFileGlob('.', '.*.cmd'))
 env.Clean(build, clean_targets)
 
+if bw_scons_path:
+    mod_target = env.BWPath('/lib/modules')
+    mod_args = ('INSTALL_MOD_PATH=' + env.BWPath('/'), 'modules_install')
+    mod_cmd = env.Command(mod_target, build, make_cmd(*mod_args))
+    env.AlwaysBuild(mod_cmd)
+    env.Alias('install', mod_cmd)
