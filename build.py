@@ -25,7 +25,12 @@ cross_compile = os.path.abspath(os.path.join(
     'arm-eabi-'
 ))
 
-def build(num_cores=4):
+def run_make_cmd(action, num_cores):
+    """
+    run make with the given action. action should be a list of arguments,
+    as you would send to subprocess, that will be appended to the make
+    invocation. this function handles setting the cross-compilation options.
+    """
     obj_dir = os.path.join(this_dir, 'obj')
     if not os.path.exists(obj_dir):
         os.makedirs(obj_dir)
@@ -37,10 +42,24 @@ def build(num_cores=4):
         'ARCH=arm',
         'CROSS_COMPILE=' + cross_compile,
     ]
-    run_cmd(make_prefix + [config])
-    run_cmd(make_prefix + [dt])
-    run_cmd(make_prefix + ['zImage'])
-    run_cmd(make_prefix + ['modules'])
+    run_cmd(make_prefix + action)
+
+def build(num_cores=4):
+    run_make_cmd([config], num_cores)
+    run_make_cmd([dt], num_cores)
+    run_make_cmd(['zImage'], num_cores)
+    run_make_cmd(['modules'], num_cores)
+
+def install(path):
+    path = os.path.join(path, 'kernel')
+    if not os.path.exists(path):
+        os.makedirs(path)
+    run_make_cmd(['modules_install', 'INSTALL_MOD_PATH='+path], 1)
+    image_path = os.path.join(this_dir, 'obj', 'arch', 'arm', 'boot')
+    shutil.copy2(os.path.join(image_path, 'zImage'),
+                 path)
+    shutil.copy2(os.path.join(image_path, 'dts', 'mb-stardust-reva.dtb'),
+                 path)
 
 def clean():
     print("Removing obj/")
@@ -59,7 +78,7 @@ if 'TR_BUILD' in os.environ:
 
     # TODO: figure out something for install
     if TR_ARG_install:
-        pass
+        install(os.environ['TR_ARG_install_dir'])
 
 else:
     build()
