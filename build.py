@@ -51,15 +51,16 @@ def build(num_cores=4):
     run_make_cmd(['modules'], num_cores)
 
 def install(path):
-    path = os.path.join(path, 'kernel')
-    if not os.path.exists(path):
-        os.makedirs(path)
-    run_make_cmd(['modules_install', 'INSTALL_MOD_PATH='+path], 1)
+    install_path = os.path.join(path, 'kernel')
+    install_boot = os.path.join(install_path, 'boot')
+    if not os.path.exists(install_boot):
+        os.makedirs(install_boot)
+    run_make_cmd(['modules_install', 'INSTALL_MOD_PATH='+install_path], 1)
     image_path = os.path.join(this_dir, 'obj', 'arch', 'arm', 'boot')
     shutil.copy2(os.path.join(image_path, 'zImage'),
-                 path)
+                 install_boot)
     shutil.copy2(os.path.join(image_path, 'dts', 'mb-stardust-reva.dtb'),
-                 path)
+                 install_boot)
 
 def clean():
     print("Removing obj/")
