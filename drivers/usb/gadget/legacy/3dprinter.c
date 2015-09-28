@@ -98,7 +98,7 @@ static struct printer_dev usb_printer_gadget;
 #define PRINTER3D_VENDOR_NUM	0x23c1		/* Makerbot */
 
 /* This is a placeholder ID that MUST be overwritten with a module parameter */
-#define PRINTER3D_PRODUCT_NUM	0x0005
+#define PRINTER3D_PRODUCT_NUM	0xffff
 
 static char *iPNPstring;
 module_param(iPNPstring, charp, S_IRUGO);
