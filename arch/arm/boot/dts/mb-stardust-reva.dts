@@ -46,6 +46,7 @@
 		pinctrl-single,pins = <
 			0x020 (PIN_INPUT_PULLUP | MUX_MODE2)	/* gpmc_ad8.mmc1_dat0 */
 			0x024 (PIN_INPUT_PULLUP | MUX_MODE2)	/* gpmc_ad9.mmc1_dat1 */
+
 			0x028 (PIN_INPUT_PULLUP | MUX_MODE2)	/* gpmc_ad10.mmc1_dat2 */
 			0x02C (PIN_INPUT_PULLUP | MUX_MODE2)	/* gpmc_ad11.mmc1_dat3 */
 			0x030 (PIN_INPUT_PULLUP | MUX_MODE2)	/* gpmc_ad12.mmc1_dat4 */

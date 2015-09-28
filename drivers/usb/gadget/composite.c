@@ -636,7 +636,7 @@ static int set_config(struct usb_composite_dev *cdev,
 	int			result = -EINVAL;
 	unsigned		power = gadget_is_otg(gadget) ? 8 : 100;
 	int			tmp;
-
+    INFO(cdev, "composite set config");
 	if (number) {
 		list_for_each_entry(c, &cdev->configs, list) {
 			if (c->bConfigurationValue == number) {
@@ -881,7 +881,7 @@ void usb_remove_config(struct usb_composite_dev *cdev,
 		      struct usb_configuration *config)
 {
 	unsigned long flags;
-
+    INFO(cdev, "composite remove config");
 	spin_lock_irqsave(&cdev->lock, flags);
 
 	if (cdev->config == config)
@@ -1745,7 +1745,7 @@ unknown:
 			return value;
 		}
 
-		VDBG(cdev,
+		INFO(cdev,
 			"non-core control req%02x.%02x v%04x i%04x l%d\n",
 			ctrl->bRequestType, ctrl->bRequest,
 			w_value, w_index, w_length);
@@ -1840,6 +1840,7 @@ void composite_disconnect(struct usb_gadget *gadget)
 	/* REVISIT:  should we have config and device level
 	 * disconnect callbacks?
 	 */
+    INFO(cdev, "composite disconnect\n");
 	spin_lock_irqsave(&cdev->lock, flags);
 	if (cdev->config)
 		reset_config(cdev);
@@ -2086,15 +2087,15 @@ void composite_suspend(struct usb_gadget *gadget)
 	/* REVISIT:  should we have config level
 	 * suspend/resume callbacks?
 	 */
-	DBG(cdev, "suspend\n");
-	if (cdev->config) {
-		list_for_each_entry(f, &cdev->config->functions, list) {
-			if (f->suspend)
-				f->suspend(f);
-		}
-	}
-	if (cdev->driver->suspend)
-		cdev->driver->suspend(cdev);
+	DBG(cdev, "composite suspend [noop]\n");
+	/* if (cdev->config) { */
+	/* 	list_for_each_entry(f, &cdev->config->functions, list) { */
+	/* 		if (f->suspend) */
+	/* 			f->suspend(f); */
+	/* 	} */
+	/* } */
+	/* if (cdev->driver->suspend) */
+	/* 	cdev->driver->suspend(cdev); */
 
 	cdev->suspended = 1;
 
@@ -2110,7 +2111,7 @@ void composite_resume(struct usb_gadget *gadget)
 	/* REVISIT:  should we have config level
 	 * suspend/resume callbacks?
 	 */
-	DBG(cdev, "resume\n");
+	DBG(cdev, "composite resume\n");
 	if (cdev->driver->resume)
 		cdev->driver->resume(cdev);
 	if (cdev->config) {
