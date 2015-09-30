@@ -42,6 +42,7 @@ def run_make_cmd(action, num_cores):
         'ARCH=arm',
         'CROSS_COMPILE=' + cross_compile,
     ]
+    print('morepork-linux: '+' '.join(make_prefix+action))
     run_cmd(make_prefix + action)
 
 def build(num_cores=4):
@@ -63,8 +64,8 @@ def install(path):
                  install_boot)
 
 def clean():
-    print("Removing obj/")
-    shutil.rmtree(os.path.join(this_dir, 'obj'))
+    print("make mrproper")
+    run_make_cmd(['mrproper', 'clean'], 1)
 
 if 'TR_BUILD' in os.environ:
     # Convert boolean args back to booleans
