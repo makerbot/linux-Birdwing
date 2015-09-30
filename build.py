@@ -51,7 +51,7 @@ def build(num_cores=4):
     run_make_cmd(['modules'], num_cores)
 
 def install(path):
-    install_path = os.path.join(path, 'kernel')
+    install_path = os.path.join(path, 'rootfs')
     install_boot = os.path.join(install_path, 'boot')
     if not os.path.exists(install_boot):
         os.makedirs(install_boot)
