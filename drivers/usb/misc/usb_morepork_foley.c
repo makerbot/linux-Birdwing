@@ -968,9 +968,9 @@ static int foley_probe(struct usb_interface *interface,
 			"Device doesn't have 2 altsettings (has %d)",
 			interface->num_altsetting);
 		return -ENODEV;
-	} else if (interface->altsetting[FOLEY_ALTSETTING].desc.bNumEndpoints != 2) {
+	} else if (interface->altsetting[FOLEY_ALTSETTING].desc.bNumEndpoints != 4) {
 		dev_err(&interface->dev,
-			"Device's altsetting 1 doesn't have 2 endpoints (has %d)",
+			"Device's altsetting 1 doesn't have 4 endpoints (has %d)",
 			interface->altsetting[FOLEY_ALTSETTING].desc.bNumEndpoints);
 		return -ENODEV;
 	}
