@@ -102,30 +102,41 @@
 		>;
 	};
 
-    pruss_pins: pruss_pins {
-        pinctrl-single,pins = <
-			0x190 (PIN_INPUT_PULLDOWN | MUX_MODE5)	/* mcasp0_aclkx (pru gpo0)*/
-			0x194 (PIN_INPUT_PULLDOWN | MUX_MODE5)	/* mcasp0_fsx (pro gpo1)*/
-			0x198 (PIN_INPUT_PULLDOWN | MUX_MODE5)	/* mcasp0_axr0 (pru gpo2)*/
-			0x19C (PIN_INPUT_PULLDOWN | MUX_MODE5)	/* mcasp0_ahclkr (pru gpo3)*/
-			0x1A0 (PIN_INPUT_PULLDOWN | MUX_MODE5)	/* mcasp0_aclkr (pru gpo4)*/
-			0x1A4 (PIN_INPUT_PULLDOWN | MUX_MODE5)	/* mcasp0_fsr (pru gpo5)*/
-			0x1A8 (PIN_INPUT_PULLDOWN | MUX_MODE5)	/* mcasp0_axr1 (pru gpo6)*/
-			0x1AC (PIN_INPUT_PULLDOWN | MUX_MODE5)	/* mcasp0_ahclkx (pru gpo7)*/
-			0x0F0 (PIN_INPUT_PULLDOWN | MUX_MODE5)	/* mmc0_dat3 (pru gpo8)*/
-			0x0F4 (PIN_INPUT_PULLDOWN | MUX_MODE5)	/* mmc0_dat2 (pru gpo9)*/
-			0x0F8 (PIN_INPUT_PULLDOWN | MUX_MODE5)	/* mmc0_dat1 (pru gpo10)*/
-			0x0FC (PIN_INPUT_PULLDOWN | MUX_MODE5)	/* mmc0_dat0 (pru gpo11)*/
-			0x100 (PIN_INPUT_PULLDOWN | MUX_MODE5)	/* mmc0_clk (pru gpo12)*/
-			0x104 (PIN_INPUT_PULLDOWN | MUX_MODE5)	/* mmc0_cmd (pru gpo13)*/
-		    0x1C0 (PIN_INPUT_PULLDOWN | MUX_MODE3)	/* cam0_pclk (pru gpo14)*/
-			0x1C4 (PIN_INPUT_PULLDOWN | MUX_MODE3)	/* cam0_data8 (pru gpo15)*/
-			0x1C8 (PIN_INPUT_PULLDOWN | MUX_MODE3)	/* cam0_data9 (pru gpo16)*/
-			0x1CC (PIN_INPUT_PULLDOWN | MUX_MODE3)	/* cam1_data9 (pru gpo17)*/
-			0x228 (PIN_INPUT_PULLDOWN | MUX_MODE4)	/* uart3_rxd (pru gpo18)*/
-			0x22C (PIN_INPUT_PULLDOWN | MUX_MODE4)	/* uart3_txd (pru gpo19)*/
-        >;
-    };
+	pruss_pins: pruss_pins {
+		pinctrl-single,pins = <
+			0x19C (PIN_OUTPUT | MUX_MODE5)	/* mcasp0_ahclkr (pru gpo3)*/
+			0x1A0 (PIN_OUTPUT | MUX_MODE5)	/* mcasp0_aclkr (pru gpo4)*/
+			0x1A4 (PIN_OUTPUT | MUX_MODE5)	/* mcasp0_fsr (pru gpo5)*/
+			0x1A8 (PIN_OUTPUT | MUX_MODE5)	/* mcasp0_axr1 (pru gpo6)*/
+			0x0F0 (PIN_OUTPUT | MUX_MODE5)	/* mmc0_dat3 (pru gpo8)*/
+			0x0F4 (PIN_OUTPUT | MUX_MODE5)	/* mmc0_dat2 (pru gpo9)*/
+			0x0F8 (PIN_OUTPUT | MUX_MODE5)	/* mmc0_dat1 (pru gpo10)*/
+			0x0FC (PIN_OUTPUT | MUX_MODE5)	/* mmc0_dat0 (pru gpo11)*/
+			0x100 (PIN_OUTPUT | MUX_MODE5)	/* mmc0_clk (pru gpo12)*/
+			0x104 (PIN_OUTPUT | MUX_MODE5)	/* mmc0_cmd (pru gpo13)*/
+			0x1C0 (PIN_OUTPUT | MUX_MODE3)	/* cam0_pclk (pru gpo14)*/
+			0x1C4 (PIN_OUTPUT | MUX_MODE3)	/* cam0_data8 (pru gpo15)*/
+			0x1C8 (PIN_OUTPUT | MUX_MODE3)	/* cam0_data9 (pru gpo16)*/
+			0x1CC (PIN_OUTPUT | MUX_MODE3)	/* cam1_data9 (pru gpo17)*/
+			0x228 (PIN_OUTPUT | MUX_MODE4)	/* uart3_rxd (pru gpo18)*/
+			0x22C (PIN_OUTPUT | MUX_MODE4)	/* uart3_txd (pru gpo19)*/
+			// pr0_pru1 pins begin here
+			0x1D0 (PIN_OUTPUT | MUX_MODE4)	/* cam1_data8 (pru1 gpo0)*/
+			0x1D4 (PIN_OUTPUT | MUX_MODE3)	/* cam1_hd (pru1 gpo1)*/
+			0x1D8 (PIN_OUTPUT | MUX_MODE3)	/* cam1_vd (pru1 gpo2)*/
+			0x1DC (PIN_OUTPUT | MUX_MODE3)	/* cam1_pclk (pru1 gpo3)*/
+			0x1F0 (PIN_OUTPUT | MUX_MODE4)	/* cam1_data2 (pru1 gpo10)*/
+			0x1F4 (PIN_OUTPUT | MUX_MODE4)	/* cam1_data3 (pru1 gpo11)*/
+			0x1F8 (PIN_OUTPUT | MUX_MODE4)	/* cam1_data4 (pru1 gpo12)*/
+			0x1FC (PIN_OUTPUT | MUX_MODE4)	/* cam1_data5 (pru1 gpo13)*/
+			0x200 (PIN_OUTPUT | MUX_MODE4)	/* cam1_data6 (pru1 gpo14)*/
+			0x204 (PIN_OUTPUT | MUX_MODE4)	/* cam1_data7 (pru1 gpo15)*/
+			0x208 (PIN_OUTPUT | MUX_MODE4)	/* cam0_data0 (pru1 gpo16)*/
+			0x20C (PIN_OUTPUT | MUX_MODE4)	/* cam0_data1 (pru1 gpo17)*/
+			0x230 (PIN_OUTPUT | MUX_MODE4)	/* uart3_ctsn (pru1 gpo18)*/
+			0x234 (PIN_OUTPUT | MUX_MODE4)	/* uart3_rtsn (pru1 gpo19)*/
+		>;
+	};
 
 	unused_pins: unused_pins {
 		pinctrl-single,pins = <
@@ -207,30 +218,20 @@
 			0x17C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* uart1_rtsn */
 			0x180 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* uart1_rxd */
 			0x184 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* uart1_txd */
+			0x190 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* mcasp0_aclkx */
+			0x194 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* mcasp0_fsx */
+			0x198 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* mcasp0_axr0 */
+			0x1AC (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* mcasp0_ahcplkx */
 			0x1B0 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_hd */
 			0x1B4 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_vd */
-			0x1D0 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam1_data8 */
-			0x1D4 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam1_hd */
-			0x1D8 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam1_vd */
-			0x1DC (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam1_pclk */
 			0x1E8 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam1_data0 */
 			0x1EC (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam1_data1 */
-			0x1F0 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam1_data2 */
-			0x1F4 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam1_data3 */
-			0x1F8 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam1_data4 */
-			0x1FC (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam1_data5 */
-			0x200 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam1_data6 */
-			0x204 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam1_data7 */
-			0x208 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_data0 */
-			0x20C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_data1 */
 			0x210 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_data2 */
 			0x214 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_data3 */
 			0x218 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_data4 */
 			0x21C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_data5 */
 			0x220 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_data6 */
 			0x224 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_data7 */
-			0x230 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* uart3_ctsn */
-			0x234 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* uart3_rtsn */
 			0x238 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpio5_8 */
 			0x23C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpio5_9 */
 			0x240 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpio5_10 */
@@ -370,7 +371,7 @@
 	ext-clk-src;
 };
 
-&pruss {
+&pruss0 {
     pinctrl-names = "default";
     pinctrl-0 = <&pruss_pins>;
 };
