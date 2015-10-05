@@ -86,6 +86,8 @@ extern struct omap_hwmod am33xx_l4_ls_hwmod;
 extern struct omap_hwmod am33xx_l4_wkup_hwmod;
 extern struct omap_hwmod am33xx_mpu_hwmod;
 extern struct omap_hwmod am33xx_pruss_hwmod;
+extern struct omap_hwmod am4372_pruss0_hwmod;
+extern struct omap_hwmod am4372_pruss1_hwmod;
 extern struct omap_hwmod am33xx_gfx_hwmod;
 extern struct omap_hwmod am33xx_prcm_hwmod;
 extern struct omap_hwmod am33xx_aes0_hwmod;

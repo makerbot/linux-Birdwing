@@ -851,6 +851,16 @@ static int pru_rproc_probe(struct platform_device *pdev)
 	for (i = 0; i < ARRAY_SIZE(mem_names); i++) {
 		res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
 						   mem_names[i]);
+        if (!res || IS_ERR(res)) {
+            // We need to ignore this error for now because PRUSS0 doesn't have
+            // a shared memory, and despite the insistence of the dt-bindings
+            // docs that the pruss doesn't NEED all its memory fields, we look
+            // for it anyway. We should probably figure out a better way to do
+            // this.
+            dev_err(dev, "pru core probe: failed to get resource %s: %d\n",
+                    mem_names[i], PTR_ERR(res));
+            continue;
+        }
 		pru->mem_va[i] = devm_ioremap_resource(dev, res);
 		pru->mem_pa[i] = res->start;
 		pru->mem_size[i] = resource_size(res);
@@ -1091,7 +1101,10 @@ static int pruss_probe(struct platform_device *pdev)
 
 	if (data->has_reset) {
 		err = pdata->deassert_reset(pdev, pdata->reset_name);
-		if (err) {
+        // if the (de)assert_reset functions come back with EEXIST that
+        // just means the module was already (in|out) of reset, which we
+        // can ignore probably
+		if (err && err != -EEXIST) {
 			dev_err(dev, "deassert_reset failed: %d\n", err);
 			goto err_fail;
 		}
@@ -1168,7 +1181,23 @@ static struct pru_private_data am335x_pru1_rproc_pdata = {
 /* AM437x PRUSS1 PRU core-specific private data */
 static struct pru_private_data am437x_pru1_0_rproc_pdata = {
 	.id = 0,
-	.fw_name = "am437x-pru1_0-fw",
+	.fw_name = "rproc-pr1-pru0-fw",
+};
+
+static struct pru_private_data am437x_pru1_1_rproc_pdata = {
+	.id = 1,
+	.fw_name = "rproc-pr1-pru1-fw",
+};
+
+static struct pru_private_data am437x_pru0_0_rproc_pdata = {
+	.id = 2,
+	.fw_name = "rproc-pr0-pru0-fw",
+};
+
+
+static struct pru_private_data am437x_pru0_1_rproc_pdata = {
+	.id = 3,
+	.fw_name = "rproc-pr0-pru1-fw",
 };
 
 static struct pru_private_data am437x_pru1_1_rproc_pdata = {
@@ -1185,6 +1214,21 @@ static struct pru_private_data am57xx_pru1_0_rproc_pdata = {
 static struct pru_private_data am57xx_pru1_1_rproc_pdata = {
 	.id = 1,
 	.fw_name = "am57xx-pru1_1-fw",
+};
+
+/* platform data to be added when creating the PRU platform devices */
+static struct of_dev_auxdata am335x_pru_rproc_auxdata_lookup[] = {
+	OF_DEV_AUXDATA("ti,pru-rproc", 0x4a334000, "4a334000.pru0", NULL),
+	OF_DEV_AUXDATA("ti,pru-rproc", 0x4a338000, "4a338000.pru1", NULL),
+	{ /* sentinel */ },
+};
+
+static struct of_dev_auxdata am4372_pru_rproc_auxdata_lookup[] = {
+	OF_DEV_AUXDATA("ti,pru-rproc", 0x54434000, "54434000.pru1_0", NULL),
+	OF_DEV_AUXDATA("ti,pru-rproc", 0x54438000, "54438000.pru1_1", NULL),
+    OF_DEV_AUXDATA("ti,pru-rproc", 0x54474000, "54474000.pru0_0", NULL),
+	OF_DEV_AUXDATA("ti,pru-rproc", 0x54478000, "54478000.pru0_1", NULL),
+	{ /* sentinel */ },
 };
 
 /* AM57xx PRUSS2 PRU core-specific private data */
@@ -1215,14 +1259,22 @@ static struct pru_match_private_data am335x_pru_match_data[] = {
 
 /* AM43xx SoC-specific PRU Device data */
 static struct pru_match_private_data am437x_pru_match_data[] = {
-	{
-		.device_name	= "54434000.pru0",
-		.priv_data	= &am437x_pru1_0_rproc_pdata,
-	},
-	{
-		.device_name	= "54438000.pru1",
-		.priv_data	= &am437x_pru1_1_rproc_pdata,
-	},
+        {
+        .device_name = "54434000.pru1_0",
+        .priv_data = &am437x_pr1_pru0_rproc_pdata,
+    },
+    {
+        .device_name = "54438000.pru1_1",
+        .priv_data = &am437x_pr1_pru1_rproc_pdata,
+    },
+    {
+        .device_name = "54474000.pru0_0",
+        .priv_data = &am437x_pr0_pru0_rproc_pdata,
+    },
+    {
+        .device_name = "54478000.pru0_1",
+        .priv_data = &am437x_pr0_pru0_rproc_pdata,
+    },
 	{
 		/* sentinel */
 	},
