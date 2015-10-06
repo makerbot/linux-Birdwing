@@ -2,7 +2,7 @@
 #define USB_MOREPORK_FOLEY_H
 
 #define USB_FOLEY_VENDOR_ID	0x23C1
-#define USB_FOLEY_PRODUCT_ID 0xBEEF
+#define USB_FOLEY_PRODUCT_ID	0x0100
 
 // Table of VID PIDs that this driver supports
 static const struct usb_device_id foley_table[] = {
