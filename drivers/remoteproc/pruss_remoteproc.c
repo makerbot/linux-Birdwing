@@ -1086,10 +1086,15 @@ static int pruss_probe(struct platform_device *pdev)
 	for (i = 0; i < ARRAY_SIZE(mem_names); i++) {
 		res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
 						   mem_names[i]);
+        if(IS_ERR_OR_NULL(res)) {
+            dev_err(dev, "null or error resource: %s: %d: skipping\n",
+                    mem_names[i], PTR_ERR(res));
+            continue;
+        }
 		pruss->mem_va[i] = devm_ioremap_resource(dev, res);
 		pruss->mem_pa[i] = res->start;
 		pruss->mem_size[i] = resource_size(res);
-		if (IS_ERR(pruss->mem_va[i])) {
+		if (IS_ERR_OR_NULL(pruss->mem_va[i])) {
 			dev_err(dev, "failed to parse and map memory resource %d %s\n",
 				i, mem_names[i]);
 			return PTR_ERR(pruss->mem_va[i]);
