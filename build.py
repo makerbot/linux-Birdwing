@@ -65,7 +65,7 @@ def install(path):
 
 def clean():
     print("make mrproper")
-    run_make_cmd(['mrproper', 'clean'], 1)
+    run_make_cmd(['mrproper'], 1)
 
 if 'TR_BUILD' in os.environ:
     # Convert boolean args back to booleans

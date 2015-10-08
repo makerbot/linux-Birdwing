@@ -220,7 +220,7 @@ static int rpmsg_pru_probe(struct rpmsg_channel *rpdev)
 	int ret;
 	struct rpmsg_pru_dev *prudev;
 	int minor_got;
-
+    dev_err(&rpdev->dev, "\n--------pru rpmsg probe--------------------\n\n");
 	prudev = devm_kzalloc(&rpdev->dev, sizeof(*prudev), GFP_KERNEL);
 	if (!prudev) {
 		dev_err(&rpdev->dev, "Unable to allocate kernel memory for the rpmsg_pru device\n");
@@ -302,7 +302,7 @@ static void rpmsg_pru_remove(struct rpmsg_channel *rpdev)
 /* .name matches on RPMsg Channels and causes a probe */
 static const struct rpmsg_device_id rpmsg_driver_pru_id_table[] = {
 	{ .name	= "rpmsg-pru" },
-	{ },
+    { }
 };
 MODULE_DEVICE_TABLE(rpmsg, rpmsg_driver_pru_id_table);
 
@@ -318,7 +318,7 @@ static struct rpmsg_driver rpmsg_pru_driver = {
 static int __init rpmsg_pru_init(void)
 {
 	int ret;
-
+    pr_err("\n-------RPMSG PRU DRIVER INIT-----------\n\n");
 	rpmsg_pru_class = class_create(THIS_MODULE, "rpmsg_pru");
 	if (IS_ERR(rpmsg_pru_class)) {
 		pr_err("Unable to create class\n");
