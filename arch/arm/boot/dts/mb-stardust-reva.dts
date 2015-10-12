@@ -135,6 +135,60 @@
 			0x20C (PIN_OUTPUT | MUX_MODE4)	/* cam0_data1 (pru1 gpo17)*/
 			0x230 (PIN_OUTPUT | MUX_MODE4)	/* uart3_ctsn (pru1 gpo18)*/
 			0x234 (PIN_OUTPUT | MUX_MODE4)	/* uart3_rtsn (pru1 gpo19)*/
+        >;
+    };
+
+	dss_pins_default: dss_pins_default {
+		pinctrl-single,pins = <
+			0x140 (PIN_OUTPUT_PULLDOWN | MUX_MODE7)	/* mii1_rxd0.gpio2_21 (reset) */
+			0x264 (PIN_OUTPUT_PULLDOWN | MUX_MODE7)	/* spi2_d0.gpio3_22 (bklight) */
+			0x0A0 (PIN_OUTPUT_PULLUP | MUX_MODE0)	/* lcd_data0.lcd_data0 */
+			0x0A4 (PIN_OUTPUT_PULLUP | MUX_MODE0)	/* lcd_data1.lcd_data1 */
+			0x0A8 (PIN_OUTPUT_PULLUP | MUX_MODE0)	/* lcd_data2.lcd_data2 */
+			0x0AC (PIN_OUTPUT_PULLUP | MUX_MODE0)	/* lcd_data3.lcd_data3 */
+			0x0B0 (PIN_OUTPUT_PULLUP | MUX_MODE0)	/* lcd_data4.lcd_data4 */
+			0x0B4 (PIN_OUTPUT_PULLUP | MUX_MODE0)	/* lcd_data5.lcd_data5 */
+			0x0B8 (PIN_OUTPUT_PULLUP | MUX_MODE0)	/* lcd_data6.lcd_data6 */
+			0x0BC (PIN_OUTPUT_PULLUP | MUX_MODE0)	/* lcd_data7.lcd_data7 */
+			0x0C0 (PIN_OUTPUT_PULLUP | MUX_MODE0)	/* lcd_data8.lcd_data8 */
+			0x0C4 (PIN_OUTPUT_PULLUP | MUX_MODE0)	/* lcd_data9.lcd_data9 */
+			0x0C8 (PIN_OUTPUT_PULLUP | MUX_MODE0)	/* lcd_data10.lcd_data10 */
+			0x0CC (PIN_OUTPUT_PULLUP | MUX_MODE0)	/* lcd_data11.lcd_data11 */
+			0x0D0 (PIN_OUTPUT_PULLUP | MUX_MODE0)	/* lcd_data12.lcd_data12 */
+			0x0D4 (PIN_OUTPUT_PULLUP | MUX_MODE0)	/* lcd_data13.lcd_data13 */
+			0x0D8 (PIN_OUTPUT_PULLUP | MUX_MODE0)	/* lcd_data14.lcd_data14 */
+			0x0DC (PIN_OUTPUT_PULLUP | MUX_MODE0)	/* lcd_data15.lcd_data15 */
+			0x0E0 (PIN_OUTPUT_PULLUP | MUX_MODE0)	/* lcd_vsync.lcd_vsync */
+			0x0E4 (PIN_OUTPUT_PULLUP | MUX_MODE0)	/* lcd_hsync.lcd_hsync */
+			0x0E8 (PIN_OUTPUT_PULLUP | MUX_MODE0)	/* lcd_pclk.lcd_pclk */
+			0x0EC (PIN_OUTPUT_PULLUP | MUX_MODE0)	/* lcd_ac_bias_en.lcd_ac_bias_en */
+		>;
+	};
+
+	dss_pins_sleep: dss_pins_sleep {
+		pinctrl-single,pins = <
+			0x140 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* mii1_rxd0 */
+			0x264 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* spi2_d0 */
+			0x0A0 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data0 */
+			0x0A4 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data1 */
+			0x0A8 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data2 */
+			0x0AC (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data3 */
+			0x0B0 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data4 */
+			0x0B4 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data5 */
+			0x0B8 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data6 */
+			0x0BC (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data7 */
+			0x0C0 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data8 */
+			0x0C4 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data9 */
+			0x0C8 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data10 */
+			0x0CC (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data11 */
+			0x0D0 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data12 */
+			0x0D4 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data13 */
+			0x0D8 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data14 */
+			0x0DC (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data15 */
+			0x0E0 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_vsync */
+			0x0E4 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_hsync */
+			0x0E8 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_pclk */
+			0x0EC (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_ac_bias_en */
 		>;
 	};
 
@@ -170,26 +224,6 @@
 			0x094 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_oen_ren */
 			0x098 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_wen */
 			0x09C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_be0n_cle */
-			0x0A0 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data0 */
-			0x0A4 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data1 */
-			0x0A8 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data2 */
-			0x0AC (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data3 */
-			0x0B0 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data4 */
-			0x0B4 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data5 */
-			0x0B8 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data6 */
-			0x0BC (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data7 */
-			0x0C0 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data8 */
-			0x0C4 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data9 */
-			0x0C8 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data10 */
-			0x0CC (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data11 */
-			0x0D0 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data12 */
-			0x0D4 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data13 */
-			0x0D8 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data14 */
-			0x0DC (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data15 */
-			0x0E0 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_vsync */
-			0x0E4 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_hsync */
-			0x0E8 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_pclk */
-			0x0EC (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_ac_bias_en */
 			0x108 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* mii1_col */
 			0x10C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* mii1_crs */
 			0x110 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* mii1_rxerr */
@@ -204,7 +238,6 @@
 			0x134 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* mii1_rxd3 */
 			0x138 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* mii1_rxd2 */
 			0x13C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* mii1_rxd1 */
-			0x140 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* mii1_rxd0 */
 			0x144 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* rmii1_refclk */
 			0x148 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* mdio_data */
 			0x14C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* mdio_clk */
@@ -243,7 +276,6 @@
 			0x258 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* spi4_d1 */
 			0x25C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* spi4_cs0 */
 			0x260 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* spi2_sclk */
-			0x264 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* spi2_d0 */
 			0x268 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* spi2_d1 */
 			0x26C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* spi2_cs0 */
 			0x270 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* xdma_evt_intr0 */
@@ -374,4 +406,49 @@
 &pruss0 {
     pinctrl-names = "default";
     pinctrl-0 = <&pruss_pins>;
+};
+
+&dss {
+	status = "okay";
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&dss_pins_default>;
+	pinctrl-1 = <&dss_pins_sleep>;
+
+	port {
+		dpi_out: endpoint@0 {
+			remote-endpoint = <&lcd_in>;
+			data-lines = <16>;
+		};
+	};
+
+	lcd0: display@0 {
+		compatible = "omapdss,panel-dpi", "panel-dpi";
+		label = "lcd";
+		enable-gpios = <&gpio2 21 GPIO_ACTIVE_HIGH>;
+
+		port {
+			lcd_in: endpoint {
+				/* I don't know what to point this to */
+				remote-endpoint = <&dpi_out>;
+			};
+		};
+
+		/* Mostly from the panel-dpi example */
+		panel-timing {
+			clock-frequency = <10000000>;
+			hactive = <480>;
+			vactive = <272>;
+			hfront-porch = <20>;
+			hback-porch = <4>;
+			hsync-len = <8>;
+			vback-porch = <2>;
+			vfront-porch = <2>;
+			vsync-len = <2>;
+
+			hsync-active = <0>;
+			vsync-active = <0>;
+			de-active = <1>;
+			pixelclk-active = <0>;
+		};
+	};
 };
