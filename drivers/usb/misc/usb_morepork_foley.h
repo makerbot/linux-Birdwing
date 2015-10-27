@@ -26,7 +26,8 @@ static const struct usb_device_id foley_table[] = {
 #define FOLEY_INTERFACE 0
 #define FOLEY_ALTSETTING 1
 
-#define FOLEY_MAX_ISOC_FRAMES 10
+//Max frames allowed per Isoc IN transaction, Isoc OUT max frames are determined at probe
+#define FOLEY_MAX_ISOC_IN_FRAMES 10
 
 /* Structure to hold all of our device specific stuff */
 struct usbfoley {
@@ -45,21 +46,21 @@ struct usbfoley {
 	__u8 bulk_out_endpointAddr;	/* the address of the bulk out endpoint */
 
 	//ISOC
-	struct urb *isoc_in_urb;	/* the urb to read isoc data with */
-	unsigned char *isoc_in_buffer;	/* the buffer to receive isoc data */
 	size_t isoc_in_ep_size;	/* the size of the endpoint buffer */
 	size_t isoc_in_buf_size;	//Size of the read buffer (ep_size * ISOC_MAX_FRAMES)
 	size_t isoc_in_filled;	/* number of bytes in the buffer */
 	size_t isoc_in_copied;	/* already copied to user space */
 	__u8 isoc_in_endpointAddr;	/* the address of the isoc in endpoint */
 	int isoc_in_interval;
+	int isoc_in_max_frames;
 	struct usb_anchor isoc_in_anchor;
+
 	size_t isoc_out_ep_size;
 	__u8 isoc_out_endpointAddr;	/* the address of the isoc out endpoint */
 	int isoc_out_interval;
+	int isoc_out_max_frames;
 	struct usb_anchor isoc_out_anchor;
-	bool isoc_in_running;
-	bool isoc_selected;	/* should be use isoc or bulk? */
+	bool isoc_selected;	/* should we use isoc or bulk? */
 
 	int current_interface;
 	int current_altsetting;
