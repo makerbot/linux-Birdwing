@@ -767,7 +767,7 @@ static ssize_t foley_bulk_write(struct file *file, const char *user_buffer,
 	usb_fill_bulk_urb(urb, dev->udev,
 			  usb_sndbulkpipe(dev->udev, dev->bulk_out_endpointAddr),
 			  buf, writesize, foley_write_bulk_callback, dev);
-	urb->transfer_flags |= URB_NO_TRANSFER_DMA_MAP;
+	//See todo comment above urb->transfer_flags |= URB_NO_TRANSFER_DMA_MAP;
 	usb_anchor_urb(urb, &dev->submitted);
 
 	/* send the data out the bulk port */
@@ -793,7 +793,10 @@ static ssize_t foley_bulk_write(struct file *file, const char *user_buffer,
 	usb_unanchor_urb(urb);
  error:
 	if (urb) {
-		usb_free_coherent(dev->udev, writesize, buf, urb->transfer_dma);
+		if (buf) {
+			kfree(buf);
+		}
+		//See todo comment above usb_free_coherent(dev->udev, writesize, buf, urb->transfer_dma);
 		usb_free_urb(urb);
 	}
 	up(&dev->limit_sem);
