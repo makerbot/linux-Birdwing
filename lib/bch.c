@@ -74,6 +74,13 @@
 #include <asm/byteorder.h>
 #include <linux/bch.h>
 
+/* HACK: Every time I try to set these parameters via Kconfig,
+ * they get ignored.  I have no idea why.
+ */
+#define CONFIG_BCH_CONST_PARAMS
+#define CONFIG_BCH_CONST_M 14
+#define CONFIG_BCH_CONST_T 24
+
 #if defined(CONFIG_BCH_CONST_PARAMS)
 #define GF_M(_p)               (CONFIG_BCH_CONST_M)
 #define GF_T(_p)               (CONFIG_BCH_CONST_T)
