@@ -768,7 +768,7 @@ static ssize_t foley_bulk_write(struct file *file, const char *user_buffer,
 			  usb_sndbulkpipe(dev->udev, dev->bulk_out_endpointAddr),
 			  buf, writesize, foley_write_bulk_callback, dev);
 	//See todo comment above urb->transfer_flags |= URB_NO_TRANSFER_DMA_MAP;
-	usb_anchor_urb(urb, &dev->submitted);
+	usb_anchor_urb(urb, &dev->bulk_out_anchor);
 
 	/* send the data out the bulk port */
 	rv = usb_submit_urb(urb, GFP_KERNEL);
@@ -829,6 +829,8 @@ static void foley_isoc_out_callback(struct urb *urb)
 	}
 
 	kfree(urb->transfer_buffer);
+
+	up(&dev->limit_sem);
 }
 
 static int foley_submit_isoc_out_urb(struct usbfoley *dev, const char *buf,
@@ -1051,7 +1053,7 @@ static int foley_probe(struct usb_interface *interface,
 	sema_init(&dev->limit_sem, WRITES_IN_FLIGHT);
 	mutex_init(&dev->io_mutex);
 	spin_lock_init(&dev->err_lock);
-	init_usb_anchor(&dev->submitted);
+	init_usb_anchor(&dev->bulk_out_anchor);
 	init_usb_anchor(&dev->isoc_in_anchor);
 	init_usb_anchor(&dev->isoc_out_anchor);
 	init_waitqueue_head(&dev->wait);
@@ -1187,7 +1189,7 @@ static void foley_disconnect(struct usb_interface *interface)
 	dev->interface = NULL;
 	mutex_unlock(&dev->io_mutex);
 
-	usb_kill_anchored_urbs(&dev->submitted);
+	usb_kill_anchored_urbs(&dev->bulk_out_anchor);
 	usb_kill_anchored_urbs(&dev->isoc_in_anchor);
 	usb_kill_anchored_urbs(&dev->isoc_out_anchor);
 
@@ -1201,10 +1203,23 @@ static void foley_draw_down(struct usbfoley *dev)
 {
 	int time;
 
-	time = usb_wait_anchor_empty_timeout(&dev->submitted, 1000);
+	//Not sure if having three 1000 milliseconds (possibly) pauses is an issue
+	//Assuming you won't draw down during any high priority reads/writes
+	time = usb_wait_anchor_empty_timeout(&dev->bulk_out_anchor, 1000);
 	if (!time) {
-		usb_kill_anchored_urbs(&dev->submitted);
+		usb_kill_anchored_urbs(&dev->bulk_out_anchor);
 	}
+
+	time = usb_wait_anchor_empty_timeout(&dev->isoc_in_anchor, 1000);
+	if (!time) {
+		usb_kill_anchored_urbs(&dev->isoc_in_anchor);
+	}
+
+	time = usb_wait_anchor_empty_timeout(&dev->isoc_in_anchor, 1000);
+	if (!time) {
+		usb_kill_anchored_urbs(&dev->isoc_out_anchor);
+	}
+
 	usb_kill_urb(dev->bulk_in_urb);
 }
 

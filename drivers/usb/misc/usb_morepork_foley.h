@@ -21,7 +21,7 @@ static const struct usb_device_id foley_table[] = {
    allocations > PAGE_SIZE and the number of packets in a page
    is an integer 512 is the largest possible packet on EHCI */
 
-#define WRITES_IN_FLIGHT	8	//Arbitrary num
+#define WRITES_IN_FLIGHT	32	//Arbitrary num, limited to not exhaust the RAM
 
 #define FOLEY_INTERFACE 0
 #define FOLEY_ALTSETTING 1
@@ -34,7 +34,7 @@ struct usbfoley {
 	struct usb_device *udev;	/* the usb device for this device */
 	struct usb_interface *interface;	/* the interface for this device */
 	struct semaphore limit_sem;	/* limiting the number of writes in progress */
-	struct usb_anchor submitted;	/* in case we need to retract our submissions */
+	struct usb_anchor bulk_out_anchor;	/* in case we need to retract our submissions */
 
 	//BULK
 	struct urb *bulk_in_urb;	/* the urb to read bulk data with */
