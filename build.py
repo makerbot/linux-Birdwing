@@ -7,6 +7,9 @@ import subprocess
 # Set the build configuration here as <name>_defconfig
 config = 'mb_stardust_reva_defconfig'
 
+# We also need to specify a device tree to build
+dt = 'mb-stardust-reva.dtb'
+
 this_dir = os.path.realpath(os.path.dirname(__file__))
 
 def run_cmd(cmd):
@@ -35,6 +38,7 @@ def build(num_cores=4):
         'CROSS_COMPILE=' + cross_compile,
     ]
     run_cmd(make_prefix + [config])
+    run_cmd(make_prefix + [dt])
     run_cmd(make_prefix + ['zImage'])
     run_cmd(make_prefix + ['modules'])
 
