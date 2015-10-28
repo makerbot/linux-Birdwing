@@ -110,6 +110,9 @@ static int foley_open(struct inode *inode, struct file *file)
 
 	// save our object in the file's private structure
 	file->private_data = dev;
+
+	//This call marks the device file as nonseekable
+	nonseekable_open(inode, file);
  exit:
 	return rv;
 }
@@ -665,9 +668,17 @@ static void foley_write_bulk_callback(struct urb *urb)
 		spin_unlock(&dev->err_lock);
 	}
 
-	/* free up our allocated buffer */
+	/*
+	usb_free_coherent doesn't like to run while atomic (how callbacks are run).
+	So for now we are using a normal trans buf, instead of a coherent dma buf
+	http://linux-usb.vger.kernel.narkive.com/i56rTPwA/usb-skeleton-c-generates-warning
 	usb_free_coherent(urb->dev, urb->transfer_buffer_length,
 			  urb->transfer_buffer, urb->transfer_dma);
+	*/
+
+	// free up our allocated buffer
+	kfree(urb->transfer_buffer);
+
 	up(&dev->limit_sem);
 }
 
@@ -681,6 +692,9 @@ static ssize_t foley_bulk_write(struct file *file, const char *user_buffer,
 	size_t writesize = min(count, (size_t) MAX_TRANSFER);
 
 	dev = file->private_data;
+
+	dev_dbg(&dev->interface->dev, "BULK_WRITE_COUNT: %d\nBULK_WRITESIZE: %d\n",
+		(int)count, (int)writesize);
 
 	/* verify that we actually have some data to write */
 	if (count == 0) {
@@ -723,8 +737,14 @@ static ssize_t foley_bulk_write(struct file *file, const char *user_buffer,
 		goto error;
 	}
 
+	/* TODO should revisit this if non-dma memory turns out to be an issue
+	usb_free_coherent doesn't like to run while atomic (how callbacks are run).
+	So for now we are using a normal trans buf, instead of a coherent dma buf
+	http://linux-usb.vger.kernel.narkive.com/i56rTPwA/usb-skeleton-c-generates-warning
 	buf = usb_alloc_coherent(dev->udev, writesize, GFP_KERNEL,
 				 &urb->transfer_dma);
+	*/
+	buf = kmalloc(writesize, GFP_KERNEL);
 	if (!buf) {
 		rv = -ENOMEM;
 		goto error;
@@ -745,14 +765,14 @@ static ssize_t foley_bulk_write(struct file *file, const char *user_buffer,
 
 	/* initialize the urb properly */
 	usb_fill_bulk_urb(urb, dev->udev,
-			  usb_sndbulkpipe(dev->udev,
-					  dev->bulk_out_endpointAddr), buf,
-			  writesize, foley_write_bulk_callback, dev);
+			  usb_sndbulkpipe(dev->udev, dev->bulk_out_endpointAddr),
+			  buf, writesize, foley_write_bulk_callback, dev);
 	urb->transfer_flags |= URB_NO_TRANSFER_DMA_MAP;
 	usb_anchor_urb(urb, &dev->submitted);
 
 	/* send the data out the bulk port */
 	rv = usb_submit_urb(urb, GFP_KERNEL);
+	dev_dbg(&dev->interface->dev, "SUBMIT_BULK_WRITE_URB_RV: %d\n", rv);
 	mutex_unlock(&dev->io_mutex);
 	if (rv) {
 		dev_err(&dev->interface->dev,
