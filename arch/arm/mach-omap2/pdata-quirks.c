@@ -413,6 +413,8 @@ struct of_dev_auxdata omap_auxdata_lookup[] __initdata = {
 	OF_DEV_AUXDATA("ti,am3352-sgx530", 0x56000000, "56000000.sgx",
 #endif
 #ifdef CONFIG_SOC_AM43XX
+	OF_DEV_AUXDATA("ti,am4376-sgx530", 0x56000000, "56000000.sgx",
+		       &sgx_pdata),
 	OF_DEV_AUXDATA("ti,am4372-wkup-m3", 0x44d00000, "44d00000.wkup_m3",
 		       &wkup_m3_data),
 	OF_DEV_AUXDATA("ti,am437-padconf", 0x44e10800, "44e10800.pinmux", &pcs_pdata),
@@ -420,8 +422,6 @@ struct of_dev_auxdata omap_auxdata_lookup[] __initdata = {
 		       &pruss1_pdata),
     OF_DEV_AUXDATA("ti,am4372-pruss", 0x54440000, "54440000.pruss0",
                &pruss0_pdata),
-    OF_DEV_AUXDATA("ti,sgx", 0x56000000, "56000000.sgx",
-               &sgx_pdata),
 #endif
 #ifdef CONFIG_ARCH_OMAP4
 	OF_DEV_AUXDATA("ti,omap4-padconf", 0x4a100040, "4a100040.pinmux", &pcs_pdata),
@@ -455,15 +455,6 @@ struct of_dev_auxdata omap_auxdata_lookup[] __initdata = {
 		       &omap4_ipu_dsp_pdata),
 	OF_DEV_AUXDATA("ti,dra7-rproc-dsp", 0x41000000, "41000000.dsp",
 		       &omap4_ipu_dsp_pdata),
-#endif
-#ifdef CONFIG_SOC_AM43XX
-	OF_DEV_AUXDATA("ti,am437-padconf", 0x44e10800, "44e10800.pinmux", &pcs_pdata),
-	OF_DEV_AUXDATA("ti,am4372-wkup-m3", 0x44d00000, "44d00000.wkup_m3",
-		       &wkup_m3_data),
-	OF_DEV_AUXDATA("ti,am4372-pruss", 0x54400000, "54400000.pruss",
-		       &pruss_pdata),
-	OF_DEV_AUXDATA("ti,am4376-sgx530", 0x56000000, "56000000.sgx",
-		       &sgx_pdata),
 #endif
 #if defined(CONFIG_ARCH_OMAP4) || defined(CONFIG_SOC_OMAP5)
 	OF_DEV_AUXDATA("ti,omap4-iommu", 0x4a066000, "4a066000.mmu",

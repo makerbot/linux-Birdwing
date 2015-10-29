@@ -823,7 +823,8 @@ static int pru_rproc_probe(struct platform_device *pdev)
 
 	pdata = pru_rproc_get_private_data(pdev);
 	if (IS_ERR_OR_NULL(pdata) || !pdata->fw_name) {
-		dev_err(dev, "missing or incomplete PRU-private data\n");
+		dev_err(dev, "missing or incomplete PRU-private data: %x for %s\n",
+                pdata, pdev->name);
 		return -ENODEV;
 	}
 
@@ -1199,15 +1200,9 @@ static struct pru_private_data am437x_pru0_0_rproc_pdata = {
 	.fw_name = "rproc-pr0-pru0-fw",
 };
 
-
 static struct pru_private_data am437x_pru0_1_rproc_pdata = {
 	.id = 3,
 	.fw_name = "rproc-pr0-pru1-fw",
-};
-
-static struct pru_private_data am437x_pru1_1_rproc_pdata = {
-	.id = 1,
-	.fw_name = "am437x-pru1_1-fw",
 };
 
 /* AM57xx PRUSS1 PRU core-specific private data */
@@ -1264,21 +1259,21 @@ static struct pru_match_private_data am335x_pru_match_data[] = {
 
 /* AM43xx SoC-specific PRU Device data */
 static struct pru_match_private_data am437x_pru_match_data[] = {
-        {
+    {
         .device_name = "54434000.pru1_0",
-        .priv_data = &am437x_pr1_pru0_rproc_pdata,
+        .priv_data = &am437x_pru1_0_rproc_pdata,
     },
     {
         .device_name = "54438000.pru1_1",
-        .priv_data = &am437x_pr1_pru1_rproc_pdata,
+        .priv_data = &am437x_pru1_1_rproc_pdata,
     },
     {
         .device_name = "54474000.pru0_0",
-        .priv_data = &am437x_pr0_pru0_rproc_pdata,
+        .priv_data = &am437x_pru0_0_rproc_pdata,
     },
     {
         .device_name = "54478000.pru0_1",
-        .priv_data = &am437x_pr0_pru0_rproc_pdata,
+        .priv_data = &am437x_pru0_0_rproc_pdata,
     },
 	{
 		/* sentinel */
@@ -1343,10 +1338,14 @@ static struct of_dev_auxdata am335x_pruss_rproc_auxdata_lookup[] = {
 	{ /* sentinel */ },
 };
 
-static struct of_dev_auxdata am437x_pruss1_rproc_auxdata_lookup[] = {
-	OF_DEV_AUXDATA("ti,am4372-pru-rproc", 0x54434000, "54434000.pru0",
+static struct of_dev_auxdata am437x_pruss_rproc_auxdata_lookup[] = {
+	OF_DEV_AUXDATA("ti,am4372-pru-rproc", 0x54434000, "54434000.pru1_0",
 		       NULL),
-	OF_DEV_AUXDATA("ti,am4372-pru-rproc", 0x54438000, "54438000.pru1",
+	OF_DEV_AUXDATA("ti,am4372-pru-rproc", 0x54438000, "54438000.pru1_1",
+		       NULL),
+    OF_DEV_AUXDATA("ti,am4372-pru-rproc", 0x54474000, "54474000.pru0_0",
+		       NULL),
+	OF_DEV_AUXDATA("ti,am4372-pru-rproc", 0x54478000, "54478000.pru0_1",
 		       NULL),
 	{ /* sentinel */ },
 };
@@ -1384,7 +1383,7 @@ static struct pruss_private_data am437x_priv_data = {
 	.num_irqs = 7,
 	.host_events = (BIT(2) | BIT(3) | BIT(4) | BIT(5) |
 			BIT(6) | BIT(8) | BIT(9)),
-	.aux_data = am437x_pruss1_rproc_auxdata_lookup,
+	.aux_data = am437x_pruss_rproc_auxdata_lookup,
 	.has_reset = true,
 };
 
