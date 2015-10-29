@@ -1,4 +1,4 @@
-/*
+ /*
  * USB Morepork driver - 0.1 
  *
  * Copyright (C) 2015 MakerBot Industries
@@ -26,6 +26,9 @@
 
 #include "usb_morepork_foley.h"
 
+static struct usb_driver foley_driver;
+static void foley_draw_down(struct usbfoley *dev);
+
 static ssize_t foley_isoc_selected_show(struct device *dev,
 					struct device_attribute *attr,
 					char *buf)
@@ -42,8 +45,13 @@ static ssize_t foley_isoc_selected_store(struct device *dev,
 {
 	struct usbfoley *fdev;
 	int selected;
+	int rv;
+
 	if (count) {
-		kstrtoint(&buf[0], 0, &selected);
+		rv = kstrtoint(&buf[0], 0, &selected);
+		if (rv < 0) {
+			return rv;
+		}
 		if (selected > 1 || selected < 0) {
 			dev_err(dev,
 			       "Invalid isoc_selected value, must be 1 or 0\n");
@@ -54,6 +62,8 @@ static ssize_t foley_isoc_selected_store(struct device *dev,
 
 		dev_dbg(dev, "isoc_selected_store: %d\n", selected);
 		fdev->isoc_selected = selected;
+
+		foley_draw_down(fdev); //make sure there are no outstanding urbs
 	}
 	return count;
 }
@@ -62,9 +72,6 @@ static ssize_t foley_isoc_selected_store(struct device *dev,
 static DEVICE_ATTR(isoc_selected, S_IRUGO | S_IWUSR, foley_isoc_selected_show,
 		   foley_isoc_selected_store);
 
-static struct usb_driver foley_driver;
-static void foley_draw_down(struct usbfoley *dev);
-
 static void foley_delete(struct kref *kref)
 {
 	struct usbfoley *dev = usbfoley_from_kref(kref);
@@ -72,6 +79,8 @@ static void foley_delete(struct kref *kref)
 	device_remove_file(&dev->udev->dev, &dev_attr_isoc_selected);
 
 	usb_kill_anchored_urbs(&dev->isoc_in_anchor);
+	usb_kill_anchored_urbs(&dev->isoc_out_anchor);
+	usb_kill_anchored_urbs(&dev->bulk_out_anchor);
 	usb_free_urb(dev->bulk_in_urb);
 	usb_put_dev(dev->udev);
 	kfree(dev->bulk_in_buffer);
@@ -128,8 +137,8 @@ static int foley_release(struct inode *inode, struct file *file)
 
 	/* allow the device to be autosuspended */
 	mutex_lock(&dev->io_mutex);
-	if (dev->interface) {
-		usb_autopm_put_interface(dev->interface);
+	if (dev->intf) {
+		usb_autopm_put_interface(dev->intf);
 	}
 	mutex_unlock(&dev->io_mutex);
 
@@ -173,7 +182,7 @@ static inline int foley_set_interface(struct usbfoley *dev, int interface, int a
 			dev->current_interface = interface;
 			dev->current_altsetting = altsetting;
 		} else {
-			dev_err(&dev->interface->dev,
+			dev_err(&dev->intf->dev,
 				"Failed to set interface intf: %d, alt: %d, err: %d\n",
 				interface, altsetting, rv);
 		}
@@ -187,13 +196,15 @@ static void foley_read_bulk_callback(struct urb *urb)
 
 	dev = urb->context;
 
+	dev_dbg(&dev->intf->dev, "FOLEY_READ_BULK_CALLBACK\n");
+
 	spin_lock(&dev->err_lock);
 	/* sync/async unlink faults aren't errors */
 	if (urb->status) {
 		if (!(urb->status == -ENOENT ||
 		      urb->status == -ECONNRESET ||
 		      urb->status == -ESHUTDOWN)) {
-			dev_err(&dev->interface->dev,
+			dev_err(&dev->intf->dev,
 				"%s - nonzero write bulk status received: %d\n",
 				__func__, urb->status);
 		}
@@ -202,7 +213,7 @@ static void foley_read_bulk_callback(struct urb *urb)
 	} else {
 		dev->bulk_in_filled = urb->actual_length;
 	}
-	dev->ongoing_read = 0;
+	dev->ongoing_bulk_read = 0;
 	spin_unlock(&dev->err_lock);
 
 	wake_up_interruptible(&dev->wait);
@@ -216,13 +227,13 @@ static int foley_do_read_bulk_io(struct usbfoley *dev, size_t count)
 	usb_fill_bulk_urb(dev->bulk_in_urb,
 			  dev->udev,
 			  usb_rcvbulkpipe(dev->udev,
-					  dev->bulk_in_endpointAddr),
+					  dev->bulk_in_epAddr),
 			  dev->bulk_in_buffer,
-			  min(dev->bulk_in_size, count),
+			  min(dev->bulk_in_ep_size, count),
 			  foley_read_bulk_callback, dev);
 	/* tell everybody to leave the URB alone */
 	spin_lock_irq(&dev->err_lock);
-	dev->ongoing_read = 1;
+	dev->ongoing_bulk_read = 1;
 	spin_unlock_irq(&dev->err_lock);
 
 	/* submit bulk in urb, which means no data to deliver */
@@ -232,12 +243,12 @@ static int foley_do_read_bulk_io(struct usbfoley *dev, size_t count)
 	/* do it */
 	rv = usb_submit_urb(dev->bulk_in_urb, GFP_KERNEL);
 	if (rv < 0) {
-		dev_err(&dev->interface->dev,
+		dev_err(&dev->intf->dev,
 			"%s - failed submitting read urb, error %d\n",
 			__func__, rv);
 		rv = (rv == -ENOMEM) ? rv : -EIO;
 		spin_lock_irq(&dev->err_lock);
-		dev->ongoing_read = 0;
+		dev->ongoing_bulk_read = 0;
 		spin_unlock_irq(&dev->err_lock);
 	}
 
@@ -263,7 +274,7 @@ static ssize_t foley_bulk_read(struct file *file, char *buffer, size_t count)
 		return rv;
 	}
 
-	if (!dev->interface) {	/* disconnect() was called */
+	if (!dev->intf) {	/* disconnect() was called */
 		rv = -ENODEV;
 		goto exit;
 	}
@@ -271,7 +282,7 @@ static ssize_t foley_bulk_read(struct file *file, char *buffer, size_t count)
 	/* if IO is under way, we must not touch things */
  retry:
 	spin_lock_irq(&dev->err_lock);
-	ongoing_io = dev->ongoing_read;
+	ongoing_io = dev->ongoing_bulk_read;
 	spin_unlock_irq(&dev->err_lock);
 
 	if (ongoing_io) {
@@ -284,7 +295,7 @@ static ssize_t foley_bulk_read(struct file *file, char *buffer, size_t count)
 		 * IO may take forever
 		 * hence wait in an interruptible state
 		 */
-		rv = wait_event_interruptible(dev->wait, (!dev->ongoing_read));
+		rv = wait_event_interruptible(dev->wait, (!dev->ongoing_bulk_read));
 		if (rv < 0) {
 			goto exit;
 		}
@@ -367,43 +378,43 @@ static void foley_isoc_in_callback(struct urb *urb)
 	int dst = 0;
 	void *buf = urb->transfer_buffer;
 
-	dev_dbg(&dev->interface->dev, "READ_ISOC_CALLBACK\n");
+	dev_dbg(&dev->intf->dev, "FOLEY_READ_ISOC_CALLBACK\n");
 
 	// process if URB was not killed
 	if (urb->status != -ENOENT) {
 		unsigned int pipe =
-		    usb_rcvisocpipe(urb->dev, dev->isoc_in_endpointAddr);
+		    usb_rcvisocpipe(urb->dev, dev->isoc_in_epAddr);
 		int pipesize = usb_maxpacket(urb->dev, pipe, usb_pipeout(pipe));
 
-		dev_dbg(&dev->interface->dev, "PIPESIZE: %d\n", pipesize);
-		dev_dbg(&dev->interface->dev, "URB_ACT_LEN: %d\n",
+		dev_dbg(&dev->intf->dev, "PIPESIZE: %d\n", pipesize);
+		dev_dbg(&dev->intf->dev, "URB_ACT_LEN: %d\n",
 			urb->actual_length);
 
 		for (i = 0; i < urb->number_of_packets; i++) {
 			if (!urb->iso_frame_desc[i].status) {
 				len = urb->iso_frame_desc[i].actual_length;
-				dev_dbg(&dev->interface->dev,
+				dev_dbg(&dev->intf->dev,
 					"ISOC_FRAME_LEN: %d\n", len);
 				if (len <= pipesize) {
-					dev_dbg(&dev->interface->dev,
+					dev_dbg(&dev->intf->dev,
 						"LEN <= PIPESIZE");
 					memcpy(buf + dst,
 					       buf + urb->iso_frame_desc[i].offset,
 					       len);
 					dst += len;
 				} else {
-					dev_err(&dev->interface->dev,
+					dev_err(&dev->intf->dev,
 						"READ_ISOC_CALLBACK: invalid len %d\n",
 						len);
 				}
 			} else {
-				dev_err(&dev->interface->dev,
+				dev_err(&dev->intf->dev,
 					"READ_ISOC_CALLBACK: corrupted packet status: %d\n",
 					urb->iso_frame_desc[i].status);
 			}
 		}
 		if (dst != urb->actual_length) {
-			dev_err(&dev->interface->dev,
+			dev_err(&dev->intf->dev,
 				"READ_ISOC_CALLBACK: dst!=urb->actual_length:%d!=%d\n",
 				dst, urb->actual_length);
 		}
@@ -420,34 +431,34 @@ static void foley_dump_urb(struct urb *urb)
 	struct usbfoley *dev;
 	dev = urb->context;
 
-	dev_info(&dev->interface->dev, "urb                   :%p", urb);
-	//dev_info(&dev->interface->dev, "next                  :%p", urb->next);
-	dev_info(&dev->interface->dev, "dev                   :%p", urb->dev);
-	dev_info(&dev->interface->dev, "pipe                  :%08X",
+	dev_info(&dev->intf->dev, "urb                   :%p", urb);
+	//dev_info(&dev->intf->dev, "next                  :%p", urb->next);
+	dev_info(&dev->intf->dev, "dev                   :%p", urb->dev);
+	dev_info(&dev->intf->dev, "pipe                  :%08X",
 		 urb->pipe);
-	dev_info(&dev->interface->dev, "status                :%d",
+	dev_info(&dev->intf->dev, "status                :%d",
 		 urb->status);
-	dev_info(&dev->interface->dev, "transfer_flags        :%08X",
+	dev_info(&dev->intf->dev, "transfer_flags        :%08X",
 		 urb->transfer_flags);
-	dev_info(&dev->interface->dev, "transfer_buffer       :%p",
+	dev_info(&dev->intf->dev, "transfer_buffer       :%p",
 		 urb->transfer_buffer);
-	dev_info(&dev->interface->dev, "transfer_buffer_length:%d",
+	dev_info(&dev->intf->dev, "transfer_buffer_length:%d",
 		 urb->transfer_buffer_length);
-	dev_info(&dev->interface->dev, "actual_length         :%d",
+	dev_info(&dev->intf->dev, "actual_length         :%d",
 		 urb->actual_length);
-	dev_info(&dev->interface->dev, "setup_packet          :%p",
+	dev_info(&dev->intf->dev, "setup_packet          :%p",
 		 urb->setup_packet);
-	dev_info(&dev->interface->dev, "start_frame           :%d",
+	dev_info(&dev->intf->dev, "start_frame           :%d",
 		 urb->start_frame);
-	dev_info(&dev->interface->dev, "number_of_packets     :%d",
+	dev_info(&dev->intf->dev, "number_of_packets     :%d",
 		 urb->number_of_packets);
-	dev_info(&dev->interface->dev, "interval              :%d",
+	dev_info(&dev->intf->dev, "interval              :%d",
 		 urb->interval);
-	dev_info(&dev->interface->dev, "error_count           :%d",
+	dev_info(&dev->intf->dev, "error_count           :%d",
 		 urb->error_count);
-	dev_info(&dev->interface->dev, "context               :%p",
+	dev_info(&dev->intf->dev, "context               :%p",
 		 urb->context);
-	dev_info(&dev->interface->dev, "complete              :%p",
+	dev_info(&dev->intf->dev, "complete              :%p",
 		 urb->complete);
 }
 
@@ -458,7 +469,7 @@ static inline void foley_fill_isoc_urb(struct urb *urb, int len, int mtu, int nu
 	int i;
 	int offset = 0;
 
-	dev_dbg(&dev->interface->dev, "ISOC_WRITE LEN: %d MTU: %d\n", len, mtu);
+	dev_dbg(&dev->intf->dev, "ISOC_WRITE LEN: %d MTU: %d\n", len, mtu);
 
 	for (i = 0; i < num_frames && len >= mtu; i++) {
 		urb->iso_frame_desc[i].offset = offset;
@@ -488,20 +499,20 @@ static int foley_usb_submit_isoc_in_urb(struct usbfoley *dev, size_t count,
 
 	urb = usb_alloc_urb(dev->isoc_in_max_frames, mem_flags);
 	if (!urb) {
-		dev_err(&dev->interface->dev, "Isoc IN URB allocation failed\n");
+		dev_err(&dev->intf->dev, "Isoc IN URB allocation failed\n");
 		return -ENOMEM;
 	}
 
 	buf = kmalloc(dev->isoc_in_buf_size, GFP_ATOMIC);
 	memset(buf, 0, dev->isoc_in_buf_size);
 	if (!buf) {
-		dev_err(&dev->interface->dev, "Isoc IN buffer allocation failed\n");
+		dev_err(&dev->intf->dev, "Isoc IN buffer allocation failed\n");
 		return -ENOMEM;
 	}
 
 	mutex_lock(&dev->io_mutex);
 
-	pipe = usb_rcvisocpipe(dev->udev, dev->isoc_in_endpointAddr);
+	pipe = usb_rcvisocpipe(dev->udev, dev->isoc_in_epAddr);
 
 	usb_fill_int_urb(urb, dev->udev, pipe, buf,
 			 dev->isoc_in_buf_size, foley_isoc_in_callback, dev,
@@ -517,7 +528,7 @@ static int foley_usb_submit_isoc_in_urb(struct usbfoley *dev, size_t count,
 
 	if (rv < 0) {
 		if (rv != -EPERM && rv != -ENODEV) {
-			dev_err(&dev->interface->dev,
+			dev_err(&dev->intf->dev,
 				"urb %p submission failed (%d)\n", urb, rv);
 		}
 		usb_unanchor_urb(urb);
@@ -540,9 +551,9 @@ static ssize_t foley_isoc_read(struct file *file, char *buf, size_t count)
 
 	int readptr = 0;
 
-	dev_info(&dev->interface->dev, "foley_isoc_read\n");
+	dev_info(&dev->intf->dev, "foley_isoc_read\n");
 
-	if (!dev->interface || !dev->udev) {
+	if (!dev->intf || !dev->udev) {
 		return -EIO;
 	}
 
@@ -587,13 +598,13 @@ static ssize_t foley_isoc_read(struct file *file, char *buf, size_t count)
 			cnt = count;
 		}
 
-		dev_dbg(&dev->interface->dev, "copy_to_user:%p %p %d\n",
+		dev_dbg(&dev->intf->dev, "copy_to_user:%p %p %d\n",
 			buf, urb->transfer_buffer + readptr, cnt);
 
 		mutex_lock(&dev->io_mutex);
 
 		if (copy_to_user(buf, urb->transfer_buffer + readptr, cnt)) {
-			dev_err(&dev->interface->dev,
+			dev_err(&dev->intf->dev,
 				"read: copy_to_user failed\n");
 			if (!ret) {
 				ret = -EFAULT;
@@ -609,7 +620,7 @@ static ssize_t foley_isoc_read(struct file *file, char *buf, size_t count)
 		buf += cnt;
 		ret += cnt;
 
-		dev_dbg(&dev->interface->dev,
+		dev_dbg(&dev->intf->dev,
 			"READPTR: %d, COUNT: %d, BUF: %p, RET: %d\n",
 			(int)readptr, (int)count, buf, (int)ret);
 
@@ -636,11 +647,10 @@ static ssize_t foley_read(struct file *file, char *buffer, size_t count,
 	foley_set_interface(dev, FOLEY_INTERFACE, FOLEY_ALTSETTING);
 
 	if (dev->isoc_selected) {
-		dev_dbg(&dev->interface->dev, "ISOC_READ\n");
+		dev_dbg(&dev->intf->dev, "ISOC_READ\n");
 		rv = foley_isoc_read(file, buffer, count);
 	} else {
-		usb_poison_anchored_urbs(&dev->isoc_in_anchor); //Poison all possible anchored isoc urbs
-		dev_dbg(&dev->interface->dev, "BULK_READ\n");
+		dev_dbg(&dev->intf->dev, "BULK_READ\n");
 		rv = foley_bulk_read(file, buffer, count);
 	}
 
@@ -653,12 +663,14 @@ static void foley_write_bulk_callback(struct urb *urb)
 
 	dev = urb->context;
 
+	dev_dbg(&dev->intf->dev, "FOLEY_WRITE_BULK_CALLBACK\n");
+
 	/* sync/async unlink faults aren't errors */
 	if (urb->status) {
 		if (!(urb->status == -ENOENT ||
 		      urb->status == -ECONNRESET ||
 		      urb->status == -ESHUTDOWN)) {
-			dev_err(&dev->interface->dev,
+			dev_err(&dev->intf->dev,
 				"%s - nonzero write bulk status received: %d\n",
 				__func__, urb->status);
 		}
@@ -693,7 +705,7 @@ static ssize_t foley_bulk_write(struct file *file, const char *user_buffer,
 
 	dev = file->private_data;
 
-	dev_dbg(&dev->interface->dev, "BULK_WRITE_COUNT: %d\nBULK_WRITESIZE: %d\n",
+	dev_dbg(&dev->intf->dev, "BULK_WRITE_COUNT: %d\nBULK_WRITESIZE: %d\n",
 		(int)count, (int)writesize);
 
 	/* verify that we actually have some data to write */
@@ -757,7 +769,7 @@ static ssize_t foley_bulk_write(struct file *file, const char *user_buffer,
 
 	/* this lock makes sure we don't submit URBs to gone devices */
 	mutex_lock(&dev->io_mutex);
-	if (!dev->interface) {	/* disconnect() was called */
+	if (!dev->intf) {	/* disconnect() was called */
 		mutex_unlock(&dev->io_mutex);
 		rv = -ENODEV;
 		goto error;
@@ -765,17 +777,17 @@ static ssize_t foley_bulk_write(struct file *file, const char *user_buffer,
 
 	/* initialize the urb properly */
 	usb_fill_bulk_urb(urb, dev->udev,
-			  usb_sndbulkpipe(dev->udev, dev->bulk_out_endpointAddr),
+			  usb_sndbulkpipe(dev->udev, dev->bulk_out_epAddr),
 			  buf, writesize, foley_write_bulk_callback, dev);
 	//See todo comment above urb->transfer_flags |= URB_NO_TRANSFER_DMA_MAP;
 	usb_anchor_urb(urb, &dev->bulk_out_anchor);
 
 	/* send the data out the bulk port */
 	rv = usb_submit_urb(urb, GFP_KERNEL);
-	dev_dbg(&dev->interface->dev, "SUBMIT_BULK_WRITE_URB_RV: %d\n", rv);
+	dev_dbg(&dev->intf->dev, "SUBMIT_BULK_WRITE_URB_RV: %d\n", rv);
 	mutex_unlock(&dev->io_mutex);
 	if (rv) {
-		dev_err(&dev->interface->dev,
+		dev_err(&dev->intf->dev,
 			"%s - failed submitting write urb, error %d\n",
 			__func__, rv);
 		goto error_unanchor;
@@ -809,7 +821,7 @@ static void foley_isoc_out_callback(struct urb *urb)
 {
 	struct usbfoley *dev = urb->context;
 
-	dev_dbg(&dev->interface->dev, "%s urb %p status %d count %d", __func__,
+	dev_dbg(&dev->intf->dev, "FOLEY_ISOC_OUT_CALLBACK\n %s urb %p status %d count %d", __func__,
 		 urb, urb->status, urb->actual_length);
 
 	//Ripped urb status processing from bulk complete
@@ -818,7 +830,7 @@ static void foley_isoc_out_callback(struct urb *urb)
 		if (!(urb->status == -ENOENT ||
 		      urb->status == -ECONNRESET ||
 		      urb->status == -ESHUTDOWN)) {
-			dev_err(&dev->interface->dev,
+			dev_err(&dev->intf->dev,
 				"%s - nonzero write bulk status received: %d\n",
 				__func__, urb->status);
 		}
@@ -845,7 +857,7 @@ static int foley_submit_isoc_out_urb(struct usbfoley *dev, const char *buf,
 		return -ENOMEM;
 	}
 
-	pipe = usb_sndisocpipe(dev->udev, dev->isoc_out_endpointAddr);
+	pipe = usb_sndisocpipe(dev->udev, dev->isoc_out_epAddr);
 
 	mutex_lock(&dev->io_mutex);
 
@@ -861,7 +873,7 @@ static int foley_submit_isoc_out_urb(struct usbfoley *dev, const char *buf,
 	rv = usb_submit_urb(urb, GFP_ATOMIC);
 	if (rv < 0) {
 		if (rv != -EPERM && rv != -ENODEV) {
-			dev_err(&dev->interface->dev,
+			dev_err(&dev->intf->dev,
 				"urb %p submission failed (%d)\n", urb, rv);
 		}
 		usb_unanchor_urb(urb);
@@ -883,7 +895,7 @@ static ssize_t foley_isoc_write(struct file *file, const char *user_buffer,
 	size_t writesize = min(count, (size_t) MAX_TRANSFER);
 
 	dev = file->private_data;
-	dev_dbg(&dev->interface->dev, "FOLEY_ISOC_WRITE\n");
+	dev_dbg(&dev->intf->dev, "FOLEY_ISOC_WRITE\n");
 
 	/* verify that we actually have some data to write */
 	if (count == 0) {
@@ -959,10 +971,10 @@ static ssize_t foley_write(struct file *file, const char *buffer, size_t count,
 	foley_set_interface(dev, FOLEY_INTERFACE, FOLEY_ALTSETTING);
 
 	if (dev->isoc_selected) {
-		dev_dbg(&dev->interface->dev, "ISOC_WRITE");
+		dev_dbg(&dev->intf->dev, "ISOC_WRITE");
 		rv = foley_isoc_write(file, buffer, count);
 	} else {
-		dev_dbg(&dev->interface->dev, "BULK_WRITE");
+		dev_dbg(&dev->intf->dev, "BULK_WRITE");
 		rv = foley_bulk_write(file, buffer, count);
 	}
 
@@ -984,9 +996,11 @@ static long foley_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	switch (cmd) {
 	case IOCTL_FOLEY_BULK:
 		dev->isoc_selected = false;
+		foley_draw_down(dev); //make sure all active urbs are stopped
 		break;
 	case IOCTL_FOLEY_ISOC:
 		dev->isoc_selected = true;
+		foley_draw_down(dev);
 		break;
 	default:
 		rv = -ENOIOCTLCMD;
@@ -1021,12 +1035,13 @@ static struct usb_class_driver foley_class = {
 	.minor_base = USB_FOLEY_MINOR_BASE,
 };
 
+// TODO cleanup foley_probe once the rest of the driver is stable
 static int foley_probe(struct usb_interface *interface,
 		       const struct usb_device_id *id)
 {
 	struct usbfoley *dev;
 	struct usb_host_interface *iface_desc;
-	struct usb_endpoint_descriptor *endpoint;
+	struct usb_endpoint_descriptor *ep;
 	int i;
 	int rv = -ENOMEM;
 
@@ -1059,22 +1074,22 @@ static int foley_probe(struct usb_interface *interface,
 	init_waitqueue_head(&dev->wait);
 
 	dev->udev = usb_get_dev(interface_to_usbdev(interface));
-	dev->interface = interface;
+	dev->intf = interface;
 
 	iface_desc = &interface->altsetting[FOLEY_ALTSETTING];
 
-	/* set up the endpoint information */
+	/* set up the endpoints information */
 	/* use only the first bulk-in and bulk-out endpoints */
 	for (i = 0; i < iface_desc->desc.bNumEndpoints; ++i) {
-		endpoint = &iface_desc->endpoint[i].desc;
+		ep = &iface_desc->endpoint[i].desc;
 
-		if (!dev->bulk_in_endpointAddr &&
-		    usb_endpoint_is_bulk_in(endpoint)) {
+		if (!dev->bulk_in_epAddr &&
+		    usb_endpoint_is_bulk_in(ep)) {
 			// we found a bulk in endpoint
-			dev->bulk_in_size = usb_endpoint_maxp(endpoint);
-			dev->bulk_in_endpointAddr = endpoint->bEndpointAddress;
+			dev->bulk_in_ep_size = usb_endpoint_maxp(ep);
+			dev->bulk_in_epAddr = ep->bEndpointAddress;
 			dev->bulk_in_buffer =
-			    kmalloc(dev->bulk_in_size, GFP_KERNEL);
+			    kmalloc(dev->bulk_in_ep_size, GFP_KERNEL);
 			if (!dev->bulk_in_buffer) {
 				dev_err(&interface->dev,
 					"Could not allocate bulk_in_buffer\n");
@@ -1086,45 +1101,45 @@ static int foley_probe(struct usb_interface *interface,
 					"Could not allocate bulk_in_urb\n");
 				goto error;
 			}
-		} else if (!dev->bulk_out_endpointAddr &&
-			   usb_endpoint_is_bulk_out(endpoint)) {
+		} else if (!dev->bulk_out_epAddr &&
+			   usb_endpoint_is_bulk_out(ep)) {
 			// we found a bulk out endpoint
-			dev->bulk_out_endpointAddr = endpoint->bEndpointAddress;
+			dev->bulk_out_epAddr = ep->bEndpointAddress;
 		}
 	}
-	if (!(dev->bulk_in_endpointAddr && dev->bulk_out_endpointAddr)) {
+	if (!(dev->bulk_in_epAddr && dev->bulk_out_epAddr)) {
 		dev_err(&interface->dev,
 			"Could not find both bulk-in and bulk-out endpoints\n");
 		goto error;
 	}
 	// Find Isoc endpoints in interfaces altsetting 1
 	for (i = 0; i < iface_desc->desc.bNumEndpoints; ++i) {
-		endpoint = &iface_desc->endpoint[i].desc;
+		ep = &iface_desc->endpoint[i].desc;
 
-		if (!dev->isoc_in_endpointAddr &&
-		    usb_endpoint_is_isoc_in(endpoint)) {
-			dev->isoc_in_ep_size = usb_endpoint_maxp(endpoint);
+		if (!dev->isoc_in_epAddr &&
+		    usb_endpoint_is_isoc_in(ep)) {
+			dev->isoc_in_ep_size = usb_endpoint_maxp(ep);
 
 			dev->isoc_in_buf_size =
 			    dev->isoc_in_ep_size * FOLEY_MAX_ISOC_IN_FRAMES;
 			dev->isoc_in_max_frames = FOLEY_MAX_ISOC_IN_FRAMES;
-			dev->isoc_in_endpointAddr = endpoint->bEndpointAddress;
-			dev->isoc_in_interval = endpoint->bInterval;
-		} else if (!dev->isoc_out_endpointAddr &&
-			   usb_endpoint_is_isoc_out(endpoint)) {
-			dev->isoc_out_ep_size = usb_endpoint_maxp(endpoint);
+			dev->isoc_in_epAddr = ep->bEndpointAddress;
+			dev->isoc_in_interval = ep->bInterval;
+		} else if (!dev->isoc_out_epAddr &&
+			   usb_endpoint_is_isoc_out(ep)) {
+			dev->isoc_out_ep_size = usb_endpoint_maxp(ep);
 			if (dev->isoc_out_ep_size == 0) {
 				dev_err(&interface->dev,
 					"Isoc OUT Ep Size is zero, can't determine max frames\n");
 				goto error;
 			}
 			dev->isoc_out_max_frames = MAX_TRANSFER/dev->isoc_out_ep_size;
-			dev->isoc_out_endpointAddr = endpoint->bEndpointAddress;
-			dev->isoc_out_interval = endpoint->bInterval;
+			dev->isoc_out_epAddr = ep->bEndpointAddress;
+			dev->isoc_out_interval = ep->bInterval;
 		}
 	}
 
-	if (!(dev->isoc_in_endpointAddr)) {	// && dev->isoc_out_endpointAddr)) {
+	if (!(dev->isoc_in_epAddr && dev->isoc_out_epAddr)) {
 		dev_err(&interface->dev,
 			"Could not find both isoc-in and isoc-out endpoints\n");
 		goto error;
@@ -1160,8 +1175,8 @@ static int foley_probe(struct usb_interface *interface,
 		 interface->minor);
 	dev_info(&interface->dev,
 		 "BULK_IN: 0x%02X, BULK_OUT: 0x%02X, ISOC_IN: 0x%02X, ISOC_OUT: 0x%02X",
-		 dev->bulk_in_endpointAddr, dev->bulk_out_endpointAddr,
-		 dev->isoc_in_endpointAddr, dev->isoc_out_endpointAddr);
+		 dev->bulk_in_epAddr, dev->bulk_out_epAddr,
+		 dev->isoc_in_epAddr, dev->isoc_out_epAddr);
 
 	return 0;
 
@@ -1186,7 +1201,7 @@ static void foley_disconnect(struct usb_interface *interface)
 
 	/* prevent more I/O from starting */
 	mutex_lock(&dev->io_mutex);
-	dev->interface = NULL;
+	dev->intf = NULL;
 	mutex_unlock(&dev->io_mutex);
 
 	usb_kill_anchored_urbs(&dev->bulk_out_anchor);

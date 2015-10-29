@@ -31,53 +31,50 @@ static const struct usb_device_id foley_table[] = {
 
 /* Structure to hold all of our device specific stuff */
 struct usbfoley {
-	struct usb_device *udev;	/* the usb device for this device */
-	struct usb_interface *interface;	/* the interface for this device */
-	struct semaphore limit_sem;	/* limiting the number of writes in progress */
-	struct usb_anchor bulk_out_anchor;	/* in case we need to retract our submissions */
+	struct usb_device *udev;	// the usb device for this device
+	struct usb_interface *intf;	// the interface for this device
+	struct semaphore limit_sem;	// limiting the number of writes in progress
 
-	//BULK
-	struct urb *bulk_in_urb;	/* the urb to read bulk data with */
-	unsigned char *bulk_in_buffer;	/* the buffer to receive data */
-	size_t bulk_in_size;	/* the size of the receive buffer */
-	size_t bulk_in_filled;	/* number of bytes in the buffer */
-	size_t bulk_in_copied;	/* already copied to user space */
-	__u8 bulk_in_endpointAddr;	/* the address of the bulk in endpoint */
-	__u8 bulk_out_endpointAddr;	/* the address of the bulk out endpoint */
+	/*** BULK ***/
+	struct usb_anchor bulk_out_anchor;	// in case we need to retract our submissions
+	struct urb *bulk_in_urb;		// the urb to read bulk data with
 
-	//ISOC
-	size_t isoc_in_ep_size;	/* the size of the endpoint buffer */
-	size_t isoc_in_buf_size;	//Size of the read buffer (ep_size * ISOC_MAX_FRAMES)
-	size_t isoc_in_filled;	/* number of bytes in the buffer */
-	size_t isoc_in_copied;	/* already copied to user space */
-	__u8 isoc_in_endpointAddr;	/* the address of the isoc in endpoint */
-	int isoc_in_interval;
-	int isoc_in_max_frames;
-	struct usb_anchor isoc_in_anchor;
+	__u8 bulk_out_epAddr;		// the address of the bulk out ep
+	__u8 bulk_in_epAddr;		// the address of the bulk in ep
 
-	size_t isoc_out_ep_size;
-	__u8 isoc_out_endpointAddr;	/* the address of the isoc out endpoint */
-	int isoc_out_interval;
-	int isoc_out_max_frames;
-	struct usb_anchor isoc_out_anchor;
-	bool isoc_selected;	/* should we use isoc or bulk? */
+	unsigned char *bulk_in_buffer;	// the buffer to receive data
+	size_t bulk_in_ep_size;		// max packet size of bulk IN ep(bulk_in_buffer size)
+	size_t bulk_in_filled;		// number of bytes in the buffer
+	size_t bulk_in_copied;		// already copied to user space
+	bool ongoing_bulk_read;		// a bulk read is going on
 
-	int current_interface;
-	int current_altsetting;
+	/*** ISOC ***/
+	struct usb_anchor isoc_out_anchor;	// anchor for all isoc OUT urbs
+	struct usb_anchor isoc_in_anchor;	// anchor for all isoc IN urbs
 
-	int errors;		/* the last request tanked */
-	bool ongoing_read;	/* a read is going on */
-	spinlock_t err_lock;	/* lock for errors */
+	__u8 isoc_out_epAddr;		// the address of the isoc out ep
+	__u8 isoc_in_epAddr;		// the address of the isoc IN ep
+
+	size_t isoc_in_ep_size;		// max packet size of isoc IN ep
+	size_t isoc_in_buf_size;	// size of the read buffer (ep_size * ISOC_MAX_FRAMES)
+	int isoc_in_interval;		// interval read from the isoc IN ep desc
+	int isoc_in_max_frames;		// max frames for isoc in packets (ISOC_MAX_FRAMES)
+
+	size_t isoc_out_ep_size;	// max packet size for isoc OUT ep
+	int isoc_out_interval;		// interval read from the isoc OUT ep desc
+	int isoc_out_max_frames;	// max frames calc'd at probe (MAX_TRANSFER/isoc_out_ep_size)
+
+	bool isoc_selected;		// should we use isoc or bulk?
+
+	int current_interface;		//current set interface num
+	int current_altsetting;		//current set interface altsetting
+
+	int errors;			// the last request tanked
+	spinlock_t err_lock;		// lock for errors
 	struct kref kref;
-	struct mutex io_mutex;	/* synchronize I/O with disconnect */
-	wait_queue_head_t wait;	/* to wait for an ongoing read */
+	wait_queue_head_t wait;		// to wait for an ongoing read
+	struct mutex io_mutex;		// synchronize I/O with disconnect
 };
 #define usbfoley_from_kref(d) container_of(d, struct usbfoley, kref)
 
-struct foley_buff {
-	struct list_head buff_list;
-	struct urb *urb;
-	struct usbfoley *dev;
-};
-
-#endif				// End USB_MOREPORK_FOLEY_H
+#endif // End USB_MOREPORK_FOLEY_H
