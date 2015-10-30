@@ -650,9 +650,16 @@ static struct omap_hwmod_ocp_if am43xx_l4_wkup__wkup_m3 = {
 	.user		= OCP_USER_MPU | OCP_USER_SDMA,
 };
 
-static struct omap_hwmod_ocp_if am43xx_l3_main__pruss = {
+static struct omap_hwmod_ocp_if am43xx_l3_main__pruss0 = {
 	.master		= &am33xx_l3_main_hwmod,
-	.slave		= &am33xx_pruss_hwmod,
+	.slave		= &am4372_pruss0_hwmod,
+	.clk		= "dpll_core_m4_ck",
+	.user		= OCP_USER_MPU,
+};
+
+static struct omap_hwmod_ocp_if am43xx_l3_main__pruss1 = {
+	.master		= &am33xx_l3_main_hwmod,
+	.slave		= &am4372_pruss1_hwmod,
 	.clk		= "dpll_core_m4_ck",
 	.user		= OCP_USER_MPU,
 };
@@ -961,7 +968,8 @@ static struct omap_hwmod_ocp_if *am43xx_hwmod_ocp_ifs[] __initdata = {
 	&am43xx_l4_ls__mcspi4,
 	&am43xx_l4_ls__gpio4,
 	&am43xx_l4_ls__gpio5,
-	&am43xx_l3_main__pruss,
+	&am43xx_l3_main__pruss0,
+    &am43xx_l3_main__pruss1,
 	&am33xx_mpu__l3_main,
 	&am33xx_mpu__prcm,
 	&am33xx_l3_s__l4_ls,

@@ -76,7 +76,7 @@ struct omap_hwmod_ocp_if am33xx_l3_s__l3_main = {
 
 /* pru-icss -> l3 main */
 struct omap_hwmod_ocp_if am33xx_pruss__l3_main = {
-	.master		= &am33xx_pruss_hwmod,
+	.master		= &am4372_pruss1_hwmod,
 	.slave		= &am33xx_l3_main_hwmod,
 	.clk		= "l3_gclk",
 	.user		= OCP_USER_MPU | OCP_USER_SDMA,
