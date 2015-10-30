@@ -1273,7 +1273,7 @@ static struct pru_match_private_data am437x_pru_match_data[] = {
     },
     {
         .device_name = "54478000.pru0_1",
-        .priv_data = &am437x_pru0_0_rproc_pdata,
+        .priv_data = &am437x_pru0_1_rproc_pdata,
     },
 	{
 		/* sentinel */
