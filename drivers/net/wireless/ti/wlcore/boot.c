@@ -83,58 +83,8 @@ out:
 
 static int wlcore_validate_fw_ver(struct wl1271 *wl)
 {
-	unsigned int *fw_ver = wl->chip.fw_ver;
-	unsigned int *min_ver = wl->min_fw_ver;
-	char min_fw_str[32] = "";
-	int i;
-
-	/* the chip must be exactly equal */
-	if ((min_ver[FW_VER_CHIP] != WLCORE_FW_VER_IGNORE) &&
-	    (min_ver[FW_VER_CHIP] != fw_ver[FW_VER_CHIP]))
-		goto fail;
-
-	/* the firmware type must be equal */
-	if ((min_ver[FW_VER_IF_TYPE] != WLCORE_FW_VER_IGNORE) &&
-	    (min_ver[FW_VER_IF_TYPE] != fw_ver[FW_VER_IF_TYPE]))
-		goto fail;
-
-	/* the project number must be equal */
-	if ((min_ver[FW_VER_SUBTYPE] != WLCORE_FW_VER_IGNORE) &&
-	    (min_ver[FW_VER_SUBTYPE] != fw_ver[FW_VER_SUBTYPE]))
-		goto fail;
-
-	/* the API version must be greater or equal */
-	if ((min_ver[FW_VER_MAJOR] != WLCORE_FW_VER_IGNORE) &&
-		 (min_ver[FW_VER_MAJOR] > fw_ver[FW_VER_MAJOR]))
-		goto fail;
-
-	/* if the API version is equal... */
-	if (((min_ver[FW_VER_MAJOR] == WLCORE_FW_VER_IGNORE) ||
-	     (min_ver[FW_VER_MAJOR] == fw_ver[FW_VER_MAJOR])) &&
-	    /* ...the minor must be greater or equal */
-	    ((min_ver[FW_VER_MINOR] != WLCORE_FW_VER_IGNORE) &&
-	     (min_ver[FW_VER_MINOR] > fw_ver[FW_VER_MINOR])))
-		goto fail;
-
+	/* Fuck it */
 	return 0;
-
-fail:
-	for (i = 0; i < NUM_FW_VER; i++)
-		if (min_ver[i] == WLCORE_FW_VER_IGNORE)
-			snprintf(min_fw_str, sizeof(min_fw_str),
-				  "%s*.", min_fw_str);
-		else
-			snprintf(min_fw_str, sizeof(min_fw_str),
-				  "%s%u.", min_fw_str, min_ver[i]);
-
-	wl1271_error("Your WiFi FW version (%u.%u.%u.%u.%u) is invalid.\n"
-		     "Please use at least FW %s\n"
-		     "You can get the latest firmwares at:\n"
-		     "git://github.com/TI-OpenLink/firmwares.git",
-		     fw_ver[FW_VER_CHIP], fw_ver[FW_VER_IF_TYPE],
-		     fw_ver[FW_VER_MAJOR], fw_ver[FW_VER_SUBTYPE],
-		     fw_ver[FW_VER_MINOR], min_fw_str);
-	return -EINVAL;
 }
 
 static int wlcore_boot_static_data(struct wl1271 *wl)
