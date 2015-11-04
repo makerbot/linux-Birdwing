@@ -208,13 +208,20 @@ static int foley_do_read_bulk_io(struct usbfoley *dev, size_t count)
 	return rv;
 }
 
-static ssize_t foley_bulk_read(struct file *file, char *buffer, size_t count)
+static ssize_t foley_read(struct file *file, char *buffer, size_t count,
+			  loff_t * ppos)
 {
 	struct usbfoley *dev;
 	int rv;
 	bool ongoing_io;
 
+	if (*ppos) {
+		return -ESPIPE;
+	}
+
 	dev = file->private_data;
+
+	foley_set_interface(dev, FOLEY_INTERFACE, FOLEY_ALTSETTING);
 
 	/* if we cannot read at all, return EOF */
 	if (!dev->bulk_in_urb || !count) {
@@ -360,22 +367,6 @@ static void foley_dump_urb(struct urb *urb)
 		 urb->complete);
 }
 
-static ssize_t foley_read(struct file *file, char *buffer, size_t count,
-			  loff_t * ppos)
-{
-	struct usbfoley *dev;
-
-	if (*ppos) {
-		return -ESPIPE;
-	}
-
-	dev = file->private_data;
-
-	foley_set_interface(dev, FOLEY_INTERFACE, FOLEY_ALTSETTING);
-
-	return foley_bulk_read(file, buffer, count);
-}
-
 static void foley_write_bulk_callback(struct urb *urb)
 {
 	struct usbfoley *dev;
@@ -413,8 +404,8 @@ static void foley_write_bulk_callback(struct urb *urb)
 	up(&dev->limit_sem);
 }
 
-static ssize_t foley_bulk_write(struct file *file, const char *user_buffer,
-				size_t count)
+static ssize_t foley_write(struct file *file, const char *buffer, size_t count,
+			   loff_t * ppos)
 {
 	struct usbfoley *dev;
 	int rv = 0;
@@ -422,7 +413,13 @@ static ssize_t foley_bulk_write(struct file *file, const char *user_buffer,
 	char *buf = NULL;
 	size_t writesize = min(count, (size_t) MAX_TRANSFER);
 
+	if (*ppos) {
+		return -ESPIPE;
+	}
+
 	dev = file->private_data;
+
+	foley_set_interface(dev, FOLEY_INTERFACE, FOLEY_ALTSETTING);
 
 	dev_dbg(&dev->intf->dev, "BULK_WRITE_COUNT: %d\nBULK_WRITESIZE: %d\n",
 		(int)count, (int)writesize);
@@ -481,7 +478,7 @@ static ssize_t foley_bulk_write(struct file *file, const char *user_buffer,
 		goto error;
 	}
 
-	if (copy_from_user(buf, user_buffer, writesize)) {
+	if (copy_from_user(buf, buffer, writesize)) {
 		rv = -EFAULT;
 		goto error;
 	}
@@ -534,22 +531,6 @@ static ssize_t foley_bulk_write(struct file *file, const char *user_buffer,
 
  exit:
 	return rv;
-}
-
-static ssize_t foley_write(struct file *file, const char *buffer, size_t count,
-			   loff_t * ppos)
-{
-	struct usbfoley *dev;
-
-	if (*ppos) {
-		return -ESPIPE;
-	}
-
-	dev = file->private_data;
-
-	foley_set_interface(dev, FOLEY_INTERFACE, FOLEY_ALTSETTING);
-
-	return foley_bulk_write(file, buffer, count);
 }
 
 static const struct file_operations foley_fops = {
