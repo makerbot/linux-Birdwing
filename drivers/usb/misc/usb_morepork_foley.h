@@ -26,9 +26,6 @@ static const struct usb_device_id foley_table[] = {
 #define FOLEY_INTERFACE 0
 #define FOLEY_ALTSETTING 1
 
-//Max frames allowed per Isoc IN transaction, Isoc OUT max frames are determined at probe
-#define FOLEY_MAX_ISOC_IN_FRAMES 10
-
 /* Structure to hold all of our device specific stuff */
 struct usbfoley {
 	struct usb_device *udev;	// the usb device for this device
@@ -47,24 +44,6 @@ struct usbfoley {
 	size_t bulk_in_filled;		// number of bytes in the buffer
 	size_t bulk_in_copied;		// already copied to user space
 	bool ongoing_bulk_read;		// a bulk read is going on
-
-	/*** ISOC ***/
-	struct usb_anchor isoc_out_anchor;	// anchor for all isoc OUT urbs
-	struct usb_anchor isoc_in_anchor;	// anchor for all isoc IN urbs
-
-	__u8 isoc_out_epAddr;		// the address of the isoc out ep
-	__u8 isoc_in_epAddr;		// the address of the isoc IN ep
-
-	size_t isoc_in_ep_size;		// max packet size of isoc IN ep
-	size_t isoc_in_buf_size;	// size of the read buffer (ep_size * ISOC_MAX_FRAMES)
-	int isoc_in_interval;		// interval read from the isoc IN ep desc
-	int isoc_in_max_frames;		// max frames for isoc in packets (ISOC_MAX_FRAMES)
-
-	size_t isoc_out_ep_size;	// max packet size for isoc OUT ep
-	int isoc_out_interval;		// interval read from the isoc OUT ep desc
-	int isoc_out_max_frames;	// max frames calc'd at probe (MAX_TRANSFER/isoc_out_ep_size)
-
-	bool isoc_selected;		// should we use isoc or bulk?
 
 	int current_interface;		//current set interface num
 	int current_altsetting;		//current set interface altsetting
