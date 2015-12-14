@@ -254,7 +254,7 @@
 				ti,mbox-tx = <4 0 0>;
 				ti,mbox-rx = <5 0 0>;
 			};
-            mbox_pru0_0_interrupt: mbox_pru0_0_interrupt {
+            mbox_pru1_0_interrupt: mbox_pru1_0_interrupt {
                 ti,mbox-tx = <6 0 0>;
                 ti,mbox-rx = <6 0 0>;
             };
@@ -853,8 +853,7 @@
 				      <0x54462400 0x100>;
 				reg-names = "iram", "control", "debug";
                 mbox-names = "pr0_pru0";
-				mboxes = <&mailbox &mbox_pru0_0
-                          &mailbox &mbox_pru0_0_interrupt>;
+				mboxes = <&mailbox &mbox_pru0_0>;
 			};
 
 /*			pru0_1: pru@54478000 {
@@ -894,7 +893,8 @@
 				      <0x54422000 0x400>,
 				      <0x54422400 0x100>;
 				reg-names = "iram", "control", "debug";
-				mboxes = <&mailbox &mbox_pru1_0>;
+				mboxes = <&mailbox &mbox_pru1_0
+                          &mailbox &mbox_pru1_0_interrupt>;
 			};
 			/*pru1_1: pru@54438000 {
 				compatible = "ti,am4372-pru-rproc";
