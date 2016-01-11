@@ -74,75 +74,41 @@
 
 	cpsw_default: cpsw_default {
 		pinctrl-single,pins = <
-			/* Slave 1 */
-			/* NOTE Most Slave 1 pins are used for MMC, leaving for ref for now */
-			/*0x114 (PIN_OUTPUT_PULLDOWN | MUX_MODE2)	/* mii1_txen.rgmii1_txen */
-			/*0x118 (PIN_INPUT_PULLDOWN | MUX_MODE2)	/* mii1_rxdv.rgmii1_rxctl */
-			/*0x11c (PIN_OUTPUT_PULLDOWN | MUX_MODE2)	/* mii1_txd1.rgmii1_txd3 */
-			/*0x120 (PIN_OUTPUT_PULLDOWN | MUX_MODE2)	/* mii1_txd0.rgmii1_txd2 */
-			/*0x124 (PIN_OUTPUT_PULLDOWN | MUX_MODE2)	/* mii1_txd1.rgmii1_txd1 */
-			/*0x128 (PIN_OUTPUT_PULLDOWN | MUX_MODE2)	/* mii1_txd0.rgmii1_txd0 */
-			/*0x12c (PIN_OUTPUT_PULLDOWN | MUX_MODE2)	/* mii1_txclk.rmii1_tclk */
-			/*0x130 (PIN_INPUT_PULLDOWN | MUX_MODE2)	/* mii1_rxclk.rmii1_rclk */
-			/*0x134 (PIN_INPUT_PULLDOWN | MUX_MODE2)	/* mii1_rxd1.rgmii1_rxd3 */
-			/*0x138 (PIN_INPUT_PULLDOWN | MUX_MODE2)	/* mii1_rxd0.rgmii1_rxd2 */
-			/*0x13c (PIN_INPUT_PULLDOWN | MUX_MODE2)	/* mii1_rxd1.rgmii1_rxd1 */
-			/*0x140 (PIN_INPUT_PULLDOWN | MUX_MODE2)	/* mii1_rxd0.rgmii1_rxd0 */
-
-
-			/*NOTE These pins should probably be in MODE1 (gmii not rgmii).
-			  though when that is done the PHY fails to be found. So maybe not */
-			/* Slave 2 */
-			0x40 (PIN_OUTPUT_PULLDOWN | MUX_MODE2)  /* gpmc_a0.rgmii2_tctl */
-			0x44 (PIN_INPUT_PULLDOWN | MUX_MODE2)   /* gpmc_a1.rgmii2_rtcl */
-			0x48 (PIN_OUTPUT_PULLDOWN | MUX_MODE2)  /* gpmc_a2.rgmii2_td3 */
-			0x4c (PIN_OUTPUT_PULLDOWN | MUX_MODE2)  /* gpmc_a3.rgmii2_td2 */
-			0x50 (PIN_OUTPUT_PULLDOWN | MUX_MODE2)  /* gpmc_a4.rgmii2_td1 */
-			0x54 (PIN_OUTPUT_PULLDOWN | MUX_MODE2)  /* gpmc_a5.rgmii2_td0 */
-			0x58 (PIN_OUTPUT_PULLDOWN | MUX_MODE2)  /* gpmc_a6.rgmii2_tclk */
-			0x5c (PIN_INPUT_PULLDOWN | MUX_MODE2)   /* gpmc_a7.rgmii2_rclk */
-			0x60 (PIN_INPUT_PULLDOWN | MUX_MODE2)   /* gpmc_a8.rgmii2_rd3 */
-			0x64 (PIN_INPUT_PULLDOWN | MUX_MODE2)   /* gpmc_a9.rgmii2_rd2 */
-			0x68 (PIN_INPUT_PULLDOWN | MUX_MODE2)   /* gpmc_a10.rgmii2_rd1 */
-			0x6c (PIN_INPUT_PULLDOWN | MUX_MODE2)   /* gpmc_a11.rgmii2_rd0 */
-			0x070 (PIN_INPUT_PULLDOWN | MUX_MODE2)	/* gpmc_wait0.rgmii2_crs */
-			0x074 (PIN_INPUT_PULLDOWN | MUX_MODE2)	/* gpmc_wpn.rgmii2_rxer */
-			0x078 (PIN_INPUT_PULLDOWN | MUX_MODE2)	/* gpmc_be1n.rgmii2_col */
+			0x78 ( PIN_INPUT | MUX_MODE1 ) /* (A3) gpmc_be1n.gmii2_col */
+			0x70 ( PIN_INPUT | MUX_MODE1 ) /* (A2) gpmc_wait0.gmii2_crs */
+			0x74 ( PIN_INPUT | MUX_MODE1 ) /* (B3) gpmc_wpn.gmii2_rxer */
+			0x40 ( PIN_OUTPUT | MUX_MODE1 ) /* (C3) gpmc_a0.gmii2_txen */
+			0x44 ( PIN_INPUT | MUX_MODE1 ) /* (C5) gpmc_a1.gmii2_rxdv */
+			0x58 ( PIN_INPUT | MUX_MODE1 ) /* (E8) gpmc_a6.gmii2_txclk */
+			0x5c ( PIN_INPUT | MUX_MODE1 ) /* (F6) gpmc_a7.gmii2_rxclk */
+			0x54 ( PIN_OUTPUT | MUX_MODE1 ) /* (E7) gpmc_a5.gmii2_txd0 */
+			0x50 ( PIN_OUTPUT | MUX_MODE1 ) /* (D7) gpmc_a4.gmii2_txd1 */
+			0x4c ( PIN_OUTPUT | MUX_MODE1 ) /* (A4) gpmc_a3.gmii2_txd2 */
+			0x48 ( PIN_OUTPUT | MUX_MODE1 ) /* (C6) gpmc_a2.gmii2_txd3 */
+			0x6c ( PIN_INPUT | MUX_MODE1 ) /* (D8) gpmc_a11.gmii2_rxd0 */
+			0x68 ( PIN_INPUT | MUX_MODE1 ) /* (G8) gpmc_a10.gmii2_rxd1 */
+			0x64 ( PIN_INPUT | MUX_MODE1 ) /* (B4) gpmc_a9.gmii2_rxd2 */
+			0x60 ( PIN_INPUT | MUX_MODE1 ) /* (F7) gpmc_a8.gmii2_rxd3 */
 		>;
 	};
 
 	cpsw_sleep: cpsw_sleep {
 		pinctrl-single,pins = <
-			/* Slave 1 reset value */
-			/*0x114 (PIN_INPUT_PULLDOWN | MUX_MODE7)
-			0x118 (PIN_INPUT_PULLDOWN | MUX_MODE7)
-			0x11c (PIN_INPUT_PULLDOWN | MUX_MODE7)
-			0x120 (PIN_INPUT_PULLDOWN | MUX_MODE7)
-			0x124 (PIN_INPUT_PULLDOWN | MUX_MODE7)
-			0x128 (PIN_INPUT_PULLDOWN | MUX_MODE7)
-			0x12c (PIN_INPUT_PULLDOWN | MUX_MODE7)
-			0x130 (PIN_INPUT_PULLDOWN | MUX_MODE7)
-			0x134 (PIN_INPUT | PULL_DISABLE | MUX_MODE7)
-			0x138 (PIN_INPUT | PULL_DISABLE | MUX_MODE7)
-			0x13c (PIN_INPUT | PULL_DISABLE | MUX_MODE7)
-			0x140 (PIN_INPUT | PULL_DISABLE | MUX_MODE7)*/
-
-			 /* Slave 2 reset value*/
-			0x40 (PIN_OUTPUT_PULLDOWN | MUX_MODE7)
-			0x44 (PIN_INPUT_PULLDOWN | MUX_MODE7)
-			0x48 (PIN_OUTPUT_PULLDOWN | MUX_MODE7)
-			0x4c (PIN_OUTPUT_PULLDOWN | MUX_MODE7)
-			0x50 (PIN_OUTPUT_PULLDOWN | MUX_MODE7)
-			0x54 (PIN_OUTPUT_PULLDOWN | MUX_MODE7)
-			0x58 (PIN_OUTPUT_PULLDOWN | MUX_MODE7)
-			0x5c (PIN_INPUT_PULLDOWN | MUX_MODE7)
-			0x60 (PIN_INPUT_PULLDOWN | MUX_MODE7)
-			0x64 (PIN_INPUT_PULLDOWN | MUX_MODE7)
-			0x68 (PIN_INPUT_PULLDOWN | MUX_MODE7)
-			0x6c (PIN_INPUT_PULLDOWN | MUX_MODE7)
-			0x070 (PIN_INPUT_PULLDOWN | MUX_MODE7)
-			0x074 (PIN_INPUT_PULLDOWN | MUX_MODE7)
-			0x078 (PIN_INPUT_PULLDOWN | MUX_MODE7)
+			0x78 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (A3) gpmc_be1n.gmii2_col */
+			0x70 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (A2) gpmc_wait0.gmii2_crs */
+			0x74 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (B3) gpmc_wpn.gmii2_rxer */
+			0x40 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (C3) gpmc_a0.gmii2_txen */
+			0x44 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (C5) gpmc_a1.gmii2_rxdv */
+			0x58 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (E8) gpmc_a6.gmii2_txclk */
+			0x5c (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (F6) gpmc_a7.gmii2_rxclk */
+			0x54 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (E7) gpmc_a5.gmii2_txd0 */
+			0x50 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (D7) gpmc_a4.gmii2_txd1 */
+			0x4c (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (A4) gpmc_a3.gmii2_txd2 */
+			0x48 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (C6) gpmc_a2.gmii2_txd3 */
+			0x6c (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (D8) gpmc_a11.gmii2_rxd0 */
+			0x68 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (G8) gpmc_a10.gmii2_rxd1 */
+			0x64 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (B4) gpmc_a9.gmii2_rxd2 */
+			0x60 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (F7) gpmc_a8.gmii2_rxd3 */
 		>;
 	};
 
@@ -476,7 +442,7 @@
 
 &cpsw_emac0 {
 	phy_id = <&davinci_mdio>, <1>; /* DustyRhoades PHY MDIO address is 0x01 */
-	phy-mode = "mii"; /* PHY (DP83848JSQ/NOPB) seems to support RMII and MII */
+	phy-mode = "mii"; /* PHY (DP83848JSQ/NOPB) supports RMII and MII */
 	status = "okay";
 };
 
