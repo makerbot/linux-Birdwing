@@ -134,7 +134,7 @@ static ssize_t rpmsg_pru_read(struct file *filp, char *buf, size_t count,
 static ssize_t rpmsg_pru_write(struct file *filp, const char *buf, size_t count,
 						 loff_t *f_pos)
 {
-	int ret;
+	int ret=0;
 	struct rpmsg_pru_dev *prudev;
 
 	prudev = filp->private_data;
@@ -144,7 +144,15 @@ static ssize_t rpmsg_pru_write(struct file *filp, const char *buf, size_t count,
 		return -EINVAL;
 	}
 
-	ret = rpmsg_send(prudev->rpdev, (void *)buf, count);
+    if (filp->f_flags & O_NONBLOCK) {
+        ret = rpmsg_try_send(prudev->rpdev, (void *)buf, count);
+        if (ret == -ENOMEM) {
+            return -EAGAIN;
+        }
+    } else {
+        ret = rpmsg_send(prudev->rpdev, (void *)buf, count);
+    }
+
 	if (ret)
 		dev_err(prudev->dev, "rpmsg_send failed: %d\n", ret);
 
