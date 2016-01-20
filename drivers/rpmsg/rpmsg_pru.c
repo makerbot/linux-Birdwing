@@ -145,7 +145,7 @@ static ssize_t rpmsg_pru_write(struct file *filp, const char *buf, size_t count,
 	}
 
     if (filp->f_flags & O_NONBLOCK) {
-        ret = rpmsg_try_send(prudev->rpdev, (void *)buf, count);
+        ret = rpmsg_trysend(prudev->rpdev, (void *)buf, count);
         if (ret == -ENOMEM) {
             return -EAGAIN;
         }
