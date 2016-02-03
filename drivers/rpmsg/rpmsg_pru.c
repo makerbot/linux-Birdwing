@@ -32,6 +32,7 @@
 #define RPMSG_BUF_SIZE				(512)
 #define MAX_FIFO_MSG				(32)
 #define FIFO_MSG_SIZE				RPMSG_BUF_SIZE
+#define LENGTH_TABLE_SIZE           (MAX_FIFO_MSG*20)
 
 /**
  * struct rpmsg_pru_dev - Structure that contains the per-device data
@@ -61,7 +62,7 @@ struct rpmsg_pru_dev {
 	bool locked;
 	dev_t devt;
 	struct kfifo rpmsg_pru_msg_fifo;
-	u32 rpmsg_pru_msg_len[MAX_FIFO_MSG];
+	u32 rpmsg_pru_msg_len[LENGTH_TABLE_SIZE];
 	int rpmsg_pru_msg_idx_rd;
 	int rpmsg_pru_msg_idx_wr;
 	wait_queue_head_t rpmsg_pru_wait_list;
@@ -126,7 +127,7 @@ static ssize_t rpmsg_pru_read(struct file *filp, char *buf, size_t count,
 		prudev->rpmsg_pru_msg_len[prudev->rpmsg_pru_msg_idx_rd],
 		&length);
 	prudev->rpmsg_pru_msg_idx_rd =
-		(prudev->rpmsg_pru_msg_idx_rd + 1) % MAX_FIFO_MSG;
+		(prudev->rpmsg_pru_msg_idx_rd + 1) % LENGTH_TABLE_SIZE;
 
 	return ret ? ret : length;
 }
@@ -199,7 +200,7 @@ static void rpmsg_pru_cb(struct rpmsg_channel *rpdev, void *data, int len,
 		return;
 	}
 
-	if ((prudev->rpmsg_pru_msg_idx_wr + 1) % MAX_FIFO_MSG ==
+	if ((prudev->rpmsg_pru_msg_idx_wr + 1) % LENGTH_TABLE_SIZE ==
 		prudev->rpmsg_pru_msg_idx_rd) {
 		dev_err(&rpdev->dev, "Message length table is full\n");
 		return;
@@ -208,7 +209,7 @@ static void rpmsg_pru_cb(struct rpmsg_channel *rpdev, void *data, int len,
 	length = kfifo_in(&prudev->rpmsg_pru_msg_fifo, data, len);
 	prudev->rpmsg_pru_msg_len[prudev->rpmsg_pru_msg_idx_wr] = length;
 	prudev->rpmsg_pru_msg_idx_wr =
-		(prudev->rpmsg_pru_msg_idx_wr + 1) % MAX_FIFO_MSG;
+		(prudev->rpmsg_pru_msg_idx_wr + 1) % LENGTH_TABLE_SIZE;
 
 	wake_up_interruptible(&prudev->rpmsg_pru_wait_list);
 
