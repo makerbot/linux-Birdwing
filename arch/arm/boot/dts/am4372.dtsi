@@ -256,7 +256,7 @@
 			};
             mbox_pru1_0_interrupt: mbox_pru1_0_interrupt {
                 ti,mbox-tx = <6 0 0>;
-                ti,mbox-rx = <6 0 0>;
+                ti,mbox-rx = <7 0 0>;
             };
 //			mbox_pru0_1: mbox_pru0_1 {
 //				ti,mbox-tx = <6 0 0>;
