@@ -32,6 +32,7 @@
 #define RPMSG_BUF_SIZE				(512)
 #define MAX_FIFO_MSG				(32)
 #define FIFO_MSG_SIZE				RPMSG_BUF_SIZE
+#define LENGTH_TABLE_SIZE           (MAX_FIFO_MSG*20)
 
 /**
  * struct rpmsg_pru_dev - Structure that contains the per-device data
@@ -61,7 +62,7 @@ struct rpmsg_pru_dev {
 	bool locked;
 	dev_t devt;
 	struct kfifo rpmsg_pru_msg_fifo;
-	u32 rpmsg_pru_msg_len[MAX_FIFO_MSG];
+	u32 rpmsg_pru_msg_len[LENGTH_TABLE_SIZE];
 	int rpmsg_pru_msg_idx_rd;
 	int rpmsg_pru_msg_idx_wr;
 	wait_queue_head_t rpmsg_pru_wait_list;
@@ -126,7 +127,7 @@ static ssize_t rpmsg_pru_read(struct file *filp, char *buf, size_t count,
 		prudev->rpmsg_pru_msg_len[prudev->rpmsg_pru_msg_idx_rd],
 		&length);
 	prudev->rpmsg_pru_msg_idx_rd =
-		(prudev->rpmsg_pru_msg_idx_rd + 1) % MAX_FIFO_MSG;
+		(prudev->rpmsg_pru_msg_idx_rd + 1) % LENGTH_TABLE_SIZE;
 
 	return ret ? ret : length;
 }
@@ -134,7 +135,7 @@ static ssize_t rpmsg_pru_read(struct file *filp, char *buf, size_t count,
 static ssize_t rpmsg_pru_write(struct file *filp, const char *buf, size_t count,
 						 loff_t *f_pos)
 {
-	int ret;
+	int ret=0;
 	struct rpmsg_pru_dev *prudev;
 
 	prudev = filp->private_data;
@@ -144,7 +145,15 @@ static ssize_t rpmsg_pru_write(struct file *filp, const char *buf, size_t count,
 		return -EINVAL;
 	}
 
-	ret = rpmsg_send(prudev->rpdev, (void *)buf, count);
+    if (filp->f_flags & O_NONBLOCK) {
+        ret = rpmsg_trysend(prudev->rpdev, (void *)buf, count);
+        if (ret == -ENOMEM) {
+            return -EAGAIN;
+        }
+    } else {
+        ret = rpmsg_send(prudev->rpdev, (void *)buf, count);
+    }
+
 	if (ret)
 		dev_err(prudev->dev, "rpmsg_send failed: %d\n", ret);
 
@@ -191,7 +200,7 @@ static void rpmsg_pru_cb(struct rpmsg_channel *rpdev, void *data, int len,
 		return;
 	}
 
-	if ((prudev->rpmsg_pru_msg_idx_wr + 1) % MAX_FIFO_MSG ==
+	if ((prudev->rpmsg_pru_msg_idx_wr + 1) % LENGTH_TABLE_SIZE ==
 		prudev->rpmsg_pru_msg_idx_rd) {
 		dev_err(&rpdev->dev, "Message length table is full\n");
 		return;
@@ -200,7 +209,7 @@ static void rpmsg_pru_cb(struct rpmsg_channel *rpdev, void *data, int len,
 	length = kfifo_in(&prudev->rpmsg_pru_msg_fifo, data, len);
 	prudev->rpmsg_pru_msg_len[prudev->rpmsg_pru_msg_idx_wr] = length;
 	prudev->rpmsg_pru_msg_idx_wr =
-		(prudev->rpmsg_pru_msg_idx_wr + 1) % MAX_FIFO_MSG;
+		(prudev->rpmsg_pru_msg_idx_wr + 1) % LENGTH_TABLE_SIZE;
 
 	wake_up_interruptible(&prudev->rpmsg_pru_wait_list);
 
@@ -212,7 +221,7 @@ static int rpmsg_pru_probe(struct rpmsg_channel *rpdev)
 	int ret;
 	struct rpmsg_pru_dev *prudev;
 	int minor_got;
-
+    dev_err(&rpdev->dev, "\n--------pru rpmsg probe--------------------\n\n");
 	prudev = devm_kzalloc(&rpdev->dev, sizeof(*prudev), GFP_KERNEL);
 	if (!prudev) {
 		dev_err(&rpdev->dev, "Unable to allocate kernel memory for the rpmsg_pru device\n");
@@ -294,7 +303,7 @@ static void rpmsg_pru_remove(struct rpmsg_channel *rpdev)
 /* .name matches on RPMsg Channels and causes a probe */
 static const struct rpmsg_device_id rpmsg_driver_pru_id_table[] = {
 	{ .name	= "rpmsg-pru" },
-	{ },
+    { }
 };
 MODULE_DEVICE_TABLE(rpmsg, rpmsg_driver_pru_id_table);
 
@@ -310,7 +319,7 @@ static struct rpmsg_driver rpmsg_pru_driver = {
 static int __init rpmsg_pru_init(void)
 {
 	int ret;
-
+    pr_err("\n-------RPMSG PRU DRIVER INIT-----------\n\n");
 	rpmsg_pru_class = class_create(THIS_MODULE, "rpmsg_pru");
 	if (IS_ERR(rpmsg_pru_class)) {
 		pr_err("Unable to create class\n");

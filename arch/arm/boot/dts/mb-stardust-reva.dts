@@ -379,6 +379,10 @@
 	status = "okay";
 };
 
+&gpio2 {
+	status = "okay";
+};
+
 &gpio3 {
 	status = "okay";
 };
@@ -484,15 +488,20 @@
 			data-lines = <16>;
 		};
 	};
+};
 
+/* TODO: This clearly belongs in dss and not in the root node.
+ *       But the dss is poorly written so this cannot go there.
+ */
+/ {
 	lcd0: display@0 {
 		compatible = "omapdss,panel-dpi", "panel-dpi";
 		label = "lcd";
+		status = "okay";
 		enable-gpios = <&gpio2 21 GPIO_ACTIVE_HIGH>;
 
 		port {
 			lcd_in: endpoint {
-				/* I don't know what to point this to */
 				remote-endpoint = <&dpi_out>;
 			};
 		};

@@ -268,3 +268,8 @@ config USB_CHAOSKEY
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called chaoskey.
+
+config USB_MOREPORK_FOLEY
+	tristate "USB Morepork MickFoley Toolhead Driver"
+	help
+	  This option enables support fo the MickFoley Toolhead

@@ -254,10 +254,14 @@
 				ti,mbox-tx = <4 0 0>;
 				ti,mbox-rx = <5 0 0>;
 			};
-			mbox_pru0_1: mbox_pru0_1 {
-				ti,mbox-tx = <6 0 0>;
-				ti,mbox-rx = <7 0 0>;
-			};
+            mbox_pru1_0_interrupt: mbox_pru1_0_interrupt {
+                ti,mbox-tx = <6 0 0>;
+                ti,mbox-rx = <7 0 0>;
+            };
+//			mbox_pru0_1: mbox_pru0_1 {
+//				ti,mbox-tx = <6 0 0>;
+//				ti,mbox-rx = <7 0 0>;
+//			};
 
 		};
 
@@ -852,7 +856,7 @@
 				mboxes = <&mailbox &mbox_pru0_0>;
 			};
 
-			pru0_1: pru@54478000 {
+/*			pru0_1: pru@54478000 {
 				compatible = "ti,am4372-pru-rproc";
 				reg = <0x54478000 0x3000>,
 				      <0x54464000 0x400>,
@@ -860,7 +864,7 @@
 				reg-names = "iram", "control", "debug";
                 mbox-names = "pr0_pru1";
 				mboxes = <&mailbox &mbox_pru0_1>;
-			};
+			};*/
 		};
 
 		pruss1: pruss@54400000 {
@@ -884,15 +888,15 @@
 			ranges;
 
 			pru1_0: pru@54434000 {
-				compatible = "ti,am4372-pru-rproc";
+			    compatible = "ti,am4372-pru-rproc";
 				reg = <0x54434000 0x3000>,
 				      <0x54422000 0x400>,
 				      <0x54422400 0x100>;
 				reg-names = "iram", "control", "debug";
-				mboxes = <&mailbox &mbox_pru1_0>;
+				mboxes = <&mailbox &mbox_pru1_0
+                          &mailbox &mbox_pru1_0_interrupt>;
 			};
-/* Comment out core 1 because we don't have a mailbox for it
-			pru1_1: pru@54438000 {
+			/*pru1_1: pru@54438000 {
 				compatible = "ti,am4372-pru-rproc";
 				reg = <0x54438000 0x3000>,
 				      <0x54424000 0x400>,
