@@ -17,7 +17,7 @@
 
 / {
 	model = "MakerBot Stardust RevA";
-	compatible = "makerbot,stardust-reva","ti,am4372","ti,am43";
+	compatible = "makerbot,stardust-reva","ti,am4372","ti,am43", "ti,cpsw";
 
 	aliases {};
 
@@ -69,6 +69,62 @@
 			0x03C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_ad15 */
 			0x080 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_csn1.gpio1_30 */
 			0x084 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_csn2.gpio1_31 */
+		>;
+	};
+
+	cpsw_default: cpsw_default {
+		pinctrl-single,pins = <
+			0x78 ( PIN_INPUT | MUX_MODE1 ) /* (A3) gpmc_be1n.gmii2_col */
+			0x70 ( PIN_INPUT | MUX_MODE1 ) /* (A2) gpmc_wait0.gmii2_crs */
+			0x74 ( PIN_INPUT | MUX_MODE1 ) /* (B3) gpmc_wpn.gmii2_rxer */
+			0x40 ( PIN_OUTPUT | MUX_MODE1 ) /* (C3) gpmc_a0.gmii2_txen */
+			0x44 ( PIN_INPUT | MUX_MODE1 ) /* (C5) gpmc_a1.gmii2_rxdv */
+			0x58 ( PIN_INPUT | MUX_MODE1 ) /* (E8) gpmc_a6.gmii2_txclk */
+			0x5c ( PIN_INPUT | MUX_MODE1 ) /* (F6) gpmc_a7.gmii2_rxclk */
+			0x54 ( PIN_OUTPUT | MUX_MODE1 ) /* (E7) gpmc_a5.gmii2_txd0 */
+			0x50 ( PIN_OUTPUT | MUX_MODE1 ) /* (D7) gpmc_a4.gmii2_txd1 */
+			0x4c ( PIN_OUTPUT | MUX_MODE1 ) /* (A4) gpmc_a3.gmii2_txd2 */
+			0x48 ( PIN_OUTPUT | MUX_MODE1 ) /* (C6) gpmc_a2.gmii2_txd3 */
+			0x6c ( PIN_INPUT | MUX_MODE1 ) /* (D8) gpmc_a11.gmii2_rxd0 */
+			0x68 ( PIN_INPUT | MUX_MODE1 ) /* (G8) gpmc_a10.gmii2_rxd1 */
+			0x64 ( PIN_INPUT | MUX_MODE1 ) /* (B4) gpmc_a9.gmii2_rxd2 */
+			0x60 ( PIN_INPUT | MUX_MODE1 ) /* (F7) gpmc_a8.gmii2_rxd3 */
+		>;
+	};
+
+	cpsw_sleep: cpsw_sleep {
+		pinctrl-single,pins = <
+			0x78 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (A3) gpmc_be1n.gmii2_col */
+			0x70 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (A2) gpmc_wait0.gmii2_crs */
+			0x74 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (B3) gpmc_wpn.gmii2_rxer */
+			0x40 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (C3) gpmc_a0.gmii2_txen */
+			0x44 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (C5) gpmc_a1.gmii2_rxdv */
+			0x58 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (E8) gpmc_a6.gmii2_txclk */
+			0x5c (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (F6) gpmc_a7.gmii2_rxclk */
+			0x54 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (E7) gpmc_a5.gmii2_txd0 */
+			0x50 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (D7) gpmc_a4.gmii2_txd1 */
+			0x4c (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (A4) gpmc_a3.gmii2_txd2 */
+			0x48 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (C6) gpmc_a2.gmii2_txd3 */
+			0x6c (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (D8) gpmc_a11.gmii2_rxd0 */
+			0x68 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (G8) gpmc_a10.gmii2_rxd1 */
+			0x64 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (B4) gpmc_a9.gmii2_rxd2 */
+			0x60 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (F7) gpmc_a8.gmii2_rxd3 */
+		>;
+	};
+
+	davinci_mdio_default: davinci_mdio_default {
+		pinctrl-single,pins = <
+			/* MDIO */
+			0x148 (PIN_INPUT_PULLUP | SLEWCTRL_FAST | MUX_MODE0)	/* mdio_data.mdio_data */
+			0x14c (PIN_OUTPUT_PULLUP | MUX_MODE0)			/* mdio_clk.mdio_clk */
+		>;
+	};
+
+	davinci_mdio_sleep: davinci_mdio_sleep {
+		pinctrl-single,pins = <
+			/* MDIO reset value */
+			0x148 (PIN_INPUT | PULL_DISABLE | MUX_MODE7)
+			0x14c (PIN_INPUT | PULL_DISABLE | MUX_MODE7)
 		>;
 	};
 
@@ -202,21 +258,6 @@
 			0x014 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_ad5 */
 			0x018 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_ad6 */
 			0x01C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_ad7 */
-			0x040 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_a0 */
-			0x044 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_a1 */
-			0x048 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_a2 */
-			0x04C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_a3 */
-			0x050 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_a4 */
-			0x054 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_a5 */
-			0x058 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_a6 */
-			0x05C (PIN_INPUT_PULLDOWN | MUX_MODE7) 	/* gpmc_a7 */
-			0x060 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_a8 */
-			0x064 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_a9 */
-			0x068 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_a10 */
-			0x06C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_a11 */
-			0x070 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_wait0 */
-			0x074 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_wpn */
-			0x078 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_be1n */
 			0x07C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_csn0  */
 			0x088 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_csn3 */
 			0x08C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_clk */
@@ -239,8 +280,6 @@
 			0x138 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* mii1_rxd2 */
 			0x13C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* mii1_rxd1 */
 			0x144 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* rmii1_refclk */
-			0x148 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* mdio_data */
-			0x14C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* mdio_clk */
 			0x150 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* spi0_sclk */
 			0x154 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* spi0_d0 */
 			0x158 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* spi0_d1 */
@@ -388,6 +427,26 @@
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&usb2_pins_default>;
 	pinctrl-1 = <&usb2_pins_sleep>;
+};
+
+&mac {
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&cpsw_default>;
+	pinctrl-1 = <&cpsw_sleep>;
+    active_slave = <1>;
+	status = "okay";
+};
+
+&davinci_mdio {
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&davinci_mdio_default>;
+	pinctrl-1 = <&davinci_mdio_sleep>;
+	status = "okay";
+};
+
+&cpsw_emac1 {
+	phy_id = <&davinci_mdio>, <1>; /* DustyRhoades PHY MDIO address is 0x01 */
+	phy-mode = "mii"; /* PHY (DP83848JSQ/NOPB) supports RMII and MII */
 };
 
 &uart0 {
