@@ -106,16 +106,16 @@
 		pinctrl-single,pins = <
 			0x19C (PIN_OUTPUT | MUX_MODE5)	/* mcasp0_ahclkr (pru gpo3)*/
 			0x1A0 (PIN_OUTPUT | MUX_MODE5)	/* mcasp0_aclkr (pru gpo4)*/
-			0x1A4 (PIN_INPUT_PULLDOWN | MUX_MODE6)	/* mcasp0_fsr (pru gpi5) INPUT*/
+		    0x1A4 (PIN_OUTPUT | MUX_MODE5)	/* mcasp0_fsr (pru gpo5)*/
 			0x1A8 (PIN_OUTPUT | MUX_MODE5)	/* mcasp0_axr1 (pru gpo6)*/
 			0x0F0 (PIN_OUTPUT | MUX_MODE5)	/* mmc0_dat3 (pru gpo8)*/
-			0x0F4 (PIN_INPUT_PULLDOWN  | MUX_MODE6)	/* mmc0_dat2 (pru gpi9) INPUT*/
+			0x0F4 (PIN_OUTPUT | MUX_MODE5)	/* mmc0_dat2 (pru gpo9)*/
 			0x0F8 (PIN_OUTPUT | MUX_MODE5)	/* mmc0_dat1 (pru gpo10)*/
 			0x0FC (PIN_OUTPUT | MUX_MODE5)	/* mmc0_dat0 (pru gpo11)*/
-			0x100 (PIN_INPUT_PULLDOWN  | MUX_MODE6)	/* mmc0_clk (pru gpi12) INPUT*/
-			0x104 (PIN_OUTPUT | MUX_MODE5)	/* mmc0_cmd (pru gpo13)*/
-			0x1C0 (PIN_OUTPUT | MUX_MODE3)	/* cam0_pclk (pru gpo14)*/
-			0x1C4 (PIN_OUTPUT | MUX_MODE3)	/* cam0_data8 (pru gpo15)*/
+			0x100 (PIN_OUTPUT | MUX_MODE5)	/* mmc0_clk (pru gpo12)*/
+			0x104 (PIN_INPUT_PULLDOWN | MUX_MODE6)	/* mmc0_cmd (pri gpi13) INPUT*/
+			0x1C0 (PIN_INPUT_PULLDOWN | MUX_MODE5)	/* cam0_pclk (pru gpi14) INPUT*/
+			0x1C4 (PIN_INPUT_PULLDOWN | MUX_MODE5)	/* cam0_data8 (pru gpi15) INPUT*/
 			0x1C8 (PIN_OUTPUT | MUX_MODE3)	/* cam0_data9 (pru gpo16)*/
 			0x1CC (PIN_OUTPUT | MUX_MODE3)	/* cam1_data9 (pru gpo17)*/
 			0x228 (PIN_OUTPUT | MUX_MODE4)	/* uart3_rxd (pru gpo18)*/
