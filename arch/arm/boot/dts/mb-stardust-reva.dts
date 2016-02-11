@@ -42,6 +42,13 @@
 		>;
 	};
 
+    i2c2_pins: i2c2_pins {
+        pinctrl-single,pins = <
+		    0x1E8 (PIN_INPUT_PULLUP | SLEWCTRL_FAST | MUX_MODE3)	/* cam1_data1 / i2c2_sda*/
+            0x1EC (PIN_INPUT_PULLUP | SLEWCTRL_FAST | MUX_MODE3)	/* cam1_data1 / i2c2_sdl */
+        >;
+    };
+
 	emmc_pins_default: emmc_pins_default {
 		pinctrl-single,pins = <
 			0x020 (PIN_INPUT_PULLUP | MUX_MODE2)	/* gpmc_ad8.mmc1_dat0 */
@@ -296,8 +303,6 @@
 			0x1AC (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* mcasp0_ahcplkx */
 			0x1B0 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_hd */
 			0x1B4 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_vd */
-			0x1E8 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam1_data0 */
-			0x1EC (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam1_data1 */
 			0x210 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_data2 */
 			0x214 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_data3 */
 			0x218 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_data4 */
@@ -353,6 +358,13 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c0_pins>;
 	clock-frequency = <100000>;
+};
+
+&i2c2 {
+    status = "okay";
+    pinctrl-names = "default";
+    pinctrl-0 = <&i2c2_pins>;
+    clock-frequency = <100000>;
 };
 
 &epwmss0 {
