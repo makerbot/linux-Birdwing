@@ -23,8 +23,11 @@ static const struct usb_device_id foley_table[] = {
 
 #define WRITES_IN_FLIGHT	32	//Arbitrary num, limited to not exhaust the RAM
 
+#define FOLEY_NUM_ALTSETTINGS 1
+#define FOLEY_NUM_ENDPOINTS 2
+
 #define FOLEY_INTERFACE 0
-#define FOLEY_ALTSETTING 1
+#define FOLEY_ALTSETTING 0 
 
 /* Structure to hold all of our device specific stuff */
 struct usbfoley {

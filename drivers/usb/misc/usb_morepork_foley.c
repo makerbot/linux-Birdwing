@@ -564,15 +564,17 @@ static int foley_probe(struct usb_interface *interface,
 	int rv = -ENOMEM;
 
 	// Check that we have the altsetting and num-o-endpoints we expect
-	if (interface->num_altsetting != 2) {
+	if (interface->num_altsetting != FOLEY_NUM_ALTSETTINGS) {
 		dev_err(&interface->dev,
-			"Device doesn't have 2 altsettings (has %d)",
-			interface->num_altsetting);
+			"Device doesn't have %d altsetting(s) (has %d)",
+			FOLEY_NUM_ALTSETTINGS, interface->num_altsetting);
 		return -ENODEV;
-	} else if (interface->altsetting[FOLEY_ALTSETTING].desc.bNumEndpoints != 2) {
+	} else if (interface->altsetting[FOLEY_ALTSETTING].desc.bNumEndpoints != FOLEY_NUM_ENDPOINTS) {
 		dev_err(&interface->dev,
-			"Device's altsetting 1 doesn't have 2 endpoints (has %d)",
-			interface->altsetting[FOLEY_ALTSETTING].desc.bNumEndpoints);
+			"Device's altsetting %d doesn't have %d endpoints (has %d)",
+			FOLEY_ALTSETTING,
+            FOLEY_NUM_ENDPOINTS,
+            interface->altsetting[FOLEY_ALTSETTING].desc.bNumEndpoints);
 		return -ENODEV;
 	}
 
