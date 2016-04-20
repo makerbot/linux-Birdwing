@@ -1,0 +1,359 @@
+---
+ arch/arm/mach-davinci/Kconfig                    |    8 +
+ arch/arm/mach-davinci/Makefile                   |    3 +
+ arch/arm/mach-davinci/ehrpwm.c                   |  302 ++++++++++++++++++++++
+ arch/arm/mach-davinci/include/mach/davinci_pwm.h |    1 +
+ 4 files changed, 314 insertions(+), 0 deletions(-)
+ create mode 100644 arch/arm/mach-davinci/ehrpwm.c
+
+diff --git a/arch/arm/mach-davinci/Kconfig b/arch/arm/mach-davinci/Kconfig
+index 8192866..6d588ed 100644
+--- a/arch/arm/mach-davinci/Kconfig
++++ b/arch/arm/mach-davinci/Kconfig
+@@ -239,6 +239,14 @@ config DAVINCI_ECAP_PWM
+ 	help
+ 	  Say Y to select the eCAP module for PWM control.
+ 
++config DAVINCI_EHRPWM
++	bool "eHRPWM driver support for simple PWM control"
++	depends on ARCH_DAVINCI_DA8XX
++	depends on HAVE_PWM
++	default n
++	help
++	  Say Y to select the eHRPWM driver
++
+ endmenu
+ 
+ endif
+diff --git a/arch/arm/mach-davinci/Makefile b/arch/arm/mach-davinci/Makefile
+index 90bd88e..3d567ca 100644
+--- a/arch/arm/mach-davinci/Makefile
++++ b/arch/arm/mach-davinci/Makefile
+@@ -45,3 +45,6 @@ obj-$(CONFIG_HAVE_PWM)			+= davinci_pwm.o
+ 
+ # eCAP driver support for PWM
+ obj-$(CONFIG_DAVINCI_ECAP_PWM)		+= ecap.o
++
++# eHRPWM driver for simple PWM control
++obj-$(CONFIG_DAVINCI_EHRPWM)           += ehrpwm.o
+diff --git a/arch/arm/mach-davinci/ehrpwm.c b/arch/arm/mach-davinci/ehrpwm.c
+new file mode 100644
+index 0000000..5166370
+--- /dev/null
++++ b/arch/arm/mach-davinci/ehrpwm.c
+@@ -0,0 +1,302 @@
++/*
++ * DA850/OMAP-L138 eHRPWM driver for simple PWM output generation
++ *
++ * Copyright (C) 2010 Texas Instruments Incorporated - http://www.ti.com/
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License as
++ * published by the Free Software Foundation version 2.
++ *
++ * This program is distributed .as is. WITHOUT ANY WARRANTY of any
++ * kind, whether express or implied; without even the implied warranty
++ * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ */
++
++#include <linux/module.h>
++#include <linux/kernel.h>
++#include <linux/platform_device.h>
++#include <linux/err.h>
++#include <linux/clk.h>
++#include <linux/io.h>
++#include <linux/pwm.h>
++#include <linux/slab.h>
++#include <mach/davinci_pwm.h>
++
++#define TBCTL_REG		0x0
++#define TBPRD_REG		0xA
++#define CMPA_REG		0x12
++#define CMPB_REG		0x14
++#define AQCTLA_REG		0x16
++#define AQCTLB_REG		0x18
++
++#define TBCTL_FREERUN_FREE	0x2
++#define TBCTL_SYNCOSEL_DISABLE	0x3
++
++#define ACTCTLA_CTREQCMP_LOW	0x1
++#define ACTCTLA_CTREQPRD_HIGH	0x2
++
++#define NUMBER_OF_PWM_OUTPUTS	2
++
++static struct private {
++	int duty_val;
++} pv_data[NUMBER_OF_PWM_OUTPUTS];
++
++struct pwm_device *pwm_dev[NUMBER_OF_PWM_OUTPUTS];
++
++struct freq_divider_table {
++	unsigned char clkdiv_val;
++	unsigned char  hspclkdiv_val;
++	unsigned int resulting_div;
++};
++
++/*
++ * The table shows all the combinations of CLKDIV and HSPCLKDIV that
++ * are available, and the resulting divider.
++ * resulting divider = CLKDIV * HSPCLKDIV
++ */
++
++static struct freq_divider_table frqtable[] = {
++	{0,	0,	1},
++	{0,	1,	2},
++	{0,	2,	4},
++	{0,	3,	6},
++	{0,	4,	8},
++	{0,	5,	10},
++	{0,	6,	12},
++	{0,	7,	14},
++	{1,	4,	16},
++	{1,	5,	20},
++	{1,	6,	24},
++	{1,	7,	28},
++	{2,	4,	32},
++	{2,	5,	40},
++	{2,	6,	48},
++	{2,	7,	56},
++	{3,	4,	64},
++	{3,	5,	80},
++	{3,	6,	96},
++	{3,	7,	112},
++	{4,	4,	128},
++	{4,	5,	160},
++	{4,	6,	192},
++	{4,	7,	224},
++	{5,	4,	256},
++	{5,	5,	320},
++	{5,	6,	384},
++	{5,	7,	448},
++	{6,	4,	512},
++	{6,	5,	640},
++	{6,	6,	768},
++	{6,	7,	896},
++	{7,	4,	1024},
++	{7,	5,	1280},
++	{7,	6,	1536},
++	{7,	7,	1792},
++};
++
++/*
++ * ehrpwm_config_pwm - configures the ehrpwm module for the PWM output with
++ * given period and duty cycle.
++ */
++
++static int ehrpwm_pwm_config(struct pwm_device *pwm, unsigned int
++		period_cycles, unsigned int duty_cycle)
++{
++	int tb_div_val = 0;
++	int desired_ps_val = 0;
++	int available_ps_val = 0;
++	int i;
++	struct private *private_data = (struct private *)(pwm->private);
++
++	/*
++	 * Prescaler is used when the period_cycles value exceeds the maximum
++	 * value of the period register.
++	 * We always look for minimum prescaler value as it would result in wide
++	 * range of duty cycle control.
++	 */
++
++	if (period_cycles > 65535) {
++		desired_ps_val = period_cycles / 65535 + 1;
++		for (i = 0; i < (sizeof(frqtable) / sizeof(frqtable[0])); i++) {
++			if (frqtable[i].resulting_div >= desired_ps_val) {
++				available_ps_val = frqtable[i].resulting_div;
++				tb_div_val = frqtable[i].clkdiv_val << 10
++					| frqtable[i].hspclkdiv_val << 7;
++				break;
++			}
++		}
++
++		period_cycles = period_cycles / available_ps_val;
++		duty_cycle = duty_cycle / available_ps_val;
++	}
++
++	__raw_writew((TBCTL_FREERUN_FREE << 14) | (TBCTL_SYNCOSEL_DISABLE << 4)
++			 | tb_div_val , pwm->mmio_base + TBCTL_REG);
++	__raw_writew((unsigned short)period_cycles, pwm->mmio_base +
++					TBPRD_REG);
++
++	/*
++	 * 100%  duty cycle is obtained when the duty_cycle value is 1 greater
++	 * than period_cycles value ie duty_cycle = period_cycles + 1.
++	 */
++
++	if (duty_cycle == period_cycles)
++		duty_cycle = period_cycles + 1;
++
++	private_data->duty_val = duty_cycle;
++	return 0;
++}
++
++int ehrpwm_pwm_enable(struct pwm_device *pwm)
++{
++	struct private *private_data = (struct private *)(pwm->private);
++
++	if (!pwm->output_number) {
++		__raw_writew((unsigned short)private_data->duty_val,
++			pwm->mmio_base + CMPA_REG);
++		__raw_writew((ACTCTLA_CTREQCMP_LOW << 4)
++			| (ACTCTLA_CTREQPRD_HIGH << 2),
++			pwm->mmio_base + AQCTLA_REG);
++	} else {
++		__raw_writew((unsigned short)private_data->duty_val,
++			pwm->mmio_base + CMPB_REG);
++		__raw_writew((ACTCTLA_CTREQCMP_LOW << 8)
++			| (ACTCTLA_CTREQPRD_HIGH << 2),
++			pwm->mmio_base + AQCTLB_REG);
++	}
++
++	return 0;
++}
++
++void ehrpwm_pwm_disable(struct pwm_device *pwm)
++{
++	if (!pwm->output_number) {
++		__raw_writew(0, pwm->mmio_base +
++				CMPA_REG);
++		__raw_writew((ACTCTLA_CTREQCMP_LOW << 4)
++			| (ACTCTLA_CTREQPRD_HIGH << 2),
++			pwm->mmio_base + AQCTLA_REG);
++	} else {
++		__raw_writew(0 , pwm->mmio_base +
++				CMPB_REG);
++		__raw_writew((ACTCTLA_CTREQCMP_LOW << 8)
++			| (ACTCTLA_CTREQPRD_HIGH << 2),
++			pwm->mmio_base + AQCTLB_REG);
++	}
++}
++
++static int __devinit ehrpwm_probe(struct platform_device *pdev)
++{
++	struct pwm_device **pwm = NULL;
++	struct resource *r;
++	int ret = 0;
++	int i = 0;
++
++	pwm = &pwm_dev[0];
++
++	for (i = 0; i < NUMBER_OF_PWM_OUTPUTS; i++) {
++		pwm[i] = kzalloc(sizeof(struct pwm_device), GFP_KERNEL);
++		if (!pwm[i]) {
++			dev_err(&pdev->dev, "failed to allocate memory\n");
++			goto err_free_device;
++			return -ENOMEM;
++		}
++	}
++
++	pwm[0]->clk = clk_get(&pdev->dev, "ehrpwm");
++	if (IS_ERR(pwm[0]->clk)) {
++		ret = PTR_ERR(pwm[0]->clk);
++		goto err_free_device;
++	}
++
++	pwm[0]->pdev = pdev;
++	pwm[0]->pwm_config_device = ehrpwm_pwm_config;
++	pwm[0]->pwm_enable = ehrpwm_pwm_enable;
++	pwm[0]->pwm_disable = ehrpwm_pwm_disable;
++	r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
++	if (!r) {
++		dev_err(&pdev->dev, "no memory resource defined\n");
++		ret = -ENODEV;
++		goto err_free_clk;
++	}
++
++	r = request_mem_region(r->start, resource_size(r), pdev->name);
++	if (!r) {
++		dev_err(&pdev->dev, "failed to request memory resource\n");
++		ret = -EBUSY;
++		goto err_free_clk;
++	}
++
++	pwm[0]->mmio_base = ioremap(r->start, resource_size(r));
++	if (!pwm[0]->mmio_base) {
++		dev_err(&pdev->dev, "failed to ioremap() registers\n");
++		ret = -ENODEV;
++		goto err_free_mem;
++	}
++
++	for (i = 0; i < NUMBER_OF_PWM_OUTPUTS; i++) {
++		*pwm[i] = *pwm[0];
++		pwm[i]->pwm_id = pdev->id + i;
++		pwm[i]->output_number = i;
++		pwm[i]->private = &pv_data[i];
++
++		pwm_add(pwm[i]);
++	}
++
++	platform_set_drvdata(pdev, pwm);
++
++	clk_enable(pwm[0]->clk);
++	return 0;
++
++err_free_mem:
++	release_mem_region(r->start, resource_size(r));
++err_free_clk:
++	clk_put(pwm[0]->clk);
++err_free_device:
++	for (i = 0; i < NUMBER_OF_PWM_OUTPUTS; i++)
++		kfree(pwm[i]);
++	return ret;
++}
++
++static int __devexit ehrpwm_remove(struct platform_device *pdev)
++{
++	struct pwm_device **pwm;
++	struct resource *r;
++	int i = 0;
++
++	pwm = platform_get_drvdata(pdev);
++	iounmap(pwm[0]->mmio_base);
++	r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
++	release_mem_region(r->start, resource_size(r));
++	clk_disable(pwm[0]->clk);
++	clk_put(pwm[0]->clk);
++	for (i = 0; i < NUMBER_OF_PWM_OUTPUTS; i++)
++		pwm_remove(pwm[i]);
++
++	return 0;
++}
++
++static struct platform_driver ehrpwm_driver = {
++	.driver		= {
++		.name	= "ehrpwm",
++		.owner	= THIS_MODULE,
++	},
++	.probe		= ehrpwm_probe,
++	.remove		= __devexit_p(ehrpwm_remove),
++};
++
++static int __init ehrpwm_init(void)
++{
++	return platform_driver_register(&ehrpwm_driver);
++}
++
++static void __exit ehrpwm_exit(void)
++{
++	platform_driver_unregister(&ehrpwm_driver);
++}
++
++module_init(ehrpwm_init);
++module_exit(ehrpwm_exit);
++
++MODULE_LICENSE("GPL v2");
+diff --git a/arch/arm/mach-davinci/include/mach/davinci_pwm.h b/arch/arm/mach-davinci/include/mach/davinci_pwm.h
+index e6db614..2090fed 100644
+--- a/arch/arm/mach-davinci/include/mach/davinci_pwm.h
++++ b/arch/arm/mach-davinci/include/mach/davinci_pwm.h
+@@ -27,6 +27,7 @@ struct pwm_device {
+ 	struct clk	*clk;
+ 	void __iomem    *mmio_base;
+ 	unsigned int	use_count;
++	unsigned char	output_number;
+ 	unsigned int	pwm_id;
+ };
+ 
+-- 

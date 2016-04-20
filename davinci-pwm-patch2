@@ -1,0 +1,113 @@
+---
+ arch/arm/mach-davinci/da850.c              |   34 ++++++++++++++++++++++++++++
+ arch/arm/mach-davinci/include/mach/da8xx.h |    2 +
+ arch/arm/mach-davinci/include/mach/mux.h   |    2 +
+ 3 files changed, 38 insertions(+), 0 deletions(-)
+
+diff --git a/arch/arm/mach-davinci/da850.c b/arch/arm/mach-davinci/da850.c
+index 7bc51f1..ab1758e 100644
+--- a/arch/arm/mach-davinci/da850.c
++++ b/arch/arm/mach-davinci/da850.c
+@@ -352,6 +352,13 @@ static struct clk ecap_clk = {
+ 	.gpsc		= 1,
+ };
+ 
++static struct clk ehrpwm_clk = {
++	.name		= "ehrpwm",
++	.parent		= &pll0_sysclk2,
++	.lpsc		= DA8XX_LPSC1_PWM,
++	.gpsc		= 1,
++};
++
+ static struct clk_lookup da850_clks[] = {
+ 	CLK(NULL,		"ref",		&ref_clk),
+ 	CLK(NULL,		"pll0",		&pll0_clk),
+@@ -395,6 +402,7 @@ static struct clk_lookup da850_clks[] = {
+ 	CLK("davinci_mmc.1",	NULL,		&mmcsd1_clk),
+ 	CLK(NULL,		"aemif",	&aemif_clk),
+ 	CLK(NULL,		"ecap",		&ecap_clk),
++	CLK(NULL,		"ehrpwm",	&ehrpwm_clk),
+ 	CLK(NULL,		NULL,		NULL),
+ };
+ 
+@@ -558,6 +566,7 @@ static const struct mux_config da850_pins[] = {
+ 	MUX_CFG(DA850, GPIO4_1,		10,	24,	15,	8,	false)
+ 	MUX_CFG(DA850, RTC_ALARM,	0,	28,	15,	2,	false)
+ 	MUX_CFG(DA850, ECAP2_APWM2,	1,	0,	15,	4,	false)
++	MUX_CFG(DA850, EHRPWM1_A,	5,	0,	15,	2,	false)
+ #endif
+ };
+ 
+@@ -1015,6 +1024,22 @@ static int da850_round_armrate(struct clk *clk, unsigned long rate)
+ }
+ #endif
+ 
++#define DA8XX_EHRPWM1_BASE	0x01F02000
++
++static struct resource da850_ehrpwm_resource[] = {
++	{
++	.start		= DA8XX_EHRPWM1_BASE,
++	.end		= DA8XX_EHRPWM1_BASE + 0xfff,
++	.flags		= IORESOURCE_MEM,
++	},
++};
++
++static struct platform_device da850_ehrpwm_dev = {
++	.name		= "ehrpwm",
++	.id		= 1,
++	.resource	= da850_ehrpwm_resource,
++	.num_resources	= ARRAY_SIZE(da850_ehrpwm_resource),
++};
+ 
+ #define DA8XX_ECAP2_BASE	0x01F08000
+ 
+@@ -1038,6 +1063,15 @@ int __init da850_register_ecap(void)
+ 	return platform_device_register(&da850_ecap_dev);
+ }
+ 
++
++#define DA8XX_CHIPCFG1		DA8XX_SYSCFG0_VIRT(DA8XX_CFGCHIP1_REG)
++
++int __init da850_register_ehrpwm(void)
++{
++	__raw_writew(__raw_readw(DA8XX_CHIPCFG1) | BIT(12), DA8XX_CHIPCFG1);
++	return platform_device_register(&da850_ehrpwm_dev);
++}
++
+ int da850_register_pm(struct platform_device *pdev)
+ {
+ 	int ret;
+diff --git a/arch/arm/mach-davinci/include/mach/da8xx.h b/arch/arm/mach-davinci/include/mach/da8xx.h
+index 3b6e399..2ccfa85 100644
+--- a/arch/arm/mach-davinci/include/mach/da8xx.h
++++ b/arch/arm/mach-davinci/include/mach/da8xx.h
+@@ -42,6 +42,7 @@ extern void __iomem *da8xx_syscfg1_base;
+ #define DA8XX_SYSCFG0_VIRT(x)	(da8xx_syscfg0_base + (x))
+ #define DA8XX_JTAG_ID_REG	0x18
+ #define DA8XX_CFGCHIP0_REG	0x17c
++#define DA8XX_CFGCHIP1_REG	0x180
+ #define DA8XX_CFGCHIP2_REG	0x184
+ #define DA8XX_CFGCHIP3_REG	0x188
+ 
+@@ -84,6 +85,7 @@ int da8xx_register_cpuidle(void);
+ void __iomem * __init da8xx_get_mem_ctlr(void);
+ int da850_register_pm(struct platform_device *pdev);
+ int __init da850_register_ecap(void);
++int __init da850_register_ehrpwm(void);
+ 
+ extern struct platform_device da8xx_serial_device;
+ extern struct emac_platform_data da8xx_emac_pdata;
+diff --git a/arch/arm/mach-davinci/include/mach/mux.h b/arch/arm/mach-davinci/include/mach/mux.h
+index b3c23ee..416d935 100644
+--- a/arch/arm/mach-davinci/include/mach/mux.h
++++ b/arch/arm/mach-davinci/include/mach/mux.h
+@@ -917,6 +917,8 @@ enum davinci_da850_index {
+ 
+ 	/* eCAP Module */
+ 	DA850_ECAP2_APWM2,
++	/* eHRPWM Module */
++	DA850_EHRPWM1_A,
+ };
+ 
+ enum davinci_tnetv107x_index {
+-- 
