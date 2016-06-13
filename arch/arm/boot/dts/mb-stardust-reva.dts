@@ -267,8 +267,8 @@
 			0x01C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_ad7 */
 			0x07C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_csn0  */
 			0x088 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_csn3 */
-			0x08C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_clk */
-			0x090 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_advn_ale */
+			0x08C (PIN_OUTPUT_PULLUP | MUX_MODE7)	/* gpmc_clk / gpio2.1 / pwr-main */
+			0x090 (PIN_OUTPUT_PULLUP | MUX_MODE7)	/* gpmc_advn_ale / gpio2.2 / 12v en */
 			0x094 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_oen_ren */
 			0x098 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_wen */
 			0x09C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_be0n_cle */
