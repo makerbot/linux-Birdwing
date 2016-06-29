@@ -3,12 +3,22 @@
 import os
 import shutil
 import subprocess
+import argparse
 
-# Set the build configuration here as <name>_defconfig
-config = 'mb_stardust_reva_defconfig'
+parser = argparse.ArgumentParser(description='Build the morepork kernel.')
+parser.add_argument('-r', '--revision', type=str, default='macho-man-reva',
+                    help='electronics revision: stardust-reva or [macho-man-reva]')
+args = parser.parse_args()
 
-# We also need to specify a device tree to build
-dt = 'mb-stardust-reva.dtb'
+if args.revision == 'macho-man-reva':
+    config = 'mb_macho_man_reva_defconfig'
+    dt = 'mb-macho-man-reva.dtb'
+elif args.revision == 'stardust-reva':
+    config = 'mb_stardust_reva_defconfig'
+    dt = 'mb-stardust-reva.dtb'
+else:
+    print("Unrecognized electroncis revision %s" % args.revision)
+    exit(-1)
 
 this_dir = os.path.realpath(os.path.dirname(__file__))
 
@@ -60,7 +70,7 @@ def install(path):
     image_path = os.path.join(this_dir, 'obj', 'arch', 'arm', 'boot')
     shutil.copy2(os.path.join(image_path, 'zImage'),
                  install_boot)
-    shutil.copy2(os.path.join(image_path, 'dts', 'mb-stardust-reva.dtb'),
+    shutil.copy2(os.path.join(image_path, 'dts', dt),
                  install_boot)
 
 def clean():
