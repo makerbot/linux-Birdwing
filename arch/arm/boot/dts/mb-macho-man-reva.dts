@@ -96,9 +96,9 @@
 		pinctrl-single,pins = <
 			0x78 ( PIN_INPUT | MUX_MODE1 ) /* (A3) gpmc_be1n.gmii2_col */
 			0x70 ( PIN_INPUT | MUX_MODE1 ) /* (A2) gpmc_wait0.gmii2_crs */
-			0x74 ( PIN_INPUT | MUX_MODE1 ) /* (B3) gpmc_wpn.gmii2_rxer */
+			0x74 ( PIN_INPUT_PULLDOWN | MUX_MODE1 ) /* (B3) gpmc_wpn.gmii2_rxer */
 			0x40 ( PIN_OUTPUT | MUX_MODE1 ) /* (C3) gpmc_a0.gmii2_txen */
-			0x44 ( PIN_INPUT | MUX_MODE1 ) /* (C5) gpmc_a1.gmii2_rxdv */
+			0x44 ( PIN_INPUT_PULLDOWN | MUX_MODE1 ) /* (C5) gpmc_a1.gmii2_rxdv */
 			0x58 ( PIN_INPUT | MUX_MODE1 ) /* (E8) gpmc_a6.gmii2_txclk */
 			0x5c ( PIN_INPUT | MUX_MODE1 ) /* (F6) gpmc_a7.gmii2_rxclk */
 			0x54 ( PIN_OUTPUT | MUX_MODE1 ) /* (E7) gpmc_a5.gmii2_txd0 */
@@ -109,6 +109,8 @@
 			0x68 ( PIN_INPUT | MUX_MODE1 ) /* (G8) gpmc_a10.gmii2_rxd1 */
 			0x64 ( PIN_INPUT | MUX_MODE1 ) /* (B4) gpmc_a9.gmii2_rxd2 */
 			0x60 ( PIN_INPUT | MUX_MODE1 ) /* (F7) gpmc_a8.gmii2_rxd3 */
+			0x270 (PIN_OUTPUT | MUX_MODE3)	/* xdma_evt_intr0 as clkout0*/
+			0x000 (PIN_OUTPUT_PULLUP | MUX_MODE7)	/* gpmc_ad0 */
 		>;
 	};
 
@@ -129,14 +131,18 @@
 			0x68 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (G8) gpmc_a10.gmii2_rxd1 */
 			0x64 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (B4) gpmc_a9.gmii2_rxd2 */
 			0x60 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (F7) gpmc_a8.gmii2_rxd3 */
+			0x270 (PIN_OUTPUT | MUX_MODE3)	/* xdma_evt_intr0 as clkout0*/
+			0x000 (PIN_OUTPUT_PULLUP | MUX_MODE7)	/* gpmc_ad0 */
 		>;
 	};
+
+	
 
 	davinci_mdio_default: davinci_mdio_default {
 		pinctrl-single,pins = <
 			/* MDIO */
-			0x148 (PIN_INPUT_PULLUP | SLEWCTRL_FAST | MUX_MODE0)	/* mdio_data.mdio_data */
-			0x14c (PIN_OUTPUT_PULLUP | MUX_MODE0)			/* mdio_clk.mdio_clk */
+			0x148 (PIN_INPUT | SLEWCTRL_FAST | MUX_MODE0)	/* mdio_data.mdio_data */
+			0x14c (PIN_OUTPUT | MUX_MODE0)			/* mdio_clk.mdio_clk */
 		>;
 	};
 
@@ -272,7 +278,6 @@
 
 	unused_pins: unused_pins {
 		pinctrl-single,pins = <
-			0x000 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_ad0 */
 			0x004 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_ad1 */
 			0x008 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_ad2 */
 			0x00C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_ad3 */
@@ -335,7 +340,6 @@
 			0x260 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* spi2_sclk */
 			0x268 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* spi2_d1 */
 			0x26C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* spi2_cs0 */
-			0x270 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* xdma_evt_intr0 */
 			0x278 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* xdma_evt_intr1 */
 			0x27C (PIN_INPUT | PULL_DISABLE)	/* nresetin_out */
 		>;
@@ -460,7 +464,7 @@
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&cpsw_default>;
 	pinctrl-1 = <&cpsw_sleep>;
-    active_slave = <1>;
+	active_slave = <1>;
 	status = "okay";
 };
 
@@ -471,9 +475,15 @@
 	status = "okay";
 };
 
+// we're not using this but let's avoid boot time complaints
+&cpsw_emac0 {
+	phy_id = <&davinci_mdio>, <0>;
+	phy-mode = "mii";
+};
+
 &cpsw_emac1 {
-	phy_id = <&davinci_mdio>, <1>; /* DustyRhoades PHY MDIO address is 0x01 */
-	phy-mode = "mii"; /* PHY (DP83848JSQ/NOPB) supports RMII and MII */
+	phy_id = <&davinci_mdio>, <1>;
+	phy-mode = "mii";
 };
 
 &uart0 {
