@@ -354,8 +354,6 @@ static void bitbang_work(struct work_struct *work)
 			}
 		}
 
-		m->status = status;
-		m->complete(m->context);
 
 		/* normally deactivate chipselect ... unless no error and
 		 * cs_change has hinted that the next message will probably
@@ -366,7 +364,8 @@ static void bitbang_work(struct work_struct *work)
 			bitbang->chipselect(spi, BITBANG_CS_INACTIVE);
 			ndelay(nsecs);
 		}
-
+		m->status = status;
+		m->complete(m->context);
 		spin_lock_irqsave(&bitbang->lock, flags);
 	}
 	bitbang->busy = 0;
