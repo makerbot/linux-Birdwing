@@ -45,6 +45,14 @@
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&debugss_pins &unused_pins>;
 	pinctrl-1 = <>;
+	
+	/* i2c0 pins used for the pcf8523 hardware RTC */
+	i2c0_pins: i2c0_pins {
+		pinctrl-single,pins = <
+			0x188 (PIN_INPUT_PULLUP | SLEWCTRL_FAST | MUX_MODE0)	/* i2c0_sda.i2c0_sda */
+			0x18C (PIN_INPUT_PULLUP | SLEWCTRL_FAST | MUX_MODE0)	/* i2c0_scl.i2c0_scl */
+		>;
+	};
 
 	// on macho man rev a, i2c-1 is mis laid out: sda is connected to scl and vice
 	// versa. so we'll use an i2c gpio for it.
@@ -317,8 +325,6 @@
 			0x17C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* uart1_rtsn */
 			0x180 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* uart1_rxd */
 			0x184 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* uart1_txd */
-			0x188 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* i2c0_sda.i2c0_sda */
-			0x18c (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* i2c0_scl.i2c0_scl */
 			0x1B0 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_hd */
 			0x1B4 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_vd */
 			0x210 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_data2 */
@@ -378,6 +384,19 @@
 //	pinctrl-0 = <&i2c1_pins>;
 //	clock-frequency = <100000>;
 //};
+
+&i2c0 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c0_pins>;
+	clock-frequency = <100000>;
+	
+	rtc_sys: pcf8523 {
+		compatible = "nxp,pcf8523";
+		status = "okay";
+		reg = <0x68>;
+	};
+};
 
 &i2c2 {
     status = "okay";
