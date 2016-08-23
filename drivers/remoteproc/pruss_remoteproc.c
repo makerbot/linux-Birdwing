@@ -695,8 +695,6 @@ static void pru_rproc_mbox_callback(struct mbox_client *client, void *data)
 	struct device *dev = &pru->rproc->dev;
 	u32 msg = (u32)data;
 
-	dev_dbg(dev, "mbox msg: 0x%x\n", msg);
-
 	/* msg contains the index of the triggered vring */
 	if (rproc_vq_interrupt(pru->rproc, msg) == IRQ_NONE)
 		dev_dbg(dev, "no message was found in vqid %d\n", msg);
@@ -709,7 +707,6 @@ static void pru_rproc_kick(struct rproc *rproc, int vq_id)
 	struct pru_rproc *pru = rproc->priv;
 	int ret;
 
-	dev_dbg(dev, "kicking vqid %d on PRU%d\n", vq_id, pru->id);
 
 	/* send the index of the triggered virtqueue in the mailbox payload */
 	ret = mbox_send_message(pru->mbox, (void *)vq_id);
