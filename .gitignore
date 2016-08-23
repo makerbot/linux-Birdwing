@@ -1,6 +1,8 @@
 # All build files from our build system go here
 /obj/
 
+/install_manifest.txt
+
 #
 # NOTE! Don't add files that are generated in specific
 # subdirectories here. Add them in the ".gitignore" file

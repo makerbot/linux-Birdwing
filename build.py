@@ -60,18 +60,76 @@ def build(num_cores=4):
     run_make_cmd([dt], num_cores)
     run_make_cmd(['zImage'], num_cores)
     run_make_cmd(['modules'], num_cores)
+    # Install the modules to a staging path using make so that we
+    # can get a manifest of all files to actually install
+    staging_path = os.path.join(this_dir, 'obj/staging')
+    run_make_cmd(['modules_install', 'INSTALL_MOD_PATH='+staging_path], 1)
+
+def install_tree(src_path, install_path, manifest_file):
+    """
+    Recursively install the folder src_path as the folder install_path
+
+    This will write the full install path of every file, symlink, and
+    empty directory to the open file object manifest_file, mimicing
+    the behavior of cmake when writing install_manifest.txt.  The
+    copying behavior mimics "cp -ar" as closely as is possible without
+    root permissions.
+    """
+    print("Installing %s as %s" % (src_path, install_path))
+    for dir, subdirs, files in os.walk(src_path):
+        rel_dir = os.path.relpath(dir, src_path)
+        install_dir = os.path.abspath(os.path.join(install_path, rel_dir))
+        if not os.path.exists(install_dir):
+            os.makedirs(install_dir)
+            shutil.copystat(dir, install_dir)
+        if not files and not subdirs:
+            manifest_file.write(install_dir + '\n')
+        for file in files + subdirs:
+            src_file = os.path.join(dir, file)
+            install_file = os.path.join(install_dir, file)
+            if os.path.islink(src_file):
+                linkto = os.readlink(src_file)
+                if os.path.lexists(install_file):
+                    os.remove(install_file)
+                os.symlink(linkto, install_file)
+            elif os.path.isfile(src_file):
+                if os.path.lexists(install_file):
+                    os.remove(install_file)
+                shutil.copy2(src_file, install_file)
+            elif os.path.isdir(src_file):
+                continue
+            else:
+                raise Exception("Unhandled file type")
+            manifest_file.write(install_file + '\n')
+
+def install_file(src_path, install_path, manifest_file):
+    """
+    Install a single regular file
+
+    Usage is otherwise the same as install_tree
+    """
+    print("Installing %s as %s" % (src_path, install_path))
+    install_dir = os.path.dirname(install_path)
+    if not os.path.exists(install_dir):
+        os.makedirs(install_dir)
+    if os.path.lexists(install_path):
+        os.remove(install_path)
+    shutil.copy2(src_path, install_path)
+    manifest_file.write(install_path + '\n')
 
 def install(path):
     install_path = os.path.join(path, 'rootfs')
     install_boot = os.path.join(install_path, 'boot')
-    if not os.path.exists(install_boot):
-        os.makedirs(install_boot)
-    run_make_cmd(['modules_install', 'INSTALL_MOD_PATH='+install_path], 1)
-    image_path = os.path.join(this_dir, 'obj', 'arch', 'arm', 'boot')
-    shutil.copy2(os.path.join(image_path, 'zImage'),
-                 install_boot)
-    shutil.copy2(os.path.join(image_path, 'dts', dt),
-                 install_boot)
+    image_path = os.path.join(this_dir, 'obj/arch/arm/boot')
+    staging_path = os.path.join(this_dir, 'obj/staging')
+    with open(os.path.join(this_dir, "install_manifest.txt"), 'w') as f:
+        install_file(
+            os.path.join(image_path, 'zImage'),
+            os.path.join(install_boot, 'zImage'), f)
+        install_file(
+            os.path.join(image_path, 'dts', dt),
+            os.path.join(install_boot, dt), f)
+        install_tree(staging_path, install_path, f)
 
 def clean():
     print("make mrproper")
