@@ -22,18 +22,12 @@ else:
 
 this_dir = os.path.realpath(os.path.dirname(__file__))
 
+# Default value for debugging purposes -- gets overridden by TR
+install_dir = os.path.abspath(os.path.join(this_dir, '../../Install'))
+
 def run_cmd(cmd):
     print(' '.join(cmd))
     subprocess.check_call(cmd, cwd=this_dir)
-
-cross_compile = os.path.abspath(os.path.join(
-    this_dir,
-    os.pardir,
-    'linaro-bare-metal',
-    'gcc-linaro-4.9-2015.02-3-x86_64_arm-eabi',
-    'bin',
-    'arm-eabi-'
-))
 
 def run_make_cmd(action, num_cores):
     """
@@ -41,6 +35,12 @@ def run_make_cmd(action, num_cores):
     as you would send to subprocess, that will be appended to the make
     invocation. this function handles setting the cross-compilation options.
     """
+    cross_compile = os.path.abspath(os.path.join(
+        install_dir,
+        'linaro-bare-metal',
+        'bin',
+        'arm-eabi-'
+    ))
     obj_dir = os.path.join(this_dir, 'obj')
     if not os.path.exists(obj_dir):
         os.makedirs(obj_dir)
@@ -140,6 +140,8 @@ if 'TR_BUILD' in os.environ:
     for arg in ('clean', 'docs', 'build', 'test', 'install'):
         globals()['TR_ARG_'+arg] = (os.environ['TR_ARG_'+arg] == 'True')
 
+    install_dir = os.environ['TR_ARG_install_dir']
+
     if TR_ARG_clean:
         clean()
 
@@ -148,7 +150,7 @@ if 'TR_BUILD' in os.environ:
 
     # TODO: figure out something for install
     if TR_ARG_install:
-        install(os.environ['TR_ARG_install_dir'])
+        install(install_dir)
 
 else:
     build()
