@@ -14,7 +14,7 @@ else:
         artifactory_utils.ArtifactSelector(
             project="linaro-bare-metal",
             revision="master",
-            version="4.9.0.0",
+            version="5.3.1.0",
             debug=False,
             stable_required=True),
     ]
