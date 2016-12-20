@@ -417,7 +417,47 @@
 	};
 };
 
+&epwmss0 {
+	status = "okay";
+};
+
+&epwmss1 {
+	status = "okay";
+};
+
+&epwmss2 {
+	status = "okay";
+};
+
+&epwmss3 {
+	status = "okay";
+};
+
+&epwmss4 {
+	status = "okay";
+};
+
+&epwmss5 {
+	status = "okay";
+};
+
 &ecap0 {
+	status = "okay";
+};
+
+&ecap1 {
+	status = "okay";
+};
+
+&ehrpwm1 {
+	status = "okay";
+};
+
+&ehrpwm3 {
+	status = "okay";
+};
+
+&ehrpwm5 {
 	status = "okay";
 };
 
