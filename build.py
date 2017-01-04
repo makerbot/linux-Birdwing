@@ -63,6 +63,8 @@ def build(num_cores=4):
     # Install the modules to a staging path using make so that we
     # can get a manifest of all files to actually install
     staging_path = os.path.join(this_dir, 'obj/staging')
+    if os.path.exists(staging_path):
+        shutil.rmtree(staging_path)
     run_make_cmd(['modules_install', 'INSTALL_MOD_PATH='+staging_path], 1)
 
 def install_tree(src_path, install_path, manifest_file):
