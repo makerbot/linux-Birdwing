@@ -12,9 +12,10 @@ static const struct usb_device_id foley_table[] = {
 
 /* Get a minor range for your devices from the usb maintainer */
 #define USB_FOLEY_MINOR_BASE    244
+#define USB_FOLEY_STATUS_MINOR_BASE 250
 
 #define IOCTL_FOLEY_BULK _IO('f', 1)
-#define IOCTL_FOLEY_ISOC _IO('f', 2)
+#define IOCTL_FOLEY_STATUS _IOR('f', 2, char*)
 
 #define MAX_TRANSFER		(PAGE_SIZE - 512)
 /* MAX_TRANSFER is chosen so that the VM is not stressed by
@@ -24,7 +25,7 @@ static const struct usb_device_id foley_table[] = {
 #define WRITES_IN_FLIGHT	32	//Arbitrary num, limited to not exhaust the RAM
 
 #define FOLEY_NUM_ALTSETTINGS 1
-#define FOLEY_NUM_ENDPOINTS 2
+#define FOLEY_NUM_ENDPOINTS 3
 
 #define FOLEY_INTERFACE 0
 #define FOLEY_ALTSETTING 0 
@@ -38,15 +39,22 @@ struct usbfoley {
 	/*** BULK ***/
 	struct usb_anchor bulk_out_anchor;	// in case we need to retract our submissions
 	struct urb *bulk_in_urb;		// the urb to read bulk data with
+	struct urb *status_in_urb;
 
 	__u8 bulk_out_epAddr;		// the address of the bulk out ep
 	__u8 bulk_in_epAddr;		// the address of the bulk in ep
+	__u8 status_in_epAddr;
 
 	unsigned char *bulk_in_buffer;	// the buffer to receive data
+	unsigned char *status_in_buffer;
 	size_t bulk_in_ep_size;		// max packet size of bulk IN ep(bulk_in_buffer size)
+	size_t status_in_ep_size;
 	size_t bulk_in_filled;		// number of bytes in the buffer
+	size_t status_in_filled;
 	size_t bulk_in_copied;		// already copied to user space
+	size_t status_in_copied;
 	bool ongoing_bulk_read;		// a bulk read is going on
+	bool ongoing_status_read;
 
 	int current_interface;		//current set interface num
 	int current_altsetting;		//current set interface altsetting
