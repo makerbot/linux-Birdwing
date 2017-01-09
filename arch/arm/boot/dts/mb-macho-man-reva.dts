@@ -68,7 +68,7 @@
 			0x1E8 (PIN_INPUT_PULLUP | SLEWCTRL_FAST | MUX_MODE3)	/* cam1_data1 / i2c2_sda*/
 			0x1EC (PIN_INPUT_PULLUP | SLEWCTRL_FAST | MUX_MODE3)	/* cam1_data1 / i2c2_sdl */
 		>;
-    };
+	};
 
 	emmc_pins_default: emmc_pins_default {
 		pinctrl-single,pins = <
@@ -226,14 +226,12 @@
 			0x200 (PIN_OUTPUT | MUX_MODE4)	/* cam1_data6 (pru1 gpo14)*/
 			0x204 (PIN_OUTPUT | MUX_MODE4)	/* cam1_data7 (pru1 gpo15)*/
 			0x230 (PIN_OUTPUT | MUX_MODE4)	/* uart3_ctsn (pru1 gpo18)*/
-			0x234 (PIN_OUTPUT | MUX_MODE4)	/* uart3_rtsn (pru1 gpo19)*/
-        >;
-    };
+		>;
+	};
 
 	dss_pins_default: dss_pins_default {
 		pinctrl-single,pins = <
-			0x140 (PIN_OUTPUT_PULLDOWN | MUX_MODE7)	/* mii1_rxd0.gpio2_21 (reset) */
-			0x264 (PIN_OUTPUT_PULLDOWN | MUX_MODE7)	/* spi2_d0.gpio3_22 (bklight) */
+			0x234 (PIN_OUTPUT_PULLDOWN | MUX_MODE7)	/* uart3_rtsn.gpio5_1 (bklight)*/
 			0x0A0 (PIN_OUTPUT_PULLUP | MUX_MODE0)	/* lcd_data0.lcd_data0 */
 			0x0A4 (PIN_OUTPUT_PULLUP | MUX_MODE0)	/* lcd_data1.lcd_data1 */
 			0x0A8 (PIN_OUTPUT_PULLUP | MUX_MODE0)	/* lcd_data2.lcd_data2 */
@@ -259,8 +257,7 @@
 
 	dss_pins_sleep: dss_pins_sleep {
 		pinctrl-single,pins = <
-			0x140 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* mii1_rxd0 */
-			0x264 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* spi2_d0 */
+			0x234 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* uart3_rtsn */
 			0x0A0 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data0 */
 			0x0A4 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data1 */
 			0x0A8 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_data2 */
@@ -281,6 +278,12 @@
 			0x0E4 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_hsync */
 			0x0E8 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_pclk */
 			0x0EC (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* lcd_ac_bias_en */
+		>;
+	};
+
+	edt_ft5xx6_ts_pins: edt_ft5xx6_ts_pins {
+		pinctrl-single,pins = <
+			0x264 (PIN_INPUT | MUX_MODE7)	/* spi2_d0.gpio3_22 (ts interrupt) */
 		>;
 	};
 
@@ -314,6 +317,7 @@
 			0x134 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* mii1_rxd3 */
 			0x138 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* mii1_rxd2 */
 			0x13C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* mii1_rxd1 */
+			0x140 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* mii1_rxd0 */
 			0x144 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* rmii1_refclk */
 			0x150 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* spi0_sclk */
 			0x154 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* spi0_d0 */
@@ -399,10 +403,34 @@
 };
 
 &i2c2 {
-    status = "okay";
-    pinctrl-names = "default";
-    pinctrl-0 = <&i2c2_pins>;
-    clock-frequency = <100000>;
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c2_pins>;
+	clock-frequency = <100000>;
+
+	ioexp_top_0: ioexp@27 {
+		status = "okay";
+		compatible = "ti,tca9555";
+		reg = <0x27>;
+	};
+
+	edt-ft5306@38 {
+		status = "okay";
+		compatible = "edt,edt-ft5306", "edt,edt-ft5x06";
+		pinctrl-names = "default";
+		pinctrl-0 = <&edt_ft5xx6_ts_pins>;
+		reg = <0x38>;
+
+		/* This is what am437x-sk-evm.dts does but the device driver
+		 * code seems to be looking for irq-gpios...
+		 */
+		interrupt-parent = <&gpio3>;
+		interrupts = <22 0>;
+
+		/* Should just match the screen resolution */
+		touchscreen-size-x = <800>;
+		touchscreen-size-y = <480>;
+	};
 };
 
 &epwmss0 {
@@ -410,11 +438,7 @@
 };
 
 &tscadc {
-	status = "okay";
-
-	adc {
-		ti,adc-channels = <0 1 2 3 4 5 6 7>;
-	};
+	status = "disabled";
 };
 
 &epwmss0 {
@@ -563,8 +587,8 @@
 };
 
 &pruss0 {
-    pinctrl-names = "default";
-    pinctrl-0 = <&pruss_pins>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pruss_pins>;
 };
 
 &dss {
@@ -589,7 +613,8 @@
 		compatible = "omapdss,panel-dpi", "panel-dpi";
 		label = "lcd";
 		status = "okay";
-		enable-gpios = <&gpio2 21 GPIO_ACTIVE_HIGH>;
+		/* This is the backlight, not really an enable... */
+		enable-gpios = <&gpio5 1 GPIO_ACTIVE_HIGH>;
 
 		port {
 			lcd_in: endpoint {
@@ -599,15 +624,15 @@
 
 		/* Mostly from the panel-dpi example */
 		panel-timing {
-			clock-frequency = <10000000>;
-			hactive = <480>;
-			vactive = <272>;
-			hfront-porch = <20>;
-			hback-porch = <4>;
-			hsync-len = <8>;
-			vback-porch = <2>;
-			vfront-porch = <2>;
-			vsync-len = <2>;
+			clock-frequency = <33000000>;
+			hactive = <800>;
+			vactive = <480>;
+			hfront-porch = <40>;
+			hback-porch = <40>;
+			hsync-len = <48>;
+			vback-porch = <29>;
+			vfront-porch = <13>;
+			vsync-len = <3>;
 
 			hsync-active = <0>;
 			vsync-active = <0>;

@@ -8,6 +8,8 @@ import argparse
 parser = argparse.ArgumentParser(description='Build the morepork kernel.')
 parser.add_argument('-r', '--revision', type=str, default='macho-man-reva',
                     help='electronics revision: stardust-reva or [macho-man-reva]')
+parser.add_argument('--dt-only', action='store_true',
+                    help='Only build and install the device tree')
 args = parser.parse_args()
 
 if args.revision == 'macho-man-reva':
@@ -58,6 +60,7 @@ def run_make_cmd(action, num_cores):
 def build(num_cores=4):
     run_make_cmd([config], num_cores)
     run_make_cmd([dt], num_cores)
+    if args.dt_only: return
     run_make_cmd(['zImage'], num_cores)
     run_make_cmd(['modules'], num_cores)
     # Install the modules to a staging path using make so that we
@@ -126,11 +129,12 @@ def install(path):
     staging_path = os.path.join(this_dir, 'obj/staging')
     with open(os.path.join(this_dir, "install_manifest.txt"), 'w') as f:
         install_file(
-            os.path.join(image_path, 'zImage'),
-            os.path.join(install_boot, 'zImage'), f)
-        install_file(
             os.path.join(image_path, 'dts', dt),
             os.path.join(install_boot, dt), f)
+        if args.dt_only: return
+        install_file(
+            os.path.join(image_path, 'zImage'),
+            os.path.join(install_boot, 'zImage'), f)
         install_tree(staging_path, install_path, f)
 
 def clean():
@@ -150,7 +154,6 @@ if 'TR_BUILD' in os.environ:
     if TR_ARG_build or TR_ARG_install:
         build(os.environ['TR_ARG_num_cores'])
 
-    # TODO: figure out something for install
     if TR_ARG_install:
         install(install_dir)
 
