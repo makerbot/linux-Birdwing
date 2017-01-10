@@ -35,8 +35,10 @@ static void foley_delete(struct kref *kref)
 
 	usb_kill_anchored_urbs(&dev->bulk_out_anchor);
 	usb_free_urb(dev->bulk_in_urb);
+	usb_free_urb(dev->status_in_urb);
 	usb_put_dev(dev->udev);
 	kfree(dev->bulk_in_buffer);
+	kfree(dev->status_in_buffer);
 	kfree(dev);
 }
 
@@ -208,6 +210,8 @@ static int foley_do_read_bulk_io(struct usbfoley *dev, size_t count)
 	return rv;
 }
 
+
+
 static ssize_t foley_read(struct file *file, char *buffer, size_t count,
 			  loff_t * ppos)
 {
@@ -328,6 +332,203 @@ static ssize_t foley_read(struct file *file, char *buffer, size_t count,
  exit:
 	mutex_unlock(&dev->io_mutex);
 	return rv;
+}
+
+
+static void foley_read_status_callback(struct urb *urb)
+{
+	struct usbfoley *dev;
+
+	dev = urb->context;
+
+	dev_dbg(&dev->intf->dev, "FOLEY_READ_STATUS_CALLBACK\n");
+
+	spin_lock(&dev->err_lock);
+	/* sync/async unlink faults aren't errors */
+	if (urb->status) {
+		if (!(urb->status == -ENOENT ||
+		      urb->status == -ECONNRESET ||
+		      urb->status == -ESHUTDOWN)) {
+			dev_err(&dev->intf->dev,
+				"%s - nonzero write status received: %d\n",
+				__func__, urb->status);
+		}
+
+		dev->errors = urb->status;
+	} else {
+		dev->status_in_filled = urb->actual_length;
+	}
+	dev->ongoing_status_read = 0;
+	spin_unlock(&dev->err_lock);
+
+	wake_up_interruptible(&dev->wait);
+}
+
+static int foley_do_read_status_io(struct usbfoley *dev, size_t count)
+{
+	int rv;
+
+	/* prepare a read */
+	usb_fill_bulk_urb(dev->status_in_urb,
+			  dev->udev,
+			  usb_rcvbulkpipe(dev->udev,
+					  dev->status_in_epAddr),
+			  dev->status_in_buffer,
+			  min(dev->status_in_ep_size, count),
+			  foley_read_status_callback, dev);
+	/* tell everybody to leave the URB alone */
+	spin_lock_irq(&dev->err_lock);
+	dev->ongoing_status_read = 1;
+	spin_unlock_irq(&dev->err_lock);
+
+	/* submit status in urb, which means no data to deliver */
+	dev->status_in_filled = 0;
+	dev->status_in_copied = 0;
+
+	/* do it */
+	rv = usb_submit_urb(dev->status_in_urb, GFP_KERNEL);
+	if (rv < 0) {
+		dev_err(&dev->intf->dev,
+			"%s - failed submitting read urb, error %d\n",
+			__func__, rv);
+		rv = (rv == -ENOMEM) ? rv : -EIO;
+		spin_lock_irq(&dev->err_lock);
+		dev->ongoing_status_read = 0;
+		spin_unlock_irq(&dev->err_lock);
+	}
+
+	return rv;
+}
+
+static ssize_t foley_status_read(struct file *file, char *buffer)
+{
+	struct usbfoley *dev;
+	int rv;
+	bool ongoing_io;
+
+
+	dev = file->private_data;
+
+	foley_set_interface(dev, FOLEY_INTERFACE, FOLEY_ALTSETTING);
+
+	/* if we cannot read at all, return EOF */
+	if (!dev->status_in_urb) {
+		return 0;
+	}
+
+	/* no concurrent readers */
+	rv = mutex_lock_interruptible(&dev->io_mutex);
+	if (rv < 0) {
+		return rv;
+	}
+
+	if (!dev->intf) {	/* disconnect() was called */
+		rv = -ENODEV;
+		goto exit;
+	}
+
+	/* if IO is under way, we must not touch things */
+ retry:
+	spin_lock_irq(&dev->err_lock);
+	ongoing_io = dev->ongoing_status_read;
+	spin_unlock_irq(&dev->err_lock);
+
+	if (ongoing_io) {
+		/* nonblocking IO shall not wait */
+		if (file->f_flags & O_NONBLOCK) {
+			rv = -EAGAIN;
+			goto exit;
+		}
+		/*
+		 * IO may take forever
+		 * hence wait in an interruptible state
+		 */
+		rv = wait_event_interruptible(dev->wait, (!dev->ongoing_status_read));
+		if (rv < 0) {
+			goto exit;
+		}
+	}
+
+	/* errors must be reported */
+	rv = dev->errors;
+	if (rv < 0) {
+		/* any error is reported once */
+		dev->errors = 0;
+		/* to preserve notifications about reset */
+		rv = (rv == -EPIPE) ? rv : -EIO;
+		/* report it */
+		goto exit;
+	}
+
+	/*
+	 * if the buffer is filled we may satisfy the read
+	 * else we need to start IO
+	 */
+
+	if (dev->status_in_filled) {
+		/* we had read data */
+		size_t available = dev->status_in_filled - dev->status_in_copied;
+		size_t chunk = min(available, 64);
+
+		if (!available) {
+			/*
+			 * all data has been used
+			 * actual IO needs to be done
+			 */
+			rv = foley_do_read_status_io(dev, 64);
+			if (rv < 0) {
+				goto exit;
+			} else {
+				goto retry;
+			}
+		}
+		/*
+		 * data is available
+		 * chunk tells us how much shall be copied
+		 */
+
+		if (copy_to_user(buffer,
+				 dev->status_in_buffer + dev->status_in_copied,
+				 chunk)) {
+			rv = -EFAULT;
+		} else {
+			rv = chunk;
+		}
+
+		dev->status_in_copied += chunk;
+
+		/*
+		 * if we are asked for more than we have,
+		 * we start IO but don't wait
+		 */
+		if (available < 64) {
+			foley_do_read_status_io(dev, 64 - chunk);
+		}
+	} else {
+		/* no data in the buffer */
+		rv = foley_do_read_status_io(dev, 64);
+		if (rv < 0) {
+			goto exit;
+		} else {
+			goto retry;
+		}
+	}
+ exit:
+	mutex_unlock(&dev->io_mutex);
+	return rv;
+}
+
+static long foley_ioctl(struct file *file,
+			   unsigned int operation, unsigned long arg) {
+	struct usbfoley *dev = file->private_data;
+	switch (operation) {
+	case IOCTL_FOLEY_STATUS:
+		return foley_status_read(file, (char*)arg);
+	default:
+		dev_err(&dev->intf->dev,
+			"%s - invalid ioctl number %d", __func__, operation);
+		return -EINVAL;
+	}
 }
 
 //Debug call to dump out useful urp info
@@ -537,6 +738,8 @@ static const struct file_operations foley_fops = {
 	.owner = THIS_MODULE,
 	.read = foley_read,
 	.write = foley_write,
+	.unlocked_ioctl = foley_ioctl,
+	.compat_ioctl = foley_ioctl,
 	.open = foley_open,
 	.release = foley_release,
 	.flush = foley_flush,
@@ -552,6 +755,7 @@ static struct usb_class_driver foley_class = {
 	.fops = &foley_fops,
 	.minor_base = USB_FOLEY_MINOR_BASE,
 };
+
 
 // TODO cleanup foley_probe once the rest of the driver is stable
 static int foley_probe(struct usb_interface *interface,
@@ -623,11 +827,30 @@ static int foley_probe(struct usb_interface *interface,
 			   usb_endpoint_is_bulk_out(ep)) {
 			// we found a bulk out endpoint
 			dev->bulk_out_epAddr = ep->bEndpointAddress;
+		} else if ( !dev->status_in_epAddr &&
+			    usb_endpoint_is_bulk_in(ep)) {
+			// this is the second bulk in endpoint for status
+			dev->status_in_ep_size = usb_endpoint_maxp(ep);
+			dev->status_in_epAddr = ep->bEndpointAddress;
+			dev->status_in_buffer = kmalloc(dev->status_in_ep_size,
+							GFP_KERNEL);
+			if (!dev->status_in_buffer) {
+				dev_err(&interface->dev,
+					"Could not allocate status_iN_buffer\n");
+				goto error;
+			}
+			dev->status_in_urb = usb_alloc_urb(0, GFP_KERNEL);
+			if (!dev->status_in_urb) {
+				dev_err(&interface->dev,
+					"Could not allocate status_in_urb\n");
+				goto error;
+			}
 		}
 	}
-	if (!(dev->bulk_in_epAddr && dev->bulk_out_epAddr)) {
+	if (!(dev->bulk_in_epAddr && dev->bulk_out_epAddr
+	      && dev->status_in_epAddr)) {
 		dev_err(&interface->dev,
-			"Could not find both bulk-in and bulk-out endpoints\n");
+			"Could not find all bulk-in and bulk-out endpoints\n");
 		goto error;
 	}
 
@@ -650,11 +873,11 @@ static int foley_probe(struct usb_interface *interface,
 
 	/* let the user know what node this device is now attached to */
 	dev_info(&interface->dev,
-		 "USB Foley device now attached to USBFoley-%d",
+		 "USB Foley device now attached to USBFoley-%d\n",
 		 interface->minor);
 	dev_info(&interface->dev,
-		 "BULK_IN: 0x%02X, BULK_OUT: 0x%02X",
-		 dev->bulk_in_epAddr, dev->bulk_out_epAddr);
+		 "BULK_IN: 0x%02X, BULK_OUT: 0x%02X, STATUS: 0x%02X\n",
+		 dev->bulk_in_epAddr, dev->bulk_out_epAddr, dev->status_in_epAddr);
 
 	return 0;
 
@@ -702,6 +925,7 @@ static void foley_draw_down(struct usbfoley *dev)
 	}
 
 	usb_kill_urb(dev->bulk_in_urb);
+	usb_kill_urb(dev->status_in_urb);
 }
 
 static int foley_suspend(struct usb_interface *intf, pm_message_t message)
