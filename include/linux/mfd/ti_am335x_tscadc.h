@@ -39,6 +39,17 @@
 #define REG_FIFO0		0x100
 #define REG_FIFO1		0x200
 
+/* Register specific for MAGADC, Which is a reuse IP of TSCADC */
+#define REG_ADCREVISION         0x000
+#define REG_SYSCONFIG           0x010
+#define REG_EOI                 0x020
+#define REG_ADCRANGE            0x048
+#define REG_SWIPECOMPARE12      0x05C
+#define REG_SWIPECOMPARE34      0x060
+#define REG_DMAENABLESET        0x038
+#define REG_DMAENABLECLR        0x03C
+#define REG_DMA0REQ             0x0EC
+
 /*	Register Bitfields	*/
 /* IRQ wakeup enable */
 #define IRQWKUP_ENB		BIT(0)
@@ -60,6 +71,15 @@
 #define IRQENB_FIFO1OVRRUN	BIT(6)
 #define IRQENB_FIFO1UNDRFLW	BIT(7)
 #define IRQENB_PENUP		BIT(9)
+
+/* IRQ enable for MAGADC */
+#define IRQENB_END_OF_SEQ	BIT(1)
+#define IRQENB_FIFO0_OVERRUN	BIT(3)
+#define IRQENB_FIFO0_UNDERFLOW	BIT(4)
+#define IRQENB_FIFO1_OVERRUN	BIT(6)
+#define IRQENB_FIFO1_UNDERFLOW	BIT(7)
+#define IRQENB_OUT_OF_RANGE	BIT(8)
+#define IRQENB_START_OF_SWIPE	BIT(9)
 
 /* Step Configuration */
 #define STEPCONFIG_MODE_MASK	(3 << 0)
@@ -84,6 +104,35 @@
 #define STEPCONFIG_INP_ADCREFM	STEPCONFIG_INP(8)
 #define STEPCONFIG_FIFO1	BIT(26)
 
+/* Additional StepConfigs for MAGADC IP */
+#define STEPCONFIG_GAIN_CTRL4_MASK	(0x30000000)
+#define STEPCONFIG_GAIN_CTRL3_MASK	(0x600)
+#define STEPCONFIG_GAIN_CTRL2_MASK	(0x180)
+#define STEPCONFIG_GAIN_CTRL1_MASK	(0x60)
+#define STEPCONFIG_THRES_CMP_EN        ((0x1) << 11)
+#define STEPCONFIG_THRES_PTR_MASK	(0xC0000000)
+#define STEPCONFIG_THRES_PTR(val)	((val) << 30)
+#define STEPCONFIG_THRESREG2_TRIGGER	STEPCONFIG_THRES_PTR(2)
+#define STEPCONFIG_THRESREG3_TRIGGER	STEPCONFIG_THRES_PTR(3)
+#define STEPCONFIG_THRESREG4_TRIGGER	STEPCONFIG_THRES_PTR(4)
+#define STEPCONFIG_DIFFCTRL(val)	((val) << 25)
+#define STEPCONFIG_DIFFCTRL_SELC	STEPCONFIG_DIFFCTRL(1)
+#define STEPCONFIG_MODE_HWSYNCCONT	STEPCONFIG_MODE(3)
+#define STEPCONFIG_MODE_SWSYNCCONT	STEPCONFIG_MODE(1)
+#define STEPCONFIG_RFM_ADCREFM		((3) << 23)
+#define STEPCONFIG_RFP_VDD		(0)
+#define STEPCONFIG_AVG_4		STEPCONFIG_AVG(2)
+
+/* Swipe threshold Masks for MAGADC */
+#define SWIPETHRES_DATA1_VAL(val)	((val) << 16)
+#define SWIPETHRES_DATA2_VAL(val)	((val) << 0)
+#define SWIPETHRES_DATA3_VAL(val)	((val) << 16)
+#define SWIPETHRES_DATA4_VAL(val)	((val) << 0)
+#define SWIPETHRES_DATA1_VAL_MASK	(0x0FFF0000U)
+#define SWIPETHRES_DATA2_VAL_MASK	(0x00000FFFU)
+#define SWIPETHRES_DATA3_VAL_MASK	(0x0FFF0000U)
+#define SWIPETHRES_DATA4_VAL_MASK	(0x00000FFFU)
+
 /* Delay register */
 #define STEPDELAY_OPEN_MASK	(0x3FFFF << 0)
 #define STEPDELAY_OPEN(val)	((val) << 0)
@@ -91,6 +140,10 @@
 #define STEPDELAY_SAMPLE_MASK	(0xFF << 24)
 #define STEPDELAY_SAMPLE(val)	((val) << 24)
 #define STEPCONFIG_SAMPLEDLY	STEPDELAY_SAMPLE(0)
+
+/* Delay added for MAGADC */
+#define MAGADC_SAMPLEDELAY	(STEPDELAY_SAMPLE(1))
+#define MAGADC_OPENDELAY	(STEPDELAY_OPEN(0))
 
 /* Charge Config */
 #define STEPCHARGE_RFP_MASK	(7 << 12)
@@ -122,6 +175,11 @@
 #define CNTRLREG_8WIRE		CNTRLREG_AFE_CTRL(3)
 #define CNTRLREG_TSCENB		BIT(7)
 
+/*Control registers bitfields  for MAGADC IP */
+#define CNTRLREG_MAGADCENB      BIT(0)
+#define CNTRLREG_PREAMP_PWRDOWN BIT(5)
+#define CNTRLREG_PREAMP_BYPASS  BIT(6)
+
 /* FIFO READ Register */
 #define FIFOREAD_DATA_MASK (0xfff << 0)
 #define FIFOREAD_CHNLID_MASK (0xf << 16)
@@ -131,6 +189,7 @@
 #define CHARGE_STEP		0x11
 
 #define ADC_CLK			3000000
+#define MAG_ADC_CLK		1600000
 #define TOTAL_STEPS		16
 #define TOTAL_CHANNELS		8
 #define FIFO1_THRESHOLD		19
@@ -155,11 +214,14 @@ struct ti_tscadc_dev {
 	struct device *dev;
 	struct regmap *regmap_tscadc;
 	void __iomem *tscadc_base;
+	unsigned long phy_base;
 	int irq;
+	int magirq;
 	int used_cells;	/* 1-2 */
-	int tsc_wires;
 	int tsc_cell;	/* -1 if not used */
 	int adc_cell;	/* -1 if not used */
+	int mag_cell;	/* -1 if not used */
+	int use_mag;   /* 1 for magadc instance, 0 for tsc instance */
 	struct mfd_cell cells[TSCADC_CELLS];
 	u32 reg_se_cache;
 	bool adc_waiting;
@@ -171,8 +233,26 @@ struct ti_tscadc_dev {
 	/* tsc device */
 	struct titsc *tsc;
 
+	/* mag device */
+	struct timag *mag;
+
 	/* adc device */
 	struct adc_device *adc;
+	int dma_rx_chnum;
+};
+
+struct ti_mfdcell_prop {
+	const char *name_fr;
+	const char *compatible_fr;
+	const char *name_sc;
+	const char *compatible_sc;
+};
+
+struct ti_tscadc_data {
+	bool			use_mag;
+	const char		*clk_name;
+	int			clk_div;
+	struct ti_mfdcell_prop	*cell_prop;
 };
 
 static inline struct ti_tscadc_dev *ti_tscadc_dev_get(struct platform_device *p)

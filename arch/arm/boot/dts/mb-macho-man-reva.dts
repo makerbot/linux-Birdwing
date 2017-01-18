@@ -201,7 +201,7 @@
 			0x1A0 (PIN_OUTPUT | MUX_MODE5)	/* mcasp0_aclkr (pru gpo4)*/
 			0x1A4 (PIN_OUTPUT | MUX_MODE5)	/* mcasp0_fsr (pru gpo5)*/
 			0x1A8 (PIN_OUTPUT | MUX_MODE5)	/* mcasp0_axr1 (pru gpo6)*/
-			0x1AC (PIN_OUTPUT | MUX_MODE5)	/* mcasp0_ahcplkx */
+			0x1AC (PIN_OUTPUT | MUX_MODE5)	/* mcasp0_ahclkx (pru gpo7) */
 			0x0F0 (PIN_OUTPUT | MUX_MODE5)	/* mmc0_dat3 (pru gpo8)*/
 			0x0F4 (PIN_OUTPUT | MUX_MODE5)	/* mmc0_dat2 (pru gpo9)*/
 			0x0F8 (PIN_OUTPUT | MUX_MODE5)	/* mmc0_dat1 (pru gpo10)*/
@@ -438,7 +438,23 @@
 };
 
 &tscadc {
-	status = "disabled";
+	status = "okay";
+
+    adc {
+    	ti,adc-channels = <0 1 2 3 4 5 6 7>;
+    };
+};
+
+&magadc {
+	status = "okay";
+
+	mag {
+		ti,tracks = <0>;
+	};
+
+	adc {
+		ti,adc-channels = <0 1 2 3 4 5 6 7>;
+	};
 };
 
 &epwmss0 {

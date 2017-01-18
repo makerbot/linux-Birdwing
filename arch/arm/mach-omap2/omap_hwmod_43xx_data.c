@@ -463,6 +463,36 @@ static struct omap_hwmod am43xx_adc_tsc_hwmod = {
 	},
 };
 
+/*
+ * 'adc/mag' class
+ * MagCard Controller (Anolog-To-Digital Converter)
+ */
+static struct omap_hwmod_class_sysconfig am43xx_adc_mag_sysc = {
+	.rev_offs	= 0x00,
+	.sysc_offs	= 0x10,
+	.sysc_flags	= SYSC_HAS_SIDLEMODE,
+	.idlemodes	= (SIDLE_FORCE | SIDLE_NO | SIDLE_SMART),
+	.sysc_fields	= &omap_hwmod_sysc_type2,
+};
+
+static struct omap_hwmod_class am43xx_adc_mag_hwmod_class = {
+	.name		= "adc_mag",
+	.sysc		= &am43xx_adc_mag_sysc,
+};
+
+static struct omap_hwmod am43xx_adc_mag_hwmod = {
+	.name		= "adc_mag",
+	.class		= &am43xx_adc_mag_hwmod_class,
+	.clkdm_name	= "l3s_clkdm",
+	.main_clk	= "adc_mag_fck",
+	.prcm		= {
+		.omap4  = {
+			.clkctrl_offs	= AM43XX_CM_PER_MAGADC_CLKCTRL_OFFSET,
+			.modulemode	= MODULEMODE_SWCTRL,
+		},
+	},
+};
+
 static struct omap_hwmod_class_sysconfig am43xx_des_sysc = {
 	.rev_offs	= 0x30,
 	.sysc_offs	= 0x34,
@@ -704,6 +734,13 @@ static struct omap_hwmod_ocp_if am43xx_l4_wkup__adc_tsc = {
 	.slave          = &am43xx_adc_tsc_hwmod,
 	.clk            = "dpll_core_m4_div2_ck",
 	.user           = OCP_USER_MPU,
+};
+
+static struct omap_hwmod_ocp_if am43xx_l4_ls__adc_mag = {
+	.master		= &am33xx_l4_ls_hwmod,
+	.slave		= &am43xx_adc_mag_hwmod,
+	.clk		= "dpll_core_m4_div2_ck",
+	.user		= OCP_USER_MPU,
 };
 
 static struct omap_hwmod_ocp_if am43xx_l4_hs__cpgmac0 = {
@@ -1059,6 +1096,7 @@ static struct omap_hwmod_ocp_if *am43xx_hwmod_ocp_ifs[] __initdata = {
 	&am43xx_l3__vpfe1,
 	&am43xx_l4_ls__vpfe0,
 	&am43xx_l4_ls__vpfe1,
+	&am43xx_l4_ls__adc_mag,
 	NULL,
 };
 

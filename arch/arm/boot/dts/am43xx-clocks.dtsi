@@ -40,6 +40,14 @@
 		clock-div = <1>;
 	};
 
+	adc_mag_fck: adc_mag_fck {
+		#clock-cells = <0>;
+		compatible = "fixed-factor-clock";
+		clocks = <&sys_clkin_ck>;
+		clock-mult = <1>;
+		clock-div = <1>;
+	};
+
 	dcan0_fck: dcan0_fck {
 		#clock-cells = <0>;
 		compatible = "fixed-factor-clock";

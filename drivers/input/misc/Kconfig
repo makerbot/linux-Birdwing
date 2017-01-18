@@ -786,4 +786,10 @@ config INPUT_DRV2667_HAPTICS
 	  To compile this driver as a module, choose M here: the
 	  module will be called drv260x-haptics.
 
+config INPUT_MAG_ADC
+	tristate "Magnetic Card Reader Driver for AM43xx"
+	depends on SOC_AM43XX
+	help
+	Say Y here if you want to enable MSR driver for AM43XX
+
 endif
