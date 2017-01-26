@@ -621,6 +621,11 @@
 	};
 };
 
+&sgx {
+	status = "okay";
+	compatible = "ti,am4376-sgx530", "ti,sgx";
+};
+
 /* TODO: This clearly belongs in dss and not in the root node.
  *       But the dss is poorly written so this cannot go there.
  */

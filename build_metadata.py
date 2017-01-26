@@ -12,9 +12,15 @@ else:
             debug=False,
             stable_required=True),
         artifactory_utils.ArtifactSelector(
-            project="linaro-bare-metal",
+            project="linaro-linux-gnu",
             revision="master",
             version="5.3.1.0",
+            debug=False,
+            stable_required=True),
+        artifactory_utils.ArtifactSelector(
+            project="sgx_kernel_module_source",
+            revision="master",
+            version="*",
             debug=False,
             stable_required=True),
     ]
