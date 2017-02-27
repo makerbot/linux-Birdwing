@@ -8,7 +8,7 @@ else:
         artifactory_utils.ArtifactSelector(
             project="Toolchain-Release",
             revision="master",
-            version="4.*",
+            version="^4.6",
             debug=False,
             stable_required=True),
         artifactory_utils.ArtifactSelector(
