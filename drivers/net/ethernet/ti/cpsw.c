@@ -684,6 +684,8 @@ static void cpsw_tx_handler(void *token, int len, int status)
 	struct net_device	*ndev = skb->dev;
 	struct cpsw_priv	*priv = netdev_priv(ndev);
 
+	//dev_err(&ndev->dev, "CPSW_HANDLE_THAT_TX, STATUS: %d\n", status);
+
 	/* Check whether the queue is stopped due to stalled tx dma, if the
 	 * queue is stopped then start the queue as we have free desc for tx
 	 */
@@ -702,6 +704,8 @@ static void cpsw_rx_handler(void *token, int len, int status)
 	struct net_device	*ndev = skb->dev;
 	struct cpsw_priv	*priv = netdev_priv(ndev);
 	int			ret = 0;
+
+	//dev_err(&ndev->dev, "CPSW_HANDLE_THAT_RX, STATUS: %d\n", status);
 
 	cpsw_dual_emac_src_port_detect(status, priv, ndev, skb);
 
@@ -757,6 +761,8 @@ static irqreturn_t cpsw_tx_interrupt(int irq, void *dev_id)
 {
 	struct cpsw_priv *priv = dev_id;
 
+	//printk(KERN_ERR "CPSW_TX_INTERRUPT\n");
+
 	writel(0, &priv->wr_regs->tx_en);
 	cpdma_ctlr_eoi(priv->dma, CPDMA_EOI_TX);
 
@@ -772,6 +778,8 @@ static irqreturn_t cpsw_tx_interrupt(int irq, void *dev_id)
 static irqreturn_t cpsw_rx_interrupt(int irq, void *dev_id)
 {
 	struct cpsw_priv *priv = dev_id;
+
+	//printk(KERN_ERR "CPSW_RX_INTERRUPT\n");
 
 	cpdma_ctlr_eoi(priv->dma, CPDMA_EOI_RX);
 	writel(0, &priv->wr_regs->rx_en);
@@ -1076,16 +1084,22 @@ static int cpsw_common_res_usage_state(struct cpsw_priv *priv)
 static inline int cpsw_tx_packet_submit(struct net_device *ndev,
 			struct cpsw_priv *priv, struct sk_buff *skb)
 {
-	if (!priv->data.dual_emac)
-		return cpdma_chan_submit(priv->txch, skb, skb->data,
+	int rv = 0;
+	if (!priv->data.dual_emac) {
+		//dev_info(&ndev->dev, "CPSW_TX_PACKET_SUBMIT, NON_DUAL_EMAC\n");
+		rv = cpdma_chan_submit(priv->txch, skb, skb->data,
 				  skb->len, 0);
-
-	if (ndev == cpsw_get_slave_ndev(priv, 0))
-		return cpdma_chan_submit(priv->txch, skb, skb->data,
+	} else if (ndev == cpsw_get_slave_ndev(priv, 0)) {
+		//dev_info(&ndev->dev, "HERE?\n");
+		rv = cpdma_chan_submit(priv->txch, skb, skb->data,
 				  skb->len, 1);
-	else
-		return cpdma_chan_submit(priv->txch, skb, skb->data,
+	} else {
+		//dev_info(&ndev->dev, "THERE?\n");
+		rv = cpdma_chan_submit(priv->txch, skb, skb->data,
 				  skb->len, 2);
+	}
+	//dev_info(&ndev->dev, "CPSW_TX_PACKET_SUBMIT_RV: %d\n", rv);
+	return rv;
 }
 
 static inline void cpsw_add_dual_emac_def_ale_entries(
@@ -2367,6 +2381,7 @@ no_phy_slave:
 			break;
 	}
 
+	//dev_err(&pdev->dev, "PROBE_SUCCESS?\n");
 	return 0;
 }
 
@@ -2706,7 +2721,7 @@ static int cpsw_probe(struct platform_device *pdev)
 	ret = devm_request_irq(&pdev->dev, irq, cpsw_rx_interrupt,
 			       0, dev_name(&pdev->dev), priv);
 	if (ret < 0) {
-		dev_err(priv->dev, "error attaching irq (%d)\n", ret);
+		dev_err(priv->dev, "error attaching rx irq (%d)\n", ret);
 		goto clean_ale_ret;
 	}
 
@@ -2719,7 +2734,7 @@ static int cpsw_probe(struct platform_device *pdev)
 	ret = devm_request_irq(&pdev->dev, irq, cpsw_tx_interrupt,
 			       0, dev_name(&pdev->dev), priv);
 	if (ret < 0) {
-		dev_err(priv->dev, "error attaching irq (%d)\n", ret);
+		dev_err(priv->dev, "error attaching tx irq (%d)\n", ret);
 		goto clean_ale_ret;
 	}
 	priv->num_irqs = 2;
@@ -2751,6 +2766,7 @@ static int cpsw_probe(struct platform_device *pdev)
 		}
 	}
 
+	//dev_err(priv->dev, "CPSW_PROBE_SUCCESS\n");
 	return 0;
 
 clean_ale_ret:

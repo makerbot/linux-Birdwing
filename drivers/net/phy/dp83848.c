@@ -1,8 +1,12 @@
 /*
  * Driver for the Texas Instruments DP83848 PHY
  *
+<<<<<<< HEAD
  * Copyright (C) 2015-2016 Texas Instruments Incorporated - http://www.ti.com/
  *	Andrew F. Davis <afd@ti.com>
+=======
+ * Copyright (C) 2015 Texas Instruments Inc.
+>>>>>>> b1fdb93... Everything we have done so far in one commit
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

@@ -219,7 +219,6 @@ choice
 	  a less common variant of a device class protocol.
 
 # this first set of drivers all depend on bulk-capable hardware.
-
 config USB_CONFIGFS
 	tristate "USB functions configurable through configfs"
 	select USB_LIBCOMPOSITE

@@ -14,6 +14,7 @@
  */
 
 #include <linux/module.h>
+#include <linux/init.h>
 #include <linux/slab.h>
 #include <linux/err.h>
 #include <linux/io.h>
@@ -24,8 +25,47 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/sched.h>
-
+#include <linux/of_irq.h>
 #include <linux/mfd/ti_am335x_tscadc.h>
+
+static struct ti_mfdcell_prop tscadc_prop = {
+	.name_fr = "TI-am335x-tsc",
+	.compatible_fr = "ti,am3359-tsc",
+	.name_sc = "TI-am335x-adc",
+	.compatible_sc = "ti,am3359-adc"
+};
+
+static struct ti_mfdcell_prop magadc_prop = {
+	.name_fr = "TI-am43xx-mag",
+	.compatible_fr = "ti,am4372-mag",
+	.name_sc = "TI-am43xx-adc",
+	.compatible_sc = "ti,am4372-adc"
+};
+
+static const struct ti_tscadc_data tscdata = {
+	.use_mag = 0,
+	.clk_name = "adc_tsc_fck",
+	.clk_div = ADC_CLK,
+	.cell_prop = &tscadc_prop
+};
+
+static const struct ti_tscadc_data magdata = {
+	.use_mag = 1,
+	.clk_name = "adc_mag_fck",
+	.clk_div = MAG_ADC_CLK,
+	.cell_prop = &magadc_prop
+};
+
+static const struct of_device_id ti_tscadc_dt_ids[] = {
+	{ .compatible = "ti,am3359-tscadc",
+	  .data = &tscdata,
+	},
+	{ .compatible = "ti,am4372-magadc",
+	  .data = &magdata,
+	},
+	{ }
+};
+MODULE_DEVICE_TABLE(of, ti_tscadc_dt_ids);
 
 static unsigned int tscadc_readl(struct ti_tscadc_dev *tsadc, unsigned int reg)
 {
@@ -68,6 +108,12 @@ static void am335x_tscadc_need_adc(struct ti_tscadc_dev *tsadc)
 	DEFINE_WAIT(wait);
 	u32 reg;
 
+	/*
+	 * disable TSC steps so it does not run while the ADC is using it. If
+	 * write 0 while it is running (it just started or was already running)
+	 * then it completes all steps that were enabled and stops then.
+	 */
+	tscadc_writel(tsadc, REG_SE, 0);
 	reg = tscadc_readl(tsadc, REG_ADCFSM);
 	if (reg & SEQ_STATUS) {
 		tsadc->adc_waiting = true;
@@ -85,7 +131,7 @@ static void am335x_tscadc_need_adc(struct ti_tscadc_dev *tsadc)
 		 * busy applying the charge step.
 		 */
 		reg = tscadc_readl(tsadc, REG_ADCFSM);
-		WARN_ON((reg & SEQ_STATUS) && !(reg & CHARGE_STEP));
+		WARN_ON(reg & SEQ_STATUS & (!CHARGE_STEP));
 		tsadc->adc_waiting = false;
 	}
 	tsadc->adc_in_use = true;
@@ -94,6 +140,7 @@ static void am335x_tscadc_need_adc(struct ti_tscadc_dev *tsadc)
 void am335x_tsc_se_set_once(struct ti_tscadc_dev *tsadc, u32 val)
 {
 	spin_lock_irq(&tsadc->reg_lock);
+	tsadc->reg_se_cache |= val;
 	am335x_tscadc_need_adc(tsadc);
 
 	tscadc_writel(tsadc, REG_SE, val);
@@ -123,12 +170,13 @@ void am335x_tsc_se_clr(struct ti_tscadc_dev *tsadc, u32 val)
 }
 EXPORT_SYMBOL_GPL(am335x_tsc_se_clr);
 
-static void tscadc_idle_config(struct ti_tscadc_dev *config)
+static void tscadc_idle_config(struct ti_tscadc_dev *config, bool use_mag)
 {
-	unsigned int idleconfig;
+	unsigned int idleconfig = 0;
 
-	idleconfig = STEPCONFIG_YNN | STEPCONFIG_INM_ADCREFM |
-			STEPCONFIG_INP_ADCREFM | STEPCONFIG_YPN;
+	if (!use_mag)
+		idleconfig = STEPCONFIG_YNN | STEPCONFIG_INM_ADCREFM |
+				STEPCONFIG_INP_ADCREFM | STEPCONFIG_YPN;
 
 	tscadc_writel(config, REG_IDLECONFIG, idleconfig);
 }
@@ -143,19 +191,31 @@ static	int ti_tscadc_probe(struct platform_device *pdev)
 	struct property         *prop;
 	const __be32            *cur;
 	u32			val;
-	int			err, ctrl;
+	int			err = -EINVAL, ctrl;
 	int			clock_rate;
 	int			tsc_wires = 0, adc_channels = 0, total_channels;
 	int			readouts = 0;
+	int			mag_tracks;
+	const struct ti_tscadc_data *data;
+	const struct of_device_id *id;
 
 	if (!pdev->dev.of_node) {
 		dev_err(&pdev->dev, "Could not find valid DT data.\n");
 		return -EINVAL;
 	}
 
-	node = of_get_child_by_name(pdev->dev.of_node, "tsc");
-	of_property_read_u32(node, "ti,wires", &tsc_wires);
-	of_property_read_u32(node, "ti,coordiante-readouts", &readouts);
+	id = of_match_device(ti_tscadc_dt_ids, &pdev->dev);
+	data = id->data;
+
+	if (data->use_mag) {
+		node = of_get_child_by_name(pdev->dev.of_node, "mag");
+		of_property_read_u32(node, "ti,tracks", &mag_tracks);
+		tsc_wires = mag_tracks * 2;
+	} else {
+		node = of_get_child_by_name(pdev->dev.of_node, "tsc");
+		of_property_read_u32(node, "ti,wires", &tsc_wires);
+		of_property_read_u32(node, "ti,coordiante-readouts", &readouts);
+	}
 
 	node = of_get_child_by_name(pdev->dev.of_node, "adc");
 	of_property_for_each_u32(node, "ti,adc-channels", prop, cur, val) {
@@ -176,8 +236,14 @@ static	int ti_tscadc_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-	if (readouts * 2 + 2 + adc_channels > 16) {
+	if (!data->use_mag && (readouts * 2 + 2 + adc_channels > 16)) {
 		dev_err(&pdev->dev, "Too many step configurations requested\n");
+		return -EINVAL;
+	}
+
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!res) {
+		dev_err(&pdev->dev, "no memory resource defined.\n");
 		return -EINVAL;
 	}
 
@@ -190,17 +256,35 @@ static	int ti_tscadc_probe(struct platform_device *pdev)
 	}
 	tscadc->dev = &pdev->dev;
 
+	/* JR: modified below logic to allow magadc to get a valid IRQ */
 	err = platform_get_irq(pdev, 0);
 	if (err < 0) {
 		dev_err(&pdev->dev, "no irq ID is specified.\n");
 		goto ret;
 	} else
 		tscadc->irq = err;
+	if (data->use_mag) {
+		tscadc->magirq = of_irq_to_resource(pdev->dev.of_node, 0, NULL);
+		if (!tscadc->magirq) {
+			dev_err(&pdev->dev, "can't translate OF irq value\n");
+			goto ret;
+		}
+	}
 
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	tscadc->tscadc_base = devm_ioremap_resource(&pdev->dev, res);
-	if (IS_ERR(tscadc->tscadc_base))
-		return PTR_ERR(tscadc->tscadc_base);
+	res = devm_request_mem_region(&pdev->dev,
+			res->start, resource_size(res), pdev->name);
+	if (!res) {
+		dev_err(&pdev->dev, "failed to reserve registers.\n");
+		return -EBUSY;
+	}
+
+	tscadc->tscadc_base = devm_ioremap(&pdev->dev,
+			res->start, resource_size(res));
+	if (!tscadc->tscadc_base) {
+		dev_err(&pdev->dev, "failed to map registers.\n");
+		return -ENOMEM;
+	}
+	tscadc->phy_base = res->start;
 
 	tscadc->regmap_tscadc = devm_regmap_init_mmio(&pdev->dev,
 			tscadc->tscadc_base, &tscadc_regmap_config);
@@ -224,7 +308,7 @@ static	int ti_tscadc_probe(struct platform_device *pdev)
 	 * The TSC_ADC_SS controller design assumes the OCP clock is
 	 * at least 6x faster than the ADC clock.
 	 */
-	clk = clk_get(&pdev->dev, "adc_tsc_fck");
+	clk = clk_get(&pdev->dev, data->clk_name);
 	if (IS_ERR(clk)) {
 		dev_err(&pdev->dev, "failed to get TSC fck\n");
 		err = PTR_ERR(clk);
@@ -239,33 +323,45 @@ static	int ti_tscadc_probe(struct platform_device *pdev)
 	tscadc_writel(tscadc, REG_CLKDIV, tscadc->clk_div);
 
 	/* Set the control register bits */
-	ctrl = CNTRLREG_STEPCONFIGWRT |	CNTRLREG_STEPID;
-	tscadc_writel(tscadc, REG_CTRL, ctrl);
+	if (!data->use_mag && (tsc_wires > 0))
+		ctrl = CNTRLREG_STEPCONFIGWRT | CNTRLREG_STEPID;
 
-	/* Set register bits for Idle Config Mode */
-	if (tsc_wires > 0) {
-		tscadc->tsc_wires = tsc_wires;
-		if (tsc_wires == 5)
-			ctrl |= CNTRLREG_5WIRE | CNTRLREG_TSCENB;
-		else
-			ctrl |= CNTRLREG_4WIRE | CNTRLREG_TSCENB;
-		tscadc_idle_config(tscadc);
+	if (!data->use_mag) {
+		ctrl |= CNTRLREG_4WIRE | CNTRLREG_TSCENB;
+		tscadc_writel(tscadc, REG_CTRL, ctrl);
 	}
 
+	/* JR added to make magadc iio devices to work */
+	if (data->use_mag && (adc_channels > 0)) {
+		ctrl = CNTRLREG_STEPID;
+		/* uncomment next line to power down and bypass preamp */
+		ctrl |= CNTRLREG_PREAMP_PWRDOWN | CNTRLREG_PREAMP_BYPASS;
+		tscadc_writel(tscadc, REG_CTRL, ctrl);
+	}
+
+	/* Set register bits for Idle Config Mode for MAGADC or TSCADC */
+	if (tsc_wires > 0)
+		tscadc_idle_config(tscadc, data->use_mag);
+
 	/* Enable the TSC module enable bit */
+	ctrl = tscadc_readl(tscadc, REG_CTRL);
 	ctrl |= CNTRLREG_TSCSSENB;
 	tscadc_writel(tscadc, REG_CTRL, ctrl);
 
 	tscadc->used_cells = 0;
 	tscadc->tsc_cell = -1;
 	tscadc->adc_cell = -1;
+	tscadc->mag_cell = -1;
 
-	/* TSC Cell */
+	/* TSC or MAG Cell */
 	if (tsc_wires > 0) {
-		tscadc->tsc_cell = tscadc->used_cells;
+		if (data->use_mag)
+			tscadc->mag_cell = tscadc->used_cells;
+		else
+			tscadc->tsc_cell = tscadc->used_cells;
 		cell = &tscadc->cells[tscadc->used_cells++];
-		cell->name = "TI-am335x-tsc";
-		cell->of_compatible = "ti,am3359-tsc";
+		cell->name = data->cell_prop->name_fr;
+		cell->of_compatible = data->cell_prop->compatible_fr;
 		cell->platform_data = &tscadc;
 		cell->pdata_size = sizeof(tscadc);
 	}
@@ -274,8 +370,8 @@ static	int ti_tscadc_probe(struct platform_device *pdev)
 	if (adc_channels > 0) {
 		tscadc->adc_cell = tscadc->used_cells;
 		cell = &tscadc->cells[tscadc->used_cells++];
-		cell->name = "TI-am335x-adc";
-		cell->of_compatible = "ti,am3359-adc";
+		cell->name = data->cell_prop->name_sc;
+		cell->of_compatible = data->cell_prop->compatible_sc;
 		cell->platform_data = &tscadc;
 		cell->pdata_size = sizeof(tscadc);
 	}
@@ -302,10 +398,10 @@ static int ti_tscadc_remove(struct platform_device *pdev)
 
 	tscadc_writel(tscadc, REG_SE, 0x00);
 
+	mfd_remove_devices(tscadc->dev);
+
 	pm_runtime_put_sync(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
-
-	mfd_remove_devices(tscadc->dev);
 
 	return 0;
 }
@@ -313,38 +409,81 @@ static int ti_tscadc_remove(struct platform_device *pdev)
 #ifdef CONFIG_PM
 static int tscadc_suspend(struct device *dev)
 {
-	struct ti_tscadc_dev	*tscadc_dev = dev_get_drvdata(dev);
+	struct platform_device  *pdev = to_platform_device(dev);
+	struct ti_tscadc_dev	*tscadc;
 
-	tscadc_writel(tscadc_dev, REG_SE, 0x00);
+	const struct ti_tscadc_data *data;
+	const struct of_device_id *id;
+	id = of_match_device(ti_tscadc_dt_ids, dev);
+	data = id->data;
+
+	/* To decrement the device's usage count */
 	pm_runtime_put_sync(dev);
+
+	tscadc = platform_get_drvdata(pdev);
+
+	tscadc_writel(tscadc, REG_SE, 0x00);
+
+	pm_runtime_put_sync(&pdev->dev);
+	pm_runtime_disable(&pdev->dev);
 
 	return 0;
 }
 
 static int tscadc_resume(struct device *dev)
 {
-	struct ti_tscadc_dev	*tscadc_dev = dev_get_drvdata(dev);
-	u32 ctrl;
+	struct platform_device  *pdev = to_platform_device(dev);
+	struct ti_tscadc_dev	*tscadc;
+	struct clk		*clk;
+	int			err = -EINVAL;
+	int			clk_value, clock_rate;
+	int			clkVal = 0;
+	const struct ti_tscadc_data *data;
+	const struct of_device_id *id;
 
+	/* To increment the device's usage count */
 	pm_runtime_get_sync(dev);
 
-	/* context restore */
-	ctrl = CNTRLREG_STEPCONFIGWRT |	CNTRLREG_STEPID;
-	tscadc_writel(tscadc_dev, REG_CTRL, ctrl);
-
-	if (tscadc_dev->tsc_cell != -1) {
-		if (tscadc_dev->tsc_wires == 5)
-			ctrl |= CNTRLREG_5WIRE | CNTRLREG_TSCENB;
-		else
-			ctrl |= CNTRLREG_4WIRE | CNTRLREG_TSCENB;
-		tscadc_idle_config(tscadc_dev);
+	tscadc = platform_get_drvdata(pdev);
+	if (!pdev->dev.of_node) {
+		dev_err(&pdev->dev, "Could not find valid DT data.\n");
+		return -EINVAL;
 	}
-	ctrl |= CNTRLREG_TSCSSENB;
-	tscadc_writel(tscadc_dev, REG_CTRL, ctrl);
 
-	tscadc_writel(tscadc_dev, REG_CLKDIV, tscadc_dev->clk_div);
+	id = of_match_device(ti_tscadc_dt_ids, &pdev->dev);
+	data = id->data;
 
+	tscadc->dev = &pdev->dev;
+
+	/* Enable the clocks */
+	pm_runtime_enable(&pdev->dev);
+	pm_runtime_get_sync(&pdev->dev);
+
+	/*
+	 * The TSC_ADC_Subsystem has 2 clock domains
+	 * OCP_CLK and ADC_CLK.
+	 */
+	clk = devm_clk_get(&pdev->dev, data->clk_name);
+	if (IS_ERR(clk)) {
+		dev_err(&pdev->dev, "failed to get TSC fck\n");
+		err = PTR_ERR(clk);
+		goto err_disable_clk;
+	}
+	clock_rate = clk_get_rate(clk);
+	clk_value = clock_rate / data->clk_div;
+
+	/* TSCADC_CLKDIV needs to be configured to the value minus 1 */
+	clk_value = clk_value - 1;
+	tscadc_writel(tscadc, REG_CLKDIV, clk_value);
+	clkVal = tscadc_readl(tscadc, REG_CLKDIV);
+
+	platform_set_drvdata(pdev, tscadc);
 	return 0;
+
+err_disable_clk:
+	pm_runtime_put_sync(&pdev->dev);
+	pm_runtime_disable(&pdev->dev);
+	return -EINVAL;
 }
 
 static const struct dev_pm_ops tscadc_pm_ops = {
@@ -356,15 +495,10 @@ static const struct dev_pm_ops tscadc_pm_ops = {
 #define TSCADC_PM_OPS NULL
 #endif
 
-static const struct of_device_id ti_tscadc_dt_ids[] = {
-	{ .compatible = "ti,am3359-tscadc", },
-	{ }
-};
-MODULE_DEVICE_TABLE(of, ti_tscadc_dt_ids);
-
 static struct platform_driver ti_tscadc_driver = {
 	.driver = {
 		.name   = "ti_am3359-tscadc",
+		.owner	= THIS_MODULE,
 		.pm	= TSCADC_PM_OPS,
 		.of_match_table = ti_tscadc_dt_ids,
 	},

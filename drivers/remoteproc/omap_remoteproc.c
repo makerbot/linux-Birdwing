@@ -384,7 +384,7 @@ static void omap_rproc_kick(struct rproc *rproc, int vqid)
 	/* send the index of the triggered virtqueue in the mailbox payload */
 	ret = mbox_send_message(oproc->mbox, (void *)vqid);
 	if (ret < 0)
-		dev_err(dev, "mbox_send_message failed: %d\n", ret);
+		dev_dbg(dev, "mbox_send_message failed: %d\n", ret);
 
 	pm_runtime_mark_last_busy(dev);
 	pm_runtime_put_autosuspend(dev);
@@ -452,7 +452,7 @@ static int omap_rproc_start(struct rproc *rproc)
 	 */
 	ret = mbox_send_message(oproc->mbox, (void *)RP_MBOX_ECHO_REQUEST);
 	if (ret < 0) {
-		dev_err(dev, "mbox_send_message failed: %d\n", ret);
+		dev_dbg(dev, "mbox_send_message failed: %d\n", ret);
 		goto put_mbox;
 	}
 

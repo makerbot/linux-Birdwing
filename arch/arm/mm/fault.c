@@ -511,6 +511,15 @@ do_bad(unsigned long addr, unsigned int fsr, struct pt_regs *regs)
 	return 1;
 }
 
+/*
+ * This abort handler never returns "fault".
+ */
+static int
+ignore(unsigned long addr, unsigned int fsr, struct pt_regs *regs)
+{
+	return 0;
+}
+
 struct fsr_info {
 	int	(*fn)(unsigned long addr, unsigned int fsr, struct pt_regs *regs);
 	int	sig;

@@ -84,6 +84,11 @@ config BCM7XXX_PHY
 	  Currently supports the BCM7366, BCM7439, BCM7445, and
 	  40nm and 65nm generation of BCM7xxx Set Top Box SoCs.
 
+config DP83848_PHY
+	tristate "Driver for Texas Instruments DP83848 PHY"
+	---help---
+	  Supports the DP83848 PHY.
+
 config BCM87XX_PHY
 	tristate "Driver for Broadcom BCM8706 and BCM8727 PHYs"
 	help

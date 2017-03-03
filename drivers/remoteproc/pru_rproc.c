@@ -22,6 +22,8 @@
 #include <linux/pm_runtime.h>
 #include <linux/remoteproc.h>
 #include <linux/pruss.h>
+#include <linux/cdev.h>
+#include <linux/uaccess.h>
 
 #include "remoteproc_internal.h"
 #include "pruss.h"
@@ -49,6 +51,10 @@
 /* PRU_ICSS_PRU_DEBUG registers */
 #define PRU_DEBUG_GPREG(x)	(0x0000 + (x) * 4)
 #define PRU_DEBUG_CT_REG(x)	(0x0080 + (x) * 4)
+
+/* Number of devices that can have interrupt mailboxes */
+#define PRU_INTERRUPT_MAX_DEVICES 2
+#define PRU_INTERRUPT_MESSAGE_SIZE 5
 
 /**
  * enum pru_mem - PRU core memory range identifiers
@@ -89,9 +95,14 @@ struct pru_match_private_data {
  * @rproc: remoteproc pointer for this PRU core
  * @mbox: mailbox channel handle used for vring signalling with MPU
  * @client: mailbox client to request the mailbox channel
- * @mem_regions: data for each of the PRU memory regions
- * @intc_config: PRU INTC configuration data
- * @rmw_lock: lock for read, modify, write operations on registers
+ * @interrupt_mbox: mailbox channel handle used for interrupt message signalling
+ * @interrupt_client: mailbox client to request the interrupt channel
+ * @cdev: Character device for interacting with the interrupt mailbox
+ * @interrupt_locked: Whether something has already opened the interrupt cdev
+ * @devt: dev_t structure for the interrupt comms
+ * @mem_va: kernel virtual addresses for each of the PRU memory regions
+ * @mem_pa: physical addresses for each of the PRU memory regions
+ * @mem_size: size of each of the PRU memory regions
  * @iram_da: device address of Instruction RAM for this PRU
  * @pdram_da: device address of primary Data RAM for this PRU
  * @sdram_da: device address of secondary Data RAM for this PRU
@@ -106,6 +117,11 @@ struct pru_rproc {
 	struct rproc *rproc;
 	struct mbox_chan *mbox;
 	struct mbox_client client;
+    struct mbox_chan *interrupt_mbox;
+    struct mbox_client interrupt_client;
+    struct cdev cdev;
+    bool interrupt_locked;
+    dev_t devt;
 	struct pruss_mem_region mem_regions[PRU_MEM_MAX];
 	struct pruss_intc_config intc_config;
 	spinlock_t rmw_lock; /* register access lock */
@@ -116,6 +132,98 @@ struct pru_rproc {
 	const char *fw_name;
 	u32 dbg_single_step;
 	u32 dbg_continuous;
+};
+
+static DEFINE_MUTEX(pru_rproc_interrupt_mutex);
+static DEFINE_IDR(minors);
+static dev_t pru_rproc_interrupt_devt;
+static struct class *pru_rproc_interrupt_class;
+
+static int pru_rproc_interrupt_open(struct inode *inode, struct file *filp)
+{
+    struct pru_rproc *pru;
+    int ret = -EACCES;
+    pru = container_of(inode->i_cdev, struct pru_rproc, cdev);
+    
+    mutex_lock(&pru_rproc_interrupt_mutex);
+    if (!pru->interrupt_mbox) {
+        pr_err("pru rproc interrupt file: no interrupt mailbox configured!\n");
+        ret = -ENODEV;
+    } else if (!pru->interrupt_locked) {
+        pru->interrupt_locked = true;
+        filp->private_data = pru;
+        ret = 0;
+    }
+    mutex_unlock(&pru_rproc_interrupt_mutex);
+    return ret;
+}
+
+static int pru_rproc_interrupt_release(struct inode *inode, struct file *filp)
+{
+    struct pru_rproc *pru;
+
+    pru = container_of(inode->i_cdev, struct pru_rproc, cdev);
+    mutex_lock(&pru_rproc_interrupt_mutex);
+    pru->interrupt_locked = false;
+    mutex_unlock(&pru_rproc_interrupt_mutex);
+    return 0;
+}
+
+static ssize_t pru_rproc_interrupt_read(struct file *filp,
+                                        char *buf, size_t count,
+                                        loff_t *f_pos)
+{
+    /* This is only for communication TO the pru */
+    return 0;
+}
+
+/**
+ * The write operation for the interrupt mailbox is a bit different.
+ *
+ * The mailbox on omap holds a hardware FIFO of 4, 32-bit values. The mailbox
+ * implementation seems to assume that what you want to do is put an address
+ * in there, and let the remote processor retrieve the contents of that address.
+ * That is not what I want to do. Instead, I want a literal value. So here's
+ * what this function does:
+ * It builds a 32 bit value from the passed in character buffer.
+ * Give it 4 bytes, not including the trailing null. Or give it fewer than that.
+ * The first char will be in the high byte, and so on until the last is in the
+ * low byte. This means it'll be slightly tough to cat stuff around using the
+ * shell but that's not what this is for anyway.
+ */
+static ssize_t pru_rproc_interrupt_write(struct file *filp,
+                                         const char *buf, size_t count,
+                                         loff_t *f_pos)
+{
+    struct pru_rproc *pru;
+    char kernel_message[PRU_INTERRUPT_MESSAGE_SIZE];
+    int ret = 0, i = 0;
+    u32 message = 0;
+    if (count > PRU_INTERRUPT_MESSAGE_SIZE) {
+        return -EFBIG;
+    }
+
+    pru = filp->private_data;
+    strncpy_from_user(kernel_message, buf, count);
+    /* don't copy the trailing 0 */
+    for (; i<PRU_INTERRUPT_MESSAGE_SIZE-1; i++) {
+        message |= (((u32)kernel_message[i])<<(8*i));
+    }
+
+    ret = mbox_send_message(pru->interrupt_mbox, (void*)message);
+    if (ret < 0) {
+        pr_err("rproc interrupt: bad mbox write: %d\n", ret);
+        return ret;
+    }
+    return count;
+}
+
+static const struct file_operations pru_rproc_interrupt_fops = {
+    .owner = THIS_MODULE,
+    .open = pru_rproc_interrupt_open,
+    .release = pru_rproc_interrupt_release,
+    .read = pru_rproc_interrupt_read,
+    .write = pru_rproc_interrupt_write,
 };
 
 static inline u32 pru_control_read_reg(struct pru_rproc *pru, unsigned int reg)
@@ -402,8 +510,6 @@ static void pru_rproc_mbox_callback(struct mbox_client *client, void *data)
 	struct device *dev = &pru->rproc->dev;
 	u32 msg = (u32)data;
 
-	dev_dbg(dev, "mbox msg: 0x%x\n", msg);
-
 	/* msg contains the index of the triggered vring */
 	if (rproc_vq_interrupt(pru->rproc, msg) == IRQ_NONE)
 		dev_dbg(dev, "no message was found in vqid %d\n", msg);
@@ -416,12 +522,11 @@ static void pru_rproc_kick(struct rproc *rproc, int vq_id)
 	struct pru_rproc *pru = rproc->priv;
 	int ret;
 
-	dev_dbg(dev, "kicking vqid %d on PRU%d\n", vq_id, pru->id);
 
 	/* send the index of the triggered virtqueue in the mailbox payload */
 	ret = mbox_send_message(pru->mbox, (void *)vq_id);
 	if (ret < 0)
-		dev_err(dev, "mbox_send_message failed: %d\n", ret);
+	    dev_dbg(dev, "mbox_send_message failed: %d\n", ret);
 }
 
 /* start a PRU core */
@@ -620,15 +725,15 @@ static const struct pru_private_data *pru_rproc_get_private_data(
 
 static int pru_rproc_probe(struct platform_device *pdev)
 {
-	struct device *dev = &pdev->dev;
+	struct device *dev = &pdev->dev, *interrupt_dev_dummy;
 	struct device_node *np = dev->of_node;
 	struct platform_device *ppdev = to_platform_device(dev->parent);
 	struct pru_rproc *pru;
 	const struct pru_private_data *pdata;
 	struct rproc *rproc = NULL;
-	struct mbox_client *client;
+	struct mbox_client *client, *interrupt_client;
 	struct resource *res;
-	int i, ret;
+	int i, ret, minor_got;
 	const char *mem_names[PRU_MEM_MAX] = { "iram", "control", "debug" };
 	bool is_idk = false;
 
@@ -675,6 +780,16 @@ static int pru_rproc_probe(struct platform_device *pdev)
 	for (i = 0; i < ARRAY_SIZE(mem_names); i++) {
 		res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
 						   mem_names[i]);
+        if (!res || IS_ERR(res)) {
+            /* We need to ignore this error for now because PRUSS0 doesn't have
+             a shared memory, and despite the insistence of the dt-bindings
+             docs that the pruss doesn't NEED all its memory fields, we look
+             for it anyway. We should probably figure out a better way to do
+             this. */
+            dev_err(dev, "pru core probe: failed to get resource %s: %ld\n",
+                    mem_names[i], PTR_ERR(res));
+            continue;
+        }
 		pru->mem_regions[i].va = devm_ioremap_resource(dev, res);
 		if (IS_ERR(pru->mem_regions[i].va)) {
 			dev_err(dev, "failed to parse and map memory resource %d %s\n",
@@ -704,6 +819,54 @@ static int pru_rproc_probe(struct platform_device *pdev)
 		dev_err(dev, "mbox_request_channel failed: %d\n", ret);
 		goto free_rproc;
 	}
+
+    interrupt_client = &pru->interrupt_client;
+    /* This is only a tx mailbox, from arm to pru, so don't populate any
+       callbacks */
+    interrupt_client->dev = dev;
+    interrupt_client->tx_done = NULL;
+    interrupt_client->rx_callback = NULL;
+    client->tx_block = false;
+    client->knows_txdone = false;
+    pru->interrupt_mbox = mbox_request_channel(interrupt_client, 1);
+    if (IS_ERR(pru->interrupt_mbox)) {
+        /* This is not actually a failure - it just means that this pru does not
+         have an interrupt mailbox, only the normal kind */
+        dev_info(dev, "no interrupt mbox: %ld\n", PTR_ERR(pru->interrupt_mbox));
+        pru->interrupt_mbox = NULL;
+    } else {
+        /* Set up the character device for the interrupt */
+        mutex_lock(&pru_rproc_interrupt_mutex);
+        minor_got = idr_alloc(&minors, pru, 0, PRU_INTERRUPT_MAX_DEVICES, GFP_KERNEL);
+        mutex_unlock(&pru_rproc_interrupt_mutex);
+        if (minor_got < 0) {
+            ret = minor_got;
+            dev_err(dev, "Failed to get a minor number for the pru interrupt device: %d\n",
+                    ret);
+            goto fail_alloc_minor;
+        }
+        dev_info(dev, "generated interrupt mailbox channel\n");
+        pru->devt = MKDEV(MAJOR(pru_rproc_interrupt_devt), minor_got);
+        cdev_init(&pru->cdev, &pru_rproc_interrupt_fops);
+        pru->cdev.owner = THIS_MODULE;
+        ret = cdev_add(&pru->cdev, pru->devt, 1);
+        if (ret) {
+            dev_err(dev, "Unable to add cdev for the pru interrupt device\n");
+            goto fail_add_cdev;
+        }
+        if (IS_ERR(interrupt_dev_dummy
+                    = device_create(pru_rproc_interrupt_class, dev, pru->devt,
+                                    NULL, "pru_rproc_interrupt" "%d",
+                                    minor_got))) {
+            dev_err(dev,
+                    "Unable to create device for the pru interrupt for %s\n",
+                    pdev->name);
+            ret = PTR_ERR(interrupt_dev_dummy);
+            goto fail_make_device;
+        }
+        dev_info(dev, "pru interrupt interface set up successfully on %d:%d",
+                 MAJOR(pru_rproc_interrupt_devt), minor_got);
+    }
 
 	ret = rproc_add(pru->rproc);
 	if (ret) {
@@ -741,8 +904,15 @@ del_rproc:
 	rproc_del(pru->rproc);
 put_mbox:
 	mbox_free_channel(pru->mbox);
+ fail_make_device:
+    cdev_del(&pru->cdev);
+fail_add_cdev:
+	mutex_lock(&pru_rproc_interrupt_mutex);
+	idr_remove(&minors, minor_got);
+	mutex_unlock(&pru_rproc_interrupt_mutex);
 free_rproc:
 	rproc_put(rproc);
+fail_alloc_minor:
 	return ret;
 }
 
@@ -785,14 +955,24 @@ static struct pru_private_data am335x_pru1_rproc_pdata = {
 /* AM437x PRUSS1 PRU core-specific private data */
 static struct pru_private_data am437x_pru1_0_rproc_pdata = {
 	.id = 0,
-	.fw_name = "am437x-pru1_0-fw",
+	.fw_name = "rproc-pr1-pru0-fw",
 	.eth_fw_name = "ti-pruss/am437x-pru0-prueth-fw.elf"
 };
 
 static struct pru_private_data am437x_pru1_1_rproc_pdata = {
 	.id = 1,
-	.fw_name = "am437x-pru1_1-fw",
+	.fw_name = "rproc-pr1-pru1-fw",
 	.eth_fw_name = "ti-pruss/am437x-pru1-prueth-fw.elf"
+};
+
+static struct pru_private_data am437x_pru0_0_rproc_pdata = {
+	.id = 2,
+	.fw_name = "rproc-pr0-pru0-fw",
+};
+
+static struct pru_private_data am437x_pru0_1_rproc_pdata = {
+	.id = 3,
+	.fw_name = "rproc-pr0-pru1-fw",
 };
 
 /* AM57xx PRUSS1 PRU core-specific private data */
@@ -839,12 +1019,20 @@ static struct pru_match_private_data am335x_pru_match_data[] = {
 /* AM43xx SoC-specific PRU Device data */
 static struct pru_match_private_data am437x_pru_match_data[] = {
 	{
-		.device_name	= "54434000.pru0",
+		.device_name	= "54434000.pru1_0",
 		.priv_data	= &am437x_pru1_0_rproc_pdata,
 	},
 	{
-		.device_name	= "54438000.pru1",
+		.device_name	= "54438000.pru1_1",
 		.priv_data	= &am437x_pru1_1_rproc_pdata,
+	},
+	{
+		.device_name = "54474000.pru0_0",
+		.priv_data = &am437x_pru0_0_rproc_pdata,
+	},
+	{
+		.device_name = "54478000.pru0_1",
+		.priv_data = &am437x_pru0_1_rproc_pdata,
 	},
 	{
 		/* sentinel */
@@ -890,7 +1078,55 @@ static struct platform_driver pru_rproc_driver = {
 	.probe  = pru_rproc_probe,
 	.remove = pru_rproc_remove,
 };
-module_platform_driver(pru_rproc_driver);
+
+static int __init pru_rproc_init(void)
+{
+	int ret;
+
+	pru_rproc_interrupt_class = class_create(THIS_MODULE,
+                                             "pru_rproc_interrupt");
+	if (IS_ERR(pru_rproc_interrupt_class)) {
+		pr_err("Unable to create class\n");
+		ret = PTR_ERR(pru_rproc_interrupt_class);
+		goto fail_create_class;
+	}
+
+	ret = alloc_chrdev_region(&pru_rproc_interrupt_devt,
+                              0, PRU_INTERRUPT_MAX_DEVICES,
+							  "pru_rproc_interrupt");
+	if (ret) {
+		pr_err("Unable to allocate chrdev region\n");
+		goto fail_alloc_region;
+	}
+
+	ret = platform_driver_register(&pru_rproc_driver);
+	if (ret) {
+		pr_err("platform driver register failed for pru_rproc_driver, %d\n",
+		       ret);
+        goto fail_register_pru;
+	}
+    return 0;
+
+fail_register_pru:
+	unregister_chrdev_region(pru_rproc_interrupt_devt,
+	                         PRU_INTERRUPT_MAX_DEVICES);
+fail_alloc_region:
+	class_destroy(pru_rproc_interrupt_class);
+fail_create_class:
+	return ret;
+}
+module_init(pru_rproc_init);
+
+static void __exit pru_rproc_exit(void)
+{
+	idr_destroy(&minors);
+	mutex_destroy(&pru_rproc_interrupt_mutex);
+	class_destroy(pru_rproc_interrupt_class);
+	unregister_chrdev_region(pru_rproc_interrupt_devt,
+                             PRU_INTERRUPT_MAX_DEVICES);
+	platform_driver_unregister(&pru_rproc_driver);
+}
+module_exit(pru_rproc_exit);
 
 MODULE_AUTHOR("Suman Anna <s-anna@ti.com>");
 MODULE_DESCRIPTION("PRU-ICSS Remote Processor Driver");

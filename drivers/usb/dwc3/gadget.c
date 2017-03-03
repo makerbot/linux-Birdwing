@@ -2353,7 +2353,7 @@ static void dwc3_gadget_disconnect_interrupt(struct dwc3 *dwc)
 
 	reg &= ~DWC3_DCTL_INITU2ENA;
 	dwc3_writel(dwc->regs, DWC3_DCTL, reg);
-
+    dev_info(dwc->dev, "DWC3 disconnect interrupt");
 	dwc3_disconnect_gadget(dwc);
 
 	dwc->gadget.speed = USB_SPEED_UNKNOWN;
@@ -2468,8 +2468,10 @@ static void dwc3_gadget_conndone_interrupt(struct dwc3 *dwc)
 		 * STAR#9000483510: RTL: SS : USB3 reset event may
 		 * not be generated always when the link enters poll
 		 */
-		if (dwc->revision < DWC3_REVISION_190A)
+		if (dwc->revision < DWC3_REVISION_190A) {
+            dev_info(dwc->dev, "DWC3 revision too old!\n");
 			dwc3_gadget_reset_interrupt(dwc);
+        }
 
 		dwc3_gadget_ep0_desc.wMaxPacketSize = cpu_to_le16(512);
 		dwc->gadget.ep0->maxpacket = 512;
@@ -2690,12 +2692,15 @@ static void dwc3_gadget_interrupt(struct dwc3 *dwc,
 {
 	switch (event->type) {
 	case DWC3_DEVICE_EVENT_DISCONNECT:
+        dev_vdbg(dwc->dev, "%s\n", __func__);
 		dwc3_gadget_disconnect_interrupt(dwc);
 		break;
 	case DWC3_DEVICE_EVENT_RESET:
+        dev_info(dwc->dev, "General reset event!\n");
 		dwc3_gadget_reset_interrupt(dwc);
 		break;
 	case DWC3_DEVICE_EVENT_CONNECT_DONE:
+        dev_info(dwc->dev, "connection done!\n");
 		dwc3_gadget_conndone_interrupt(dwc);
 		break;
 	case DWC3_DEVICE_EVENT_WAKEUP:

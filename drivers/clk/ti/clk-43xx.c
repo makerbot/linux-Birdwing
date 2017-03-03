@@ -44,6 +44,7 @@ static struct ti_dt_clk am43xx_clks[] = {
 	DT_CLK(NULL, "dpll_per_m2_div4_wkupdm_ck", "dpll_per_m2_div4_wkupdm_ck"),
 	DT_CLK(NULL, "dpll_per_m2_div4_ck", "dpll_per_m2_div4_ck"),
 	DT_CLK(NULL, "adc_tsc_fck", "adc_tsc_fck"),
+	DT_CLK(NULL, "adc_mag_fck", "adc_mag_fck"),
 	DT_CLK(NULL, "clkdiv32k_ck", "clkdiv32k_ck"),
 	DT_CLK(NULL, "clkdiv32k_ick", "clkdiv32k_ick"),
 	DT_CLK(NULL, "dcan0_fck", "dcan0_fck"),

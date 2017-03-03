@@ -316,10 +316,19 @@
 				ti,mbox-tx = <2 0 0>;
 				ti,mbox-rx = <3 0 0>;
 			};
-			mbox_pru1_1: mbox_pru1_1 {
+			mbox_pru0_0: mbox_pru0_0 {
 				ti,mbox-tx = <4 0 0>;
 				ti,mbox-rx = <5 0 0>;
 			};
+            mbox_pru1_0_interrupt: mbox_pru1_0_interrupt {
+                ti,mbox-tx = <6 0 0>;
+                ti,mbox-rx = <7 0 0>;
+            };
+//			mbox_pru0_1: mbox_pru0_1 {
+//				ti,mbox-tx = <6 0 0>;
+//				ti,mbox-rx = <7 0 0>;
+//			};
+
 		};
 
 		timer1: timer@44e31000 {
@@ -815,7 +824,7 @@
 		};
 
 		tscadc: tscadc@44e0d000 {
-			compatible = "ti,am3359-tscadc";
+			compatible = "ti,am4372-tscadc","ti,am3359-tscadc";
 			reg = <0x44e0d000 0x1000>;
 			ti,hwmods = "adc_tsc";
 			interrupts = <GIC_SPI 16 IRQ_TYPE_LEVEL_HIGH>;
@@ -824,14 +833,34 @@
 			status = "disabled";
 
 			tsc {
-				compatible = "ti,am3359-tsc";
-			};
+				compatible = "ti,am4372-tsc","ti,am3359-tsc";
+ 			};
 
 			adc {
 				#io-channel-cells = <1>;
-				compatible = "ti,am3359-adc";
+				compatible = "ti,am4372-adc","ti,am3359-adc";
 			};
 
+		};
+
+        magadc: magadc@4834c000 {
+			compatible = "ti,am4372-magadc";
+			reg = <0x4834c000 0x2000>;
+			ti,hwmods = "adc_mag";
+			dmas = <&edma 54>;
+			dma-names = "rx";
+			interrupts = <GIC_SPI 115 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&adc_mag_fck>;
+			clock-names = "fck";
+			status = "disabled";
+
+			mag {
+				compatible = "ti,am4372-mag";
+			};
+
+			adc {
+				compatible ="ti,am4372-adc";
+			};
 		};
 
 		sham: sham@53100000 {
@@ -884,9 +913,49 @@
 			interrupts = <GIC_SPI 111 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
+		pruss0: pruss@54440000 {
+			compatible = "ti,am4372-pruss";
+			ti,hwmods = "pruss0";
+			reg = <0x54440000 0x2000>,
+			      <0x54442000 0x2000>,
+			      <0x54460000 0x2000>,
+			      <0x54466000 0x2000>;
+			reg-names = "dram0", "dram1", "intc", "cfg";//"shrdram2", 
+			interrupts = <GIC_SPI 31 IRQ_TYPE_LEVEL_HIGH
+				      GIC_SPI 33 IRQ_TYPE_LEVEL_HIGH
+				      GIC_SPI 34 IRQ_TYPE_LEVEL_HIGH
+				      GIC_SPI 35 IRQ_TYPE_LEVEL_HIGH
+				      GIC_SPI 36 IRQ_TYPE_LEVEL_HIGH
+				      GIC_SPI 38 IRQ_TYPE_LEVEL_HIGH
+				      GIC_SPI 39 IRQ_TYPE_LEVEL_HIGH>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges;
+
+			pru0_0: pru@54474000 {
+				compatible = "ti,am4372-pru-rproc";
+				reg = <0x54474000 0x3000>,
+				      <0x54462000 0x400>,
+				      <0x54462400 0x100>;
+				reg-names = "iram", "control", "debug";
+                mbox-names = "pr0_pru0";
+				mboxes = <&mailbox &mbox_pru0_0>;
+			};
+
+/*			pru0_1: pru@54478000 {
+				compatible = "ti,am4372-pru-rproc";
+				reg = <0x54478000 0x3000>,
+				      <0x54464000 0x400>,
+				      <0x54464400 0x100>;
+				reg-names = "iram", "control", "debug";
+                mbox-names = "pr0_pru1";
+				mboxes = <&mailbox &mbox_pru0_1>;
+			};*/
+		};
+
 		pruss1: pruss@54400000 {
 			compatible = "ti,am4372-pruss";
-			ti,hwmods = "pruss";
+			ti,hwmods = "pruss1";
 			reg = <0x54400000 0x2000>,
 			      <0x54402000 0x2000>,
 			      <0x54410000 0x8000>,
@@ -907,23 +976,24 @@
 			#size-cells = <1>;
 			ranges;
 
-			pru1_0: pru0@54434000 {
+			pru1_0: pru@54434000 {
 				compatible = "ti,am4372-pru-rproc";
 				reg = <0x54434000 0x3000>,
 				      <0x54422000 0x400>,
 				      <0x54422400 0x100>;
 				reg-names = "iram", "control", "debug";
-				mboxes = <&mailbox &mbox_pru1_0>;
+				mboxes = <&mailbox &mbox_pru1_0
+                          &mailbox &mbox_pru1_0_interrupt>;
 			};
 
-			pru1_1: pru1@54438000 {
+			/*pru1_1: pru@54438000 {
 				compatible = "ti,am4372-pru-rproc";
 				reg = <0x54438000 0x3000>,
 				      <0x54424000 0x400>,
 				      <0x54424400 0x100>;
 				reg-names = "iram", "control", "debug";
 				mboxes = <&mailbox &mbox_pru1_1>;
-			};
+			};*/
 
 			pruss1_mdio: mdio@54432400 {
 				compatible = "ti,davinci_mdio";

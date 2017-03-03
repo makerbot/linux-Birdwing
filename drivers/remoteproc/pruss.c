@@ -1049,8 +1049,13 @@ static int pruss_probe(struct platform_device *pdev)
 	for (i = 0; i < ARRAY_SIZE(mem_names); i++) {
 		res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
 						   mem_names[i]);
+		if(IS_ERR_OR_NULL(res)) {
+			dev_err(dev, "null or error resource: %s: %d: skipping\n",
+			        mem_names[i], PTR_ERR(res));
+			continue;
+		}
 		pruss->mem_regions[i].va = devm_ioremap_resource(dev, res);
-		if (IS_ERR(pruss->mem_regions[i].va)) {
+		if (IS_ERR_OR_NULL(pruss->mem_regions[i].va)) {
 			dev_err(dev, "failed to parse and map memory resource %d %s\n",
 				i, mem_names[i]);
 			return PTR_ERR(pruss->mem_regions[i].va);
@@ -1065,7 +1070,10 @@ static int pruss_probe(struct platform_device *pdev)
 
 	if (data->has_reset) {
 		err = pdata->deassert_reset(pdev, pdata->reset_name);
-		if (err) {
+		/* if the (de)assert_reset functions come back with EEXIST that
+		   just means the module was already (in|out) of reset, which we
+		   can ignore probably */
+		if (err && err != -EEXIST) {
 			dev_err(dev, "deassert_reset failed: %d\n", err);
 			goto err_fail;
 		}
@@ -1148,10 +1156,14 @@ static struct of_dev_auxdata am335x_pruss_rproc_auxdata_lookup[] = {
 	{ /* sentinel */ },
 };
 
-static struct of_dev_auxdata am437x_pruss1_rproc_auxdata_lookup[] = {
-	OF_DEV_AUXDATA("ti,am4372-pru-rproc", 0x54434000, "54434000.pru0",
+static struct of_dev_auxdata am437x_pruss_rproc_auxdata_lookup[] = {
+	OF_DEV_AUXDATA("ti,am4372-pru-rproc", 0x54434000, "54434000.pru1_0",
 		       NULL),
-	OF_DEV_AUXDATA("ti,am4372-pru-rproc", 0x54438000, "54438000.pru1",
+	OF_DEV_AUXDATA("ti,am4372-pru-rproc", 0x54438000, "54438000.pru1_1",
+		       NULL),
+	OF_DEV_AUXDATA("ti,am4372-pru-rproc", 0x54474000, "54474000.pru0_0",
+		       NULL),
+	OF_DEV_AUXDATA("ti,am4372-pru-rproc", 0x54478000, "54478000.pru0_1",
 		       NULL),
 	{ /* sentinel */ },
 };
@@ -1189,7 +1201,7 @@ static struct pruss_private_data am437x_priv_data = {
 	.num_irqs = 7,
 	.host_events = (BIT(2) | BIT(3) | BIT(4) | BIT(5) |
 			BIT(6) | BIT(8) | BIT(9)),
-	.aux_data = am437x_pruss1_rproc_auxdata_lookup,
+	.aux_data = am437x_pruss_rproc_auxdata_lookup,
 	.has_reset = true,
 };
 

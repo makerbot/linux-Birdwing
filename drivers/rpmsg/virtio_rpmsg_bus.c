@@ -178,11 +178,13 @@ static int rpmsg_dev_match(struct device *dev, struct device_driver *drv)
 	struct rpmsg_driver *rpdrv = to_rpmsg_driver(drv);
 	const struct rpmsg_device_id *ids = rpdrv->id_table;
 	unsigned int i;
-
+    dev_err(dev, "rpmsg bus: seeking driver for channel %s\n", rpdev->id.name);
 	for (i = 0; ids[i].name[0]; i++)
-		if (rpmsg_id_match(rpdev, &ids[i]))
+		if (rpmsg_id_match(rpdev, &ids[i])) {
+            dev_err(dev, "rpmsg bus: found driver for channel %s!\n", rpdev->id.name);
 			return 1;
-
+        }
+    dev_err(dev, "rpmsg bus: no driver for channel %s\n", rpdev->id.name);
 	return 0;
 }
 
@@ -928,7 +930,8 @@ static int rpmsg_recv_single(struct virtproc_info *vrp, struct device *dev,
 		/* farewell, ept, we don't need you anymore */
 		kref_put(&ept->refcount, __ept_release);
 	} else
-		dev_warn(dev, "msg received with no recipient\n");
+		dev_warn(dev, "msg received with no recipient (%d requested)\n",
+                 msg->dst);
 
 	/* publish the real size of the buffer */
 	rpmsg_sg_init_one(vrp, &sg, msg, RPMSG_BUF_SIZE);
@@ -1233,7 +1236,7 @@ static int __init rpmsg_init(void)
 		pr_err("failed to register virtio driver: %d\n", ret);
 		bus_unregister(&rpmsg_bus);
 	}
-
+    pr_err("rpmsg bus registered\n");
 	return ret;
 }
 subsys_initcall(rpmsg_init);

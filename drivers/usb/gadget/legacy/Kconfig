@@ -315,6 +315,14 @@ config USB_G_PRINTER
 	  For more information, see Documentation/usb/gadget_printer.txt
 	  which includes sample code for accessing the device file.
 
+config USB_G_3DPRINTER
+	tristate "3D Printer support"
+	select USB_LIBCOMPOSITE
+	help
+	  This driver implements the Makerbot 3D Printer driver.
+	  Say "y" to link the driver statically (don't do this) or "m"
+	  to build a dynamically linked module (do this)
+
 if TTY
 
 config USB_CDC_COMPOSITE

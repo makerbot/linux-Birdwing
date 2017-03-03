@@ -151,7 +151,7 @@ static void __davinci_mdio_reset(struct davinci_mdio_data *data)
 	 * so, our request could get deferred by one access cycle.  We
 	 * defensively allow for 4 access cycles.
 	 */
-	data->access_time = usecs_to_jiffies(access_time * 4);
+	data->access_time = access_time * 4; // Don't convert usecs to jiffies here, http://comments.gmane.org/gmane.linux.network/279586
 	if (!data->access_time)
 		data->access_time = 1;
 }
