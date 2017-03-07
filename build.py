@@ -12,6 +12,8 @@ parser.add_argument('--dt-only', action='store_true',
                     help='Only build and install the device tree')
 parser.add_argument('--no-sgx', action='store_true',
                     help='Skip building the sgx kernel modules')
+parser.add_argument('--no-modules', action='store_true',
+                    help='Skip building/installing all modules')
 args = parser.parse_args()
 
 if args.revision == 'macho-man-reva':
@@ -89,9 +91,10 @@ def build(num_cores=4):
     run_make_cmd([dt], num_cores)
     if args.dt_only: return
     run_make_cmd(['zImage'], num_cores)
-    run_make_cmd(['modules'], num_cores)
     if os.path.exists(staging_path):
         shutil.rmtree(staging_path)
+    if args.no_modules: return
+    run_make_cmd(['modules'], num_cores)
     run_make_cmd(['modules_install'], 1)
     if not args.no_sgx:
         build_sgx(num_cores)
@@ -160,6 +163,7 @@ def install(path):
         install_file(
             os.path.join(image_path, 'zImage'),
             os.path.join(install_boot, 'zImage'), f)
+        if args.no_modules: return
         install_tree(staging_path, install_path, f)
 
 def clean():
