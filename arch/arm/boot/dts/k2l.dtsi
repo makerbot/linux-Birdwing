@@ -9,6 +9,9 @@
  */
 
 / {
+	compatible = "ti,k2l", "ti,keystone";
+	model = "Texas Instruments Keystone 2 Lamarr SoC";
+
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -28,12 +31,18 @@
 		};
 	};
 
-	soc {
+	aliases {
+		rproc0 = &dsp0;
+		rproc1 = &dsp1;
+		rproc2 = &dsp2;
+		rproc3 = &dsp3;
+	};
 
+	soc {
 		/include/ "k2l-clocks.dtsi"
 
 		uart2: serial@02348400 {
-			compatible = "ns16550a";
+			compatible = "ti,keystone-uart", "ns16550a";
 			current-speed = <115200>;
 			reg-shift = <2>;
 			reg-io-width = <4>;
@@ -43,7 +52,7 @@
 		};
 
 		uart3:	serial@02348800 {
-			compatible = "ns16550a";
+			compatible = "ti,keystone-uart", "ns16550a";
 			current-speed = <115200>;
 			reg-shift = <2>;
 			reg-io-width = <4>;
@@ -79,7 +88,84 @@
 			#gpio-cells = <2>;
 			gpio,syscon-dev = <&devctrl 0x24c>;
 		};
+
+		mdio: mdio@26200f00 {
+			compatible	= "ti,keystone_mdio", "ti,davinci_mdio";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x26200f00 0x100>;
+			status = "disabled";
+			clocks = <&clkcpgmac>;
+			clock-names = "fck";
+			bus_freq	= <2500000>;
+		};
 		/include/ "k2l-netcp.dtsi"
+
+		dsp0: dsp0 {
+			compatible = "ti,k2l-dsp";
+			reg = <0x10800000 0x00100000>,
+			      <0x10e00000 0x00008000>,
+			      <0x10f00000 0x00008000>;
+			reg-names = "l2sram", "l1pram", "l1dram";
+			clocks = <&clkgem0>;
+			ti,syscon-dev = <&devctrl 0x844>;
+			resets = <&pscrst 0xa3c 8 0 0x83c 8 0>;
+			interrupt-parent = <&kirq0>;
+			interrupts = <0 8>;
+			interrupt-names = "vring", "exception";
+			kick-gpio = <&dspgpio0 27 0>;
+		};
+
+		dsp1: dsp1 {
+			compatible = "ti,k2l-dsp";
+			reg = <0x11800000 0x00100000>,
+			      <0x11e00000 0x00008000>,
+			      <0x11f00000 0x00008000>;
+			reg-names = "l2sram", "l1pram", "l1dram";
+			clocks = <&clkgem1>;
+			ti,syscon-dev = <&devctrl 0x848>;
+			resets = <&pscrst 0xa40 8 0 0x840 8 0>;
+			interrupt-parent = <&kirq0>;
+			interrupts = <1 9>;
+			interrupt-names = "vring", "exception";
+			kick-gpio = <&dspgpio1 27 0>;
+		};
+
+		dsp2: dsp2 {
+			compatible = "ti,k2l-dsp";
+			reg = <0x12800000 0x00100000>,
+			      <0x12e00000 0x00008000>,
+			      <0x12f00000 0x00008000>;
+			reg-names = "l2sram", "l1pram", "l1dram";
+			clocks = <&clkgem2>;
+			ti,syscon-dev = <&devctrl 0x84c>;
+			resets = <&pscrst 0xa44 8 0 0x844 8 0>;
+			interrupt-parent = <&kirq0>;
+			interrupts = <2 10>;
+			interrupt-names = "vring", "exception";
+			kick-gpio = <&dspgpio2 27 0>;
+		};
+
+		dsp3: dsp3 {
+			compatible = "ti,k2l-dsp";
+			reg = <0x13800000 0x00100000>,
+			      <0x13e00000 0x00008000>,
+			      <0x13f00000 0x00008000>;
+			reg-names = "l2sram", "l1pram", "l1dram";
+			clocks = <&clkgem3>;
+			ti,syscon-dev = <&devctrl 0x850>;
+			resets = <&pscrst 0xa48 8 0 0x848 8 0>;
+			interrupt-parent = <&kirq0>;
+			interrupts = <3 11>;
+			interrupt-names = "vring", "exception";
+			kick-gpio = <&dspgpio3 27 0>;
+		};
+
+		debugss: debugss {
+			compatible = "ti,keystone-debugss";
+			clocks = <&mainpllclk>, <&armpllclk>, <&clkdebugsstrc>, <&gemtraceclk>, <&clktetbtrc>;
+			clock-names = "mainpllclock", "armpllclock", "debugssclock", "gemtraceclock", "tetbclock";
+		};
 	};
 };
 
@@ -95,8 +181,4 @@
        ti,davinci-spi-num-cs = <5>;
        /* Pin muxed. Enabled and configured by Bootloader */
        status = "disabled";
-};
-
-&mdio {
-	reg = <0x26200f00 0x100>;
 };

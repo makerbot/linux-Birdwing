@@ -12,6 +12,7 @@
 #include "skeleton.dtsi"
 
 / {
+	compatible = "ti,keystone";
 	model = "Texas Instruments Keystone 2 SoC";
 	#address-cells = <2>;
 	#size-cells = <2>;
@@ -71,6 +72,11 @@
 			reg = <0x02310000 0x200>;
 		};
 
+		psc: power-sleep-controller@02350000 {
+			compatible = "syscon";
+			reg = <0x02350000 0x1000>;
+		};
+
 		devctrl: device-state-control@02620000 {
 			compatible = "ti,keystone-devctrl", "syscon";
 			reg = <0x02620000 0x1000>;
@@ -83,10 +89,16 @@
 			ti,wdt-list = <0>;
 		};
 
+		pscrst: psc-reset {
+			compatible = "syscon-reset";
+			syscon = <&psc>;
+			#reset-cells = <6>;
+		};
+
 		/include/ "keystone-clocks.dtsi"
 
 		uart0: serial@02530c00 {
-			compatible = "ns16550a";
+			compatible = "ti,keystone-uart", "ns16550a";
 			current-speed = <115200>;
 			reg-shift = <2>;
 			reg-io-width = <4>;
@@ -96,7 +108,7 @@
 		};
 
 		uart1:	serial@02531000 {
-			compatible = "ns16550a";
+			compatible = "ti,keystone-uart", "ns16550a";
 			current-speed = <115200>;
 			reg-shift = <2>;
 			reg-io-width = <4>;
@@ -267,17 +279,6 @@
 				  1 0 0x21000A00 0x00000100>;
 		};
 
-		mdio: mdio@02090300 {
-			compatible	= "ti,keystone_mdio", "ti,davinci_mdio";
-			#address-cells = <1>;
-			#size-cells = <0>;
-			reg		= <0x02090300 0x100>;
-			status = "disabled";
-			clocks = <&clkpa>;
-			clock-names = "fck";
-			bus_freq	= <2500000>;
-		};
-
 		kirq0: keystone_irq@26202a0 {
 			compatible = "ti,keystone-irq";
 			interrupts = <GIC_SPI 4 IRQ_TYPE_EDGE_RISING>;
@@ -286,11 +287,12 @@
 			ti,syscon-dev = <&devctrl 0x2a0>;
 		};
 
-		pcie0_phy: pciephy@2320000 {
+		pcie0_phy: phy@2320000 {
 			#phy-cells = <0>;
-			compatible = "ti,keystone-serdes-phy";
+			compatible = "ti,keystone-serdes-pcie";
 			reg = <0x02320000 0x4000>;
-			reg-names = "reg_serdes";
+			link-rate-kbps = <5000000>;
+			num-lanes = <2>;
 			status = "disabled";
 		};
 
@@ -307,10 +309,7 @@
 			status = "disabled";
 			device_type = "pci";
 			num-lanes = <2>;
-
-			/* PCIE phy */
 			phys = <&pcie0_phy>;
-			phy-names = "pcie-phy";
 
 			#interrupt-cells = <1>;
 			interrupt-map-mask = <0 0 0 7>;
@@ -342,6 +341,13 @@
 					<GIC_SPI 28 IRQ_TYPE_EDGE_RISING>,
 					<GIC_SPI 29 IRQ_TYPE_EDGE_RISING>;
 			};
+		};
+
+		srss: srss@2330000 {
+			compatible = "ti,keystone-srss";
+			reg = <0x02330000 0x800>;
+			clocks = <&clksr>;
+			clock-names = "srssclock";
 		};
 	};
 };

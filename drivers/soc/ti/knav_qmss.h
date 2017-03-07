@@ -19,6 +19,8 @@
 #ifndef __KNAV_QMSS_H__
 #define __KNAV_QMSS_H__
 
+#include <linux/regmap.h>
+
 #define THRESH_GTE	BIT(7)
 #define THRESH_LT	0
 
@@ -125,6 +127,9 @@ struct knav_acc_channel {
 	atomic_t		retrigger_count;
 };
 
+#define KNAV_PDSP_FW_TYPE_ACC				0
+#define KNAV_PDSP_FW_TYPE_QOS				1
+
 struct knav_pdsp_info {
 	const char					*name;
 	struct knav_reg_pdsp_regs  __iomem		*regs;
@@ -133,11 +138,17 @@ struct knav_pdsp_info {
 		struct knav_reg_acc_command __iomem	*acc_command;
 		u32 __iomem				*qos_command;
 	};
+	struct regmap					*intd_regmap;
 	void __iomem					*intd;
 	u32 __iomem					*iram;
-	const char					*firmware;
+	const char					**firmware;
+	u32						num_firmwares;
+	u32						firmware_type;
 	u32						id;
 	struct list_head				list;
+	bool						loaded;
+	bool						started;
+	struct knav_qos_info				*qos_info;
 };
 
 struct knav_qmgr_info {
@@ -291,8 +302,14 @@ struct knav_queue {
 	struct list_head		list;
 };
 
+enum qmss_version {
+	QMSS,
+	QMSS_LITE,
+};
+
 struct knav_device {
 	struct device				*dev;
+	struct clk				*clk;
 	unsigned				base_id;
 	unsigned				num_queues;
 	unsigned				num_queues_in_use;
@@ -304,6 +321,7 @@ struct knav_device {
 	struct list_head			pools;
 	struct list_head			pdsps;
 	struct list_head			qmgrs;
+	enum qmss_version			version;
 };
 
 struct knav_range_ops {
@@ -317,6 +335,9 @@ struct knav_range_ops {
 			       struct knav_queue_inst *inst);
 	int	(*set_notify)(struct knav_range_info *range,
 			      struct knav_queue_inst *inst, bool enabled);
+	int	(*queue_push)(struct knav_queue_inst *inst, dma_addr_t dma,
+			      unsigned size, unsigned flags);
+	dma_addr_t (*queue_pop)(struct knav_queue_inst *inst, unsigned *size);
 };
 
 struct knav_irq_info {
@@ -335,6 +356,7 @@ struct knav_range_info {
 	struct knav_range_ops		*ops;
 	struct knav_acc_info		acc_info;
 	struct knav_acc_channel	*acc;
+	struct knav_qos_info		*qos_info;
 	unsigned			num_irqs;
 	struct knav_irq_info		irqs[RANGE_MAX_IRQS];
 };
@@ -366,6 +388,32 @@ struct knav_range_info {
 
 #define for_each_qmgr(kdev, qmgr)				\
 	list_for_each_entry(qmgr, &kdev->qmgrs, list)
+
+static inline int
+write_intd(struct knav_pdsp_info *pdsp, unsigned int reg, unsigned int val)
+{
+	int ret = 0;
+
+	if (pdsp->intd)
+		writel_relaxed(val, pdsp->intd + reg);
+	else
+		ret = regmap_write(pdsp->intd_regmap, reg, val);
+
+	return ret;
+}
+
+static inline int
+read_intd(struct knav_pdsp_info *pdsp, unsigned int reg, unsigned int *val)
+{
+	int ret = 0;
+
+	if (pdsp->intd)
+		*val = readl_relaxed(pdsp->intd + reg);
+	else
+		ret = regmap_read(pdsp->intd_regmap, reg, val);
+
+	return ret;
+}
 
 static inline struct knav_pdsp_info *
 knav_find_pdsp(struct knav_device *kdev, unsigned pdsp_id)

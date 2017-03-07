@@ -32,6 +32,7 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_graph.h>
+#include <linux/of_gpio.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/videodev2.h>
@@ -232,6 +233,8 @@ struct ov2659 {
 	struct sensor_register *format_ctrl_regs;
 	struct ov2659_pll_ctrl pll;
 	int streaming;
+	/* used to control the sensor powerdownN pin */
+	struct gpio_desc *pwrdn_gpio;
 };
 
 static const struct sensor_register ov2659_init_regs[] = {
@@ -1312,10 +1315,6 @@ static int ov2659_detect(struct v4l2_subdev *sd)
 	}
 	usleep_range(1000, 2000);
 
-	ret = ov2659_init(sd, 0);
-	if (ret < 0)
-		return ret;
-
 	/* Check sensor revision */
 	ret = ov2659_read(client, REG_SC_CHIP_ID_H, &pid);
 	if (!ret)
@@ -1332,6 +1331,7 @@ static int ov2659_detect(struct v4l2_subdev *sd)
 			ret = -ENODEV;
 		} else {
 			dev_info(&client->dev, "Found OV%04X sensor\n", id);
+			ret = ov2659_init(sd, 0);
 		}
 	}
 
@@ -1375,6 +1375,7 @@ static int ov2659_probe(struct i2c_client *client,
 	struct v4l2_subdev *sd;
 	struct ov2659 *ov2659;
 	struct clk *clk;
+	struct gpio_desc *gpio;
 	int ret;
 
 	if (!pdata) {
@@ -1397,6 +1398,13 @@ static int ov2659_probe(struct i2c_client *client,
 	if (ov2659->xvclk_frequency < 6000000 ||
 	    ov2659->xvclk_frequency > 27000000)
 		return -EINVAL;
+
+	/* Optional gpio don't fail if not present */
+	gpio = devm_gpiod_get_optional(&client->dev, "pwrdn", GPIOD_OUT_HIGH);
+	if (IS_ERR(gpio))
+		return PTR_ERR(gpio);
+
+	ov2659->pwrdn_gpio = gpio;
 
 	v4l2_ctrl_handler_init(&ov2659->ctrls, 2);
 	ov2659->link_frequency =

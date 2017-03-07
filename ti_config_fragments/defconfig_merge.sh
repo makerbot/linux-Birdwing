@@ -27,13 +27,23 @@ prepare_for_exit()
 
 check_for_compiler()
 {
-	COMPILER_COMMAND=`which $CROSS_COMPILE"gcc"`
+	COMPILER_COMMAND=$(which $CROSS_COMPILE"gcc")
 	if [ -x "$COMPILER_COMMAND" ]; then
-		return 0
+		echo "Found " "$CROSS_COMPILE"
 	else
 		echo "Invalid or non-existent compiler $COMPILER_COMMAND" > build_failure.txt
 		return 1
 	fi
+
+        CCACHE_INSTALLED=$(which ccache)
+        if [ -z "$CCACHE_INSTALLED" ]; then
+		echo "To decrease build time install ccache"
+        else
+		CCACHE="ccache"
+        fi
+
+	CROSS_COMPILE=""$CCACHE" "$CROSS_COMPILE""
+	echo "Cross compile command is ""$CROSS_COMPILE"
 }
 
 build_the_defconfig()
@@ -145,7 +155,7 @@ build_the_dtbs()
 		return 1
 	fi
 
-	NUM_OF_WARNINGS=`cat $BUILD_OUT | grep -wc warnings`
+	NUM_OF_WARNINGS=`cat $BUILD_OUT | grep -wc "warning:"`
 	echo "#########################################################" >> $OUT_LOG
 	echo "# Device Tree Warnings" >> $OUT_LOG
 	echo "#########################################################" >> $OUT_LOG
@@ -173,7 +183,7 @@ build_the_modules()
 		return 1
 	fi
 
-	NUM_OF_WARNINGS=`cat $BUILD_OUT | grep -wc warnings`
+	NUM_OF_WARNINGS=`cat $BUILD_OUT | grep -wc "warning:"`
 	echo "#########################################################" >> $OUT_LOG
 	echo "# Module Build Warnings" >> $OUT_LOG
 	echo "#########################################################" >> $OUT_LOG
@@ -266,7 +276,7 @@ set_original_directory()
 
 cross_make()
 {
-	make -C$KERNEL_DIR -j$BUILD_THREADS ARCH=arm CROSS_COMPILE=$CROSS_COMPILE $*
+	make -C$KERNEL_DIR -j$BUILD_THREADS ARCH=arm $*
 }
 
 usage()
@@ -442,7 +452,7 @@ fi
 
 # There is only one file passed in via command line
 if [ -z "$DEFCONFIG_EXTRAS_FILE" ]; then
-	echo "Only appending $DEFCONFIG_EXTRAS_FILE"
+	echo "Only appending $APPENDED_CONFIG"
 	$KERNEL_DIR/scripts/kconfig/merge_config.sh -m -r -O $LOGGING_DIRECTORY $LOGGING_DIRECTORY/base_config $APPENDED_CONFIG
 	if [ $? -ne 0 ]; then
 		echo "Failed to merge config $APPENDED_CONFIG"

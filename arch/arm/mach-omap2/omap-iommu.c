@@ -26,7 +26,7 @@ static void omap_iommu_dra7_emu_swsup_config(struct platform_device *pdev,
 					     bool enable)
 {
 	static struct clockdomain *emu_clkdm;
-	static DEFINE_MUTEX(emu_lock);
+	static DEFINE_SPINLOCK(emu_lock);
 	static atomic_t count;
 	struct device_node *np = pdev->dev.of_node;
 
@@ -39,14 +39,14 @@ static void omap_iommu_dra7_emu_swsup_config(struct platform_device *pdev,
 			return;
 	}
 
-	mutex_lock(&emu_lock);
+	spin_lock(&emu_lock);
 
 	if (enable && (atomic_inc_return(&count) == 1))
 		clkdm_deny_idle(emu_clkdm);
 	else if (!enable && (atomic_dec_return(&count) == 0))
 		clkdm_allow_idle(emu_clkdm);
 
-	mutex_unlock(&emu_lock);
+	spin_unlock(&emu_lock);
 }
 
 int omap_iommu_set_pwrdm_constraint(struct platform_device *pdev, bool request,
@@ -106,6 +106,8 @@ static int __init omap_iommu_dev_init(struct omap_hwmod *oh, void *unused)
 		pdata->assert_reset = omap_device_assert_hardreset;
 		pdata->deassert_reset = omap_device_deassert_hardreset;
 	}
+	pdata->device_enable = omap_device_enable,
+	pdata->device_idle = omap_device_idle,
 
 	pdev = omap_device_build("omap-iommu", i, oh, pdata, sizeof(*pdata));
 

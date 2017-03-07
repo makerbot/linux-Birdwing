@@ -17,7 +17,7 @@
 
 	memory {
 		device_type = "memory";
-		reg = <0x80000000 0x40000000>; /* 1024 MB */
+		reg = <0x0 0x80000000 0x0 0x40000000>; /* 1024 MB */
 	};
 
 	aliases {
@@ -28,27 +28,27 @@
 	};
 
 	reserved-memory {
-		#address-cells = <1>;
-		#size-cells = <1>;
+		#address-cells = <2>;
+		#size-cells = <2>;
 		ranges;
 
 		ipu2_cma_pool: ipu2_cma@95800000 {
 			compatible = "shared-dma-pool";
-			reg = <0x95800000 0x3800000>;
+			reg = <0x0 0x95800000 0x0 0x3800000>;
 			reusable;
 			status = "okay";
 		};
 
 		dsp1_cma_pool: dsp1_cma@99000000 {
 			compatible = "shared-dma-pool";
-			reg = <0x99000000 0x4000000>;
+			reg = <0x0 0x99000000 0x0 0x4000000>;
 			reusable;
 			status = "okay";
 		};
 
 		ipu1_cma_pool: ipu1_cma@9d000000 {
 			compatible = "shared-dma-pool";
-			reg = <0x9d000000 0x2000000>;
+			reg = <0x0 0x9d000000 0x0 0x2000000>;
 			reusable;
 			status = "okay";
 		};
@@ -187,23 +187,90 @@
 	};
 };
 
-&dra7_pmx_core {
-	i2c5_pins: pinmux_i2c5_pins {
-		pinctrl-single,pins = <
-			0x2b4 (PIN_INPUT | MUX_MODE10) /* mcasp1_axr0.i2c5_sda */
-			0x2b8 (PIN_INPUT | MUX_MODE10) /* mcasp1_axr1.i2c5_scl */
-		>;
-	};
+&dpll_dsp_ck {
+	assigned-clock-rates = <700000000>;
+};
 
+&dpll_dsp_m2_ck {
+	assigned-clock-rates = <700000000>;
+};
+
+&dpll_dsp_m3x2_ck {
+	assigned-clock-rates = <466666667>;
+};
+
+&dpll_iva_ck {
+	assigned-clock-rates = <1064000000>;
+};
+
+&dpll_iva_m2_ck {
+	assigned-clock-rates = <532000000>;
+};
+
+&dra7_pmx_core {
 	mmc1_pins_default: mmc1_pins_default {
 		pinctrl-single,pins = <
-			0x36c (PIN_INPUT | MUX_MODE14)	/* mmc1sdcd.gpio219 */
 			0x354 (PIN_INPUT_PULLUP | MUX_MODE0) /* mmc1_clk.clk */
 			0x358 (PIN_INPUT_PULLUP | MUX_MODE0) /* mmc1_cmd.cmd */
 			0x35c (PIN_INPUT_PULLUP | MUX_MODE0) /* mmc1_dat0.dat0 */
 			0x360 (PIN_INPUT_PULLUP | MUX_MODE0) /* mmc1_dat1.dat1 */
 			0x364 (PIN_INPUT_PULLUP | MUX_MODE0) /* mmc1_dat2.dat2 */
 			0x368 (PIN_INPUT_PULLUP | MUX_MODE0) /* mmc1_dat3.dat3 */
+		>;
+	};
+
+	mmc1_pins_sdr12: pinmux_mmc1_sdr12_pins {
+		pinctrl-single,pins = <
+			0x354 (PIN_INPUT_PULLUP | MUX_MODE0) /* mmc1_clk.clk */
+			0x358 (PIN_INPUT_PULLUP | MUX_MODE0) /* mmc1_cmd.cmd */
+			0x35c (PIN_INPUT_PULLUP | MUX_MODE0) /* mmc1_dat0.dat0 */
+			0x360 (PIN_INPUT_PULLUP | MUX_MODE0) /* mmc1_dat1.dat1 */
+			0x364 (PIN_INPUT_PULLUP | MUX_MODE0) /* mmc1_dat2.dat2 */
+			0x368 (PIN_INPUT_PULLUP | MUX_MODE0) /* mmc1_dat3.dat3 */
+		>;
+	};
+
+	mmc1_pins_hs: pinmux_mmc1_hs_pins {
+		pinctrl-single,pins = <
+			0x354 (PIN_INPUT_PULLUP | MUX_MODE0) /* mmc1_clk.clk */
+			0x358 (PIN_INPUT_PULLUP | MUX_MODE0) /* mmc1_cmd.cmd */
+			0x35c (PIN_INPUT_PULLUP | MUX_MODE0) /* mmc1_dat0.dat0 */
+			0x360 (PIN_INPUT_PULLUP | MUX_MODE0) /* mmc1_dat1.dat1 */
+			0x364 (PIN_INPUT_PULLUP | MUX_MODE0) /* mmc1_dat2.dat2 */
+			0x368 (PIN_INPUT_PULLUP | MUX_MODE0) /* mmc1_dat3.dat3 */
+		>;
+	};
+
+	mmc1_pins_sdr25: pinmux_mmc1_sdr25_pins {
+		pinctrl-single,pins = <
+			0x354 (PIN_INPUT_PULLUP | MUX_MODE0) /* mmc1_clk.clk */
+			0x358 (PIN_INPUT_PULLUP | MUX_MODE0) /* mmc1_cmd.cmd */
+			0x35c (PIN_INPUT_PULLUP | MUX_MODE0) /* mmc1_dat0.dat0 */
+			0x360 (PIN_INPUT_PULLUP | MUX_MODE0) /* mmc1_dat1.dat1 */
+			0x364 (PIN_INPUT_PULLUP | MUX_MODE0) /* mmc1_dat2.dat2 */
+			0x368 (PIN_INPUT_PULLUP | MUX_MODE0) /* mmc1_dat3.dat3 */
+		>;
+	};
+
+	mmc1_pins_sdr50: pinmux_mmc1_sdr50_pins {
+		pinctrl-single,pins = <
+			0x354 (PIN_INPUT_PULLUP | MUX_VIRTUAL_MODE15 | MUX_MODE0)	/* mmc1_clk.mmc1_clk */
+			0x358 (PIN_INPUT_PULLUP | MUX_VIRTUAL_MODE15 | MUX_MODE0)	/* mmc1_cmd.mmc1_cmd */
+			0x35C (PIN_INPUT_PULLUP | MUX_VIRTUAL_MODE15 | MUX_MODE0)	/* mmc1_dat0.mmc1_dat0 */
+			0x360 (PIN_INPUT_PULLUP | MUX_VIRTUAL_MODE15 | MUX_MODE0)	/* mmc1_dat1.mmc1_dat1 */
+			0x364 (PIN_INPUT_PULLUP | MUX_VIRTUAL_MODE15 | MUX_MODE0)	/* mmc1_dat2.mmc1_dat2 */
+			0x368 (PIN_INPUT_PULLUP | MUX_VIRTUAL_MODE15 | MUX_MODE0)	/* mmc1_dat3.mmc1_dat3 */
+		>;
+	};
+
+	mmc1_pins_ddr50: pinmux_mmc1_ddr50_pins {
+		pinctrl-single,pins = <
+			0x354	(PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE0)	/* mmc1_clk.mmc1_clk */
+			0x358	(PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE0)	/* mmc1_cmd.mmc1_cmd */
+			0x35C	(PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE0)	/* mmc1_dat0.mmc1_dat0 */
+			0x360	(PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE0)	/* mmc1_dat1.mmc1_dat1 */
+			0x364	(PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE0)	/* mmc1_dat2.mmc1_dat2 */
+			0x368	(PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE0)	/* mmc1_dat3.mmc1_dat3 */
 		>;
 	};
 
@@ -219,6 +286,51 @@
 			0x90 (PIN_INPUT_PULLUP | MUX_MODE1) /* gpmc_a20.mmc2_dat5 */
 			0x94 (PIN_INPUT_PULLUP | MUX_MODE1) /* gpmc_a21.mmc2_dat6 */
 			0x98 (PIN_INPUT_PULLUP | MUX_MODE1) /* gpmc_a22.mmc2_dat7 */
+		>;
+	};
+
+	mmc2_pins_hs: pinmux_mmc2_hs_pins {
+		pinctrl-single,pins = <
+			0x08C	(PIN_INPUT_PULLUP | MUX_VIRTUAL_MODE13 | MUX_MODE1)	/* gpmc_a19.mmc2_dat4 */
+			0x090	(PIN_INPUT_PULLUP | MUX_VIRTUAL_MODE13 | MUX_MODE1)	/* gpmc_a20.mmc2_dat5 */
+			0x094	(PIN_INPUT_PULLUP | MUX_VIRTUAL_MODE13 | MUX_MODE1)	/* gpmc_a21.mmc2_dat6 */
+			0x098	(PIN_INPUT_PULLUP | MUX_VIRTUAL_MODE13 | MUX_MODE1)	/* gpmc_a22.mmc2_dat7 */
+			0x09C	(PIN_INPUT_PULLUP | MUX_VIRTUAL_MODE13 | MUX_MODE1)	/* gpmc_a23.mmc2_clk */
+			0x0A0	(PIN_INPUT_PULLUP | MUX_VIRTUAL_MODE13 | MUX_MODE1)	/* gpmc_a24.mmc2_dat0 */
+			0x0A4	(PIN_INPUT_PULLUP | MUX_VIRTUAL_MODE13 | MUX_MODE1)	/* gpmc_a25.mmc2_dat1 */
+			0x0A8	(PIN_INPUT_PULLUP | MUX_VIRTUAL_MODE13 | MUX_MODE1)	/* gpmc_a26.mmc2_dat2 */
+			0x0AC	(PIN_INPUT_PULLUP | MUX_VIRTUAL_MODE13 | MUX_MODE1)	/* gpmc_a27.mmc2_dat3 */
+			0x0B0	(PIN_INPUT_PULLUP | MUX_VIRTUAL_MODE13 | MUX_MODE1)	/* gpmc_cs1.mmc2_cmd */
+		>;
+	};
+
+	mmc2_pins_ddr_1_8v: pinmux_mmc2_ddr_1_8v_pins {
+		pinctrl-single,pins = <
+			0x08C	(PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE1)	/* gpmc_a19.mmc2_dat4 */
+			0x090	(PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE1)	/* gpmc_a20.mmc2_dat5 */
+			0x094	(PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE1)	/* gpmc_a21.mmc2_dat6 */
+			0x098	(PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE1)	/* gpmc_a22.mmc2_dat7 */
+			0x09C	(PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE1)	/* gpmc_a23.mmc2_clk */
+			0x0A0	(PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE1)	/* gpmc_a24.mmc2_dat0 */
+			0x0A4	(PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE1)	/* gpmc_a25.mmc2_dat1 */
+			0x0A8	(PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE1)	/* gpmc_a26.mmc2_dat2 */
+			0x0AC	(PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE1)	/* gpmc_a27.mmc2_dat3 */
+			0x0B0	(PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE1)	/* gpmc_cs1.mmc2_cmd */
+		>;
+	};
+
+	mmc2_pins_hs200_1_8v: pinmux_mmc2_hs200_1_8v_pins {
+		pinctrl-single,pins = <
+			0x08C	(PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE1)	/* gpmc_a19.mmc2_dat4 */
+			0x090	(PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE1)	/* gpmc_a20.mmc2_dat5 */
+			0x094	(PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE1)	/* gpmc_a21.mmc2_dat6 */
+			0x098	(PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE1)	/* gpmc_a22.mmc2_dat7 */
+			0x09C	(PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE1)	/* gpmc_a23.mmc2_clk */
+			0x0A0	(PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE1)	/* gpmc_a24.mmc2_dat0 */
+			0x0A4	(PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE1)	/* gpmc_a25.mmc2_dat1 */
+			0x0A8	(PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE1)	/* gpmc_a26.mmc2_dat2 */
+			0x0AC	(PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE1)	/* gpmc_a27.mmc2_dat3 */
+			0x0B0	(PIN_INPUT_PULLUP | MANUAL_MODE | MUX_MODE1)	/* gpmc_cs1.mmc2_cmd */
 		>;
 	};
 
@@ -255,6 +367,88 @@
 	};
 };
 
+&dra7_iodelay_core {
+	mmc1_iodelay_ddr50_conf: mmc1_iodelay_ddr50_conf {
+		pinctrl-single,pins = <
+			0x618 (A_DELAY(0) | G_DELAY(0))		/* CFG_MMC1_CLK_IN */
+			0x620 (A_DELAY(1353) | G_DELAY(0))	/* CFG_MMC1_CLK_OUT */
+			0x624 (A_DELAY(0) | G_DELAY(0))		/* CFG_MMC1_CMD_IN */
+			0x62C (A_DELAY(1) | G_DELAY(0))		/* CFG_MMC1_CMD_OUT */
+			0x628 (A_DELAY(0) | G_DELAY(0))		/* CFG_MMC1_CMD_OEN */
+			0x630 (A_DELAY(483) | G_DELAY(0))	/* CFG_MMC1_DAT0_IN */
+			0x638 (A_DELAY(16) | G_DELAY(0))	/* CFG_MMC1_DAT0_OUT */
+			0x634 (A_DELAY(0) | G_DELAY(0))		/* CFG_MMC1_DAT0_OEN */
+			0x63C (A_DELAY(126) | G_DELAY(0))	/* CFG_MMC1_DAT1_IN */
+			0x644 (A_DELAY(0) | G_DELAY(0))		/* CFG_MMC1_DAT1_OUT */
+			0x640 (A_DELAY(0) | G_DELAY(0))		/* CFG_MMC1_DAT1_OEN */
+			0x648 (A_DELAY(104) | G_DELAY(0))	/* CFG_MMC1_DAT2_IN */
+			0x650 (A_DELAY(34) | G_DELAY(0))	/* CFG_MMC1_DAT2_OUT */
+			0x64C (A_DELAY(0) | G_DELAY(0))		/* CFG_MMC1_DAT2_OEN */
+			0x654 (A_DELAY(33) | G_DELAY(0))	/* CFG_MMC1_DAT3_IN */
+			0x65C (A_DELAY(18) | G_DELAY(0))	/* CFG_MMC1_DAT3_OUT */
+			0x658 (A_DELAY(0) | G_DELAY(0))		/* CFG_MMC1_DAT3_OEN */
+		>;
+	};
+
+	mmc2_iodelay_ddr_1_8v_conf: mmc2_iodelay_ddr_1_8v_conf {
+		pinctrl-single,pins = <
+			0x18C (A_DELAY(0) | G_DELAY(0))		/* CFG_GPMC_A19_IN */
+			0x194 (A_DELAY(100) | G_DELAY(0))	/* CFG_GPMC_A19_OUT */
+			0x190 (A_DELAY(0) | G_DELAY(0))		/* CFG_GPMC_A19_OEN */
+			0x1A4 (A_DELAY(391) | G_DELAY(0))	/* CFG_GPMC_A20_IN */
+			0x1AC (A_DELAY(219) | G_DELAY(0))	/* CFG_GPMC_A20_OUT */
+			0x1A8 (A_DELAY(0) | G_DELAY(0))		/* CFG_GPMC_A20_OEN */
+			0x1B0 (A_DELAY(0) | G_DELAY(0))		/* CFG_GPMC_A21_IN */
+			0x1B8 (A_DELAY(24) | G_DELAY(0))	/* CFG_GPMC_A21_OUT */
+			0x1B4 (A_DELAY(0) | G_DELAY(0))		/* CFG_GPMC_A21_OEN */
+			0x1BC (A_DELAY(211) | G_DELAY(0))	/* CFG_GPMC_A22_IN */
+			0x1C4 (A_DELAY(88) | G_DELAY(0))	/* CFG_GPMC_A22_OUT */
+			0x1C0 (A_DELAY(0) | G_DELAY(0))		/* CFG_GPMC_A22_OEN */
+			0x1C8 (A_DELAY(0) | G_DELAY(0))		/* CFG_GPMC_A23_IN */
+			0x1D0 (A_DELAY(626) | G_DELAY(0))	/* CFG_GPMC_A23_OUT */
+			0x1D4 (A_DELAY(320) | G_DELAY(0))	/* CFG_GPMC_A24_IN */
+			0x1DC (A_DELAY(0) | G_DELAY(0))		/* CFG_GPMC_A24_OUT */
+			0x1D8 (A_DELAY(0) | G_DELAY(0))		/* CFG_GPMC_A24_OEN */
+			0x1E0 (A_DELAY(0) | G_DELAY(0))		/* CFG_GPMC_A25_IN */
+			0x1E8 (A_DELAY(172) | G_DELAY(0))	/* CFG_GPMC_A25_OUT */
+			0x1E4 (A_DELAY(0) | G_DELAY(0))		/* CFG_GPMC_A25_OEN */
+			0x1EC (A_DELAY(159) | G_DELAY(0))	/* CFG_GPMC_A26_IN */
+			0x1F4 (A_DELAY(177) | G_DELAY(0))	/* CFG_GPMC_A26_OUT */
+			0x1F0 (A_DELAY(0) | G_DELAY(0))		/* CFG_GPMC_A26_OEN */
+			0x1F8 (A_DELAY(232) | G_DELAY(0))	/* CFG_GPMC_A27_IN */
+			0x200 (A_DELAY(0) | G_DELAY(0))		/* CFG_GPMC_A27_OUT */
+			0x1FC (A_DELAY(0) | G_DELAY(0))		/* CFG_GPMC_A27_OEN */
+			0x360 (A_DELAY(0) | G_DELAY(0))		/* CFG_GPMC_CS1_IN */
+			0x368 (A_DELAY(0) | G_DELAY(0))		/* CFG_GPMC_CS1_OUT */
+			0x364 (A_DELAY(0) | G_DELAY(0))		/* CFG_GPMC_CS1_OEN */
+		>;
+	};
+
+	mmc2_iodelay_hs200_1_8v_conf: mmc2_iodelay_hs200_1_8v_conf {
+		pinctrl-single,pins = <
+			0x194 (A_DELAY(0) | G_DELAY(95))	/* CFG_GPMC_A19_OUT */
+			0x190 (A_DELAY(695) | G_DELAY(0))	/* CFG_GPMC_A19_OEN */
+			0x1AC (A_DELAY(214) | G_DELAY(0))	/* CFG_GPMC_A20_OUT */
+			0x1A8 (A_DELAY(924) | G_DELAY(0))	/* CFG_GPMC_A20_OEN */
+			0x1B8 (A_DELAY(19) | G_DELAY(0))	/* CFG_GPMC_A21_OUT */
+			0x1B4 (A_DELAY(719) | G_DELAY(0))	/* CFG_GPMC_A21_OEN */
+			0x1C4 (A_DELAY(83) | G_DELAY(0))	/* CFG_GPMC_A22_OUT */
+			0x1C0 (A_DELAY(824) | G_DELAY(0))	/* CFG_GPMC_A22_OEN */
+			0x1D0 (A_DELAY(1020) | G_DELAY(416))	/* CFG_GPMC_A23_OUT */
+			0x1DC (A_DELAY(0) | G_DELAY(0))		/* CFG_GPMC_A24_OUT */
+			0x1D8 (A_DELAY(877) | G_DELAY(0))	/* CFG_GPMC_A24_OEN */
+			0x1E8 (A_DELAY(167) | G_DELAY(0))	/* CFG_GPMC_A25_OUT */
+			0x1E4 (A_DELAY(446) | G_DELAY(0))	/* CFG_GPMC_A25_OEN */
+			0x1F4 (A_DELAY(172) | G_DELAY(0))	/* CFG_GPMC_A26_OUT */
+			0x1F0 (A_DELAY(847) | G_DELAY(0))	/* CFG_GPMC_A26_OEN */
+			0x200 (A_DELAY(0) | G_DELAY(0))		/* CFG_GPMC_A27_OUT */
+			0x1FC (A_DELAY(586) | G_DELAY(0))	/* CFG_GPMC_A27_OEN */
+			0x368 (A_DELAY(40) | G_DELAY(0))	/* CFG_GPMC_CS1_OUT */
+			0x364 (A_DELAY(1039) | G_DELAY(0))	/* CFG_GPMC_CS1_OEN */
+		>;
+	};
+};
+
 &i2c1 {
 	status = "okay";
 	clock-frequency = <400000>;
@@ -286,7 +480,7 @@
 					/* VDD_CORE */
 					regulator-name = "smps2";
 					regulator-min-microvolt = <850000>;
-					regulator-max-microvolt = <1060000>;
+					regulator-max-microvolt = <1150000>;
 					regulator-boot-on;
 					regulator-always-on;
 				};
@@ -325,6 +519,7 @@
 					regulator-max-microvolt = <3300000>;
 					regulator-always-on;
 					regulator-boot-on;
+					regulator-allow-bypass;
 				};
 
 				ldo2_reg: ldo2 {
@@ -332,6 +527,7 @@
 					regulator-name = "ldo2";
 					regulator-min-microvolt = <1800000>;
 					regulator-max-microvolt = <3300000>;
+					regulator-allow-bypass;
 				};
 
 				ldo3_reg: ldo3 {
@@ -414,45 +610,6 @@
 
 &i2c5 {
 	status = "okay";
-	pinctrl-names = "default";
-	pinctrl-0 = <&i2c5_pins>;
-	clock-frequency = <400000>;
-
-	pcf_hdmi: pcf8575@26 {
-		compatible = "nxp,pcf8575";
-		reg = <0x26>;
-		gpio-controller;
-		#gpio-cells = <2>;
-		/*
-		 * initial state is used here to keep the mdio interface
-		 * selected on RU89 through SEL_VIN4_MUX_S0, VIN2_S1 and
-		 * VIN2_S0 driven high otherwise Ethernet stops working
-		 * VIN6_SEL_S0 is low, thus selecting McASP3 over VIN6
-		 */
-		lines-initial-states = <0x0f2b>;
-	};
-
-	ov10633@37 {
-		compatible = "ovti,ov10633";
-		reg = <0x37>;
-
-		mux-gpios = <&pcf_hdmi 2	GPIO_ACTIVE_HIGH>, /* VIN2_S0 */
-			    <&pcf_hdmi 6	GPIO_ACTIVE_LOW>; /* VIN2_S2 */
-		port {
-			onboardLI: endpoint {
-				remote-endpoint = <&vin2a>;
-				hsync-active = <1>;
-				vsync-active = <1>;
-				pclk-sample = <0>;
-			};
-		};
-	};
-};
-
-&i2c5 {
-	status = "okay";
-	pinctrl-names = "default";
-	pinctrl-0 = <&i2c5_pins>;
 	clock-frequency = <400000>;
 
 	pcf_hdmi: pcf8575@26 {
@@ -475,10 +632,28 @@
 			line-name = "vin6_sel_s0";
 		};
 	};
+
+	ov10633@37 {
+		compatible = "ovti,ov10633";
+		reg = <0x37>;
+
+		mux-gpios = <&pcf_hdmi 2	GPIO_ACTIVE_HIGH>, /* VIN2_S0 */
+			    <&pcf_hdmi 6	GPIO_ACTIVE_LOW>; /* VIN2_S2 */
+		port {
+			onboardLI: endpoint {
+				remote-endpoint = <&vin2a>;
+				hsync-active = <1>;
+				vsync-active = <1>;
+				pclk-sample = <0>;
+			};
+		};
+	};
 };
 
 &uart1 {
 	status = "okay";
+	interrupts-extended = <&crossbar_mpu GIC_SPI 67 IRQ_TYPE_LEVEL_HIGH>,
+			      <&dra7_pmx_core 0x3e0>;
 };
 
 &uart3 {
@@ -491,7 +666,12 @@
 };
 
 &gpmc {
-	status = "okay";
+	/*
+	 * For the existing IOdelay configuration via U-Boot we don't
+	 * support NAND on dra72-evm. Keep it disabled. Enabling it
+	 * requires a different configuration by U-Boot.
+	 */
+	status = "disabled";
 	ranges = <0 0 0x08000000 0x01000000>;	/* minimum GPMC partition = 16MB */
 	nand@0,0 {
 		/* To use NAND, DIP switch SW5 must be set like so:
@@ -602,8 +782,13 @@
 
 &mmc1 {
 	status = "okay";
-	pinctrl-names = "default";
+	pinctrl-names = "default", "hs", "sdr12", "sdr25", "sdr50", "ddr50";
 	pinctrl-0 = <&mmc1_pins_default>;
+	pinctrl-1 = <&mmc1_pins_hs>;
+	pinctrl-2 = <&mmc1_pins_sdr12>;
+	pinctrl-3 = <&mmc1_pins_sdr25>;
+	pinctrl-4 = <&mmc1_pins_sdr50>;
+	pinctrl-5 = <&mmc1_pins_ddr50 &mmc1_iodelay_ddr50_conf>;
 	vmmc-supply = <&evm_3v3_sd>;
 	vmmc_aux-supply = <&ldo1_reg>;
 	bus-width = <4>;
@@ -618,8 +803,11 @@
 &mmc2 {
 	/* SW5-3 in ON position */
 	status = "okay";
-	pinctrl-names = "default";
+	pinctrl-names = "default", "hs", "ddr_1_8v", "hs200_1_8v";
 	pinctrl-0 = <&mmc2_pins_default>;
+	pinctrl-1 = <&mmc2_pins_hs>;
+	pinctrl-2 = <&mmc2_pins_ddr_1_8v &mmc2_iodelay_ddr_1_8v_conf>;
+	pinctrl-3 = <&mmc2_pins_hs200_1_8v &mmc2_iodelay_hs200_1_8v_conf>;
 
 	vmmc-supply = <&evm_3v3>;
 	bus-width = <8>;
@@ -672,15 +860,13 @@
 &qspi {
 	status = "okay";
 
-	spi-max-frequency = <48000000>;
+	spi-max-frequency = <64000000>;
 	m25p80@0 {
 		compatible = "s25fl256s1";
-		spi-max-frequency = <48000000>;
+		spi-max-frequency = <64000000>;
 		reg = <0>;
 		spi-tx-bus-width = <1>;
 		spi-rx-bus-width = <4>;
-		spi-cpol;
-		spi-cpha;
 		#address-cells = <1>;
 		#size-cells = <1>;
 
@@ -752,6 +938,14 @@
 &atl {
 	status = "okay";
 
+	assigned-clocks = <&abe_dpll_sys_clk_mux>,
+			  <&atl_gfclk_mux>,
+			  <&dpll_abe_ck>,
+			  <&dpll_abe_m2x2_ck>,
+			  <&atl_clkin2_ck>;
+	assigned-clock-parents = <&sys_clkin2>, <&dpll_abe_m2_ck>;
+	assigned-clock-rates = <0>, <0>, <180633600>, <361267200>, <5644800>;
+
 	atl2 {
 		bws = <DRA7_ATL_WS_MCASP2_FSX>;
 		aws = <DRA7_ATL_WS_MCASP3_FSX>;
@@ -812,6 +1006,11 @@
 	vdd-supply = <&smps3_reg>;
 };
 
+&rtc {
+	status = "okay";
+	ext-clk-src;
+};
+
 &mailbox5 {
 	status = "okay";
 	mbox_ipu1_ipc3x: mbox_ipu1_ipc3x {
@@ -867,7 +1066,4 @@
 	timers = <&timer5>;
 };
 
-&rtc {
-	status = "okay";
-	ext-clk-src;
-};
+#include "dra7xx-evm-cmem.dtsi"

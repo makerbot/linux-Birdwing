@@ -13,8 +13,27 @@
 #include "k2l.dtsi"
 
 / {
-	compatible =  "ti,k2l-evm","ti,keystone";
+	compatible = "ti,k2l-evm", "ti,k2l", "ti,keystone";
 	model = "Texas Instruments Keystone 2 Lamarr EVM";
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		dsp_common_cma_pool: dsp_common_cma_pool {
+			compatible = "shared-dma-pool";
+			reg = <0x00000008 0x1f800000 0x00000000 0x800000>;
+			reusable;
+		};
+
+		dsp_common_mpm_area: dsp_reserved_mpm_area {
+			compatible = "shared-dma-pool";
+			reg = <0x00000008 0x20000000 0x00000000 0x20000000>;
+			no-map;
+			status = "okay";
+		};
+	};
 
 	soc {
 		clocks {
@@ -24,6 +43,12 @@
 				clock-frequency = <122880000>;
 				clock-output-names = "refclk-sys";
 			};
+		};
+
+		mpm_mem: dspmem {
+			compatible = "ti,keystone-dsp-mem";
+			reg = <0x0c000000 0x00200000>,
+			      <0xa0000000 0x20000000>;
 		};
 	};
 };
@@ -129,3 +154,27 @@
 		reg = <1>;
 	};
 };
+
+&dsp0 {
+	memory-region = <&dsp_common_cma_pool>;
+};
+
+&dsp1 {
+	memory-region = <&dsp_common_cma_pool>;
+};
+
+&dsp2 {
+	memory-region = <&dsp_common_cma_pool>;
+};
+
+&dsp3 {
+	memory-region = <&dsp_common_cma_pool>;
+};
+
+&gbe_serdes0 {
+	status = "okay";
+};
+
+#include "keystone-uio.dtsi"
+#include "k2l-uio.dtsi"
+#include "k2l-evm-cmem.dtsi"

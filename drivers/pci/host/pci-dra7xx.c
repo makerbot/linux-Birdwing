@@ -22,8 +22,11 @@
 #include <linux/phy/phy.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
+#include <linux/of_platform.h>
 #include <linux/resource.h>
 #include <linux/types.h>
+#include <linux/mfd/syscon.h>
+#include <linux/regmap.h>
 
 #include <linux/platform_data/pci-dra7xx.h>
 
@@ -65,12 +68,20 @@
 #define	PCIECTRL_DRA7XX_CONF_PHY_CS			0x010C
 #define	LINK_UP						BIT(16)
 
+#define PCIE_1LANE_2LANE_SELECTION			BIT(13)
+#define PCIE_B1C0_MODE_SEL				BIT(2)
+
 struct dra7xx_pcie {
 	void __iomem		*base;
+	u32			*b1c0_mask;
 	struct phy		**phy;
-	int			phy_count;
+	int			lanes;
 	struct device		*dev;
 	struct pcie_port	pp;
+};
+
+struct dra7xx_pcie_data {
+	u32	b1co_mode_sel_mask;
 };
 
 #define to_dra7xx_pcie(x)	container_of((x), struct dra7xx_pcie, pp)
@@ -302,8 +313,25 @@ static int __init dra7xx_add_pcie_port(struct dra7xx_pcie *dra7xx,
 		return -EINVAL;
 	}
 
+	/*
+	 * Mark dra7xx_pcie_msi IRQ as IRQF_NO_THREAD
+	 * On -RT and if kernel is booting with "threadirqs" cmd line parameter
+	 * the dra7xx_pcie_msi_irq_handler() will be forced threaded but,
+	 * in the same time, it's IRQ dispatcher and calls generic_handle_irq(),
+	 * which, in turn, will be resolved to handle_simple_irq() call.
+	 * The handle_simple_irq() expected to be called with IRQ disabled, as
+	 * result kernle will display warning:
+	 * "irq XXX handler YYY+0x0/0x14 enabled interrupts".
+	 *
+	 * Current DRA7 PCIe hw configuration supports 32 interrupts,
+	 * which cannot change because it's hardwired in silicon, and can assume
+	 * that only a few (most of the time it will be exactly ONE) of those
+	 * interrupts are pending at the same time. So, It's sane way to dial
+	 * with above issue by marking dra7xx_pcie_msi IRQ as IRQF_NO_THREAD.
+	 */
 	ret = devm_request_irq(&pdev->dev, pp->irq,
-			       dra7xx_pcie_msi_irq_handler, IRQF_SHARED,
+			       dra7xx_pcie_msi_irq_handler,
+			       IRQF_SHARED | IRQF_NO_THREAD,
 			       "dra7-pcie-msi",	pp);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to request irq\n");
@@ -356,13 +384,64 @@ static int dra7xx_pcie_reset(struct platform_device *pdev)
 	return 0;
 }
 
+static const struct of_device_id of_dra7xx_pcie_match[];
+
+static int dra7xx_pcie_configure_two_lane(struct device *dev)
+{
+	struct device_node *np = dev->of_node;
+	struct regmap *pcie_syscon;
+	unsigned int pcie_reg;
+	struct dra7xx_pcie_data *data;
+	const struct of_device_id *match;
+
+	match = of_match_device(of_dra7xx_pcie_match, dev);
+	if (!match)
+		return -EINVAL;
+
+	data = (struct dra7xx_pcie_data *)match->data;
+	if (!data) {
+		dev_err(dev, "no b1c0 mask data\n");
+		return -EINVAL;
+	}
+
+	pcie_syscon = syscon_regmap_lookup_by_phandle(np, "syscon-lane-conf");
+	if (IS_ERR(pcie_syscon)) {
+		dev_err(dev, "unable to get syscon-lane-conf\n");
+		return -EINVAL;
+	}
+
+	if (of_property_read_u32_index(np, "syscon-lane-conf", 1, &pcie_reg)) {
+		dev_err(dev, "couldn't get lane configuration reg offset\n");
+		return -EINVAL;
+	}
+
+	regmap_update_bits(pcie_syscon, pcie_reg, PCIE_1LANE_2LANE_SELECTION,
+			   PCIE_1LANE_2LANE_SELECTION);
+
+	pcie_syscon = syscon_regmap_lookup_by_phandle(np, "syscon-lane-sel");
+	if (IS_ERR(pcie_syscon)) {
+		dev_err(dev, "unable to get syscon-lane-sel\n");
+		return -EINVAL;
+	}
+
+	if (of_property_read_u32_index(np, "syscon-lane-sel", 1, &pcie_reg)) {
+		dev_err(dev, "couldn't get lane selection reg offset\n");
+		return -EINVAL;
+	}
+
+	regmap_update_bits(pcie_syscon, pcie_reg, data->b1co_mode_sel_mask,
+			   PCIE_B1C0_MODE_SEL);
+
+	return 0;
+}
+
 static int __init dra7xx_pcie_probe(struct platform_device *pdev)
 {
 	u32 reg;
 	int ret;
 	int irq;
 	int i;
-	int phy_count;
+	u32 lanes;
 	struct phy **phy;
 	void __iomem *base;
 	struct resource *res;
@@ -398,17 +477,16 @@ static int __init dra7xx_pcie_probe(struct platform_device *pdev)
 	if (!base)
 		return -ENOMEM;
 
-	phy_count = of_property_count_strings(np, "phy-names");
-	if (phy_count < 0) {
-		dev_err(dev, "unable to find the strings\n");
-		return phy_count;
+	if (of_property_read_u32(np, "num-lanes", &lanes)) {
+		dev_err(dev, "Failed to parse the number of lanes\n");
+		return -EINVAL;
 	}
 
-	phy = devm_kzalloc(dev, sizeof(*phy) * phy_count, GFP_KERNEL);
+	phy = devm_kzalloc(dev, sizeof(*phy) * lanes, GFP_KERNEL);
 	if (!phy)
 		return -ENOMEM;
 
-	for (i = 0; i < phy_count; i++) {
+	for (i = 0; i < lanes; i++) {
 		snprintf(name, sizeof(name), "pcie-phy%d", i);
 		phy[i] = devm_phy_get(dev, name);
 		if (IS_ERR(phy[i]))
@@ -425,10 +503,16 @@ static int __init dra7xx_pcie_probe(struct platform_device *pdev)
 		}
 	}
 
+	if (lanes == 2) {
+		ret = dra7xx_pcie_configure_two_lane(dev);
+		if (ret < 0)
+			goto err_phy;
+	}
+
 	dra7xx->base = base;
 	dra7xx->phy = phy;
 	dra7xx->dev = dev;
-	dra7xx->phy_count = phy_count;
+	dra7xx->lanes = lanes;
 
 	pm_runtime_enable(dev);
 	ret = pm_runtime_get_sync(dev);
@@ -477,7 +561,7 @@ static int __exit dra7xx_pcie_remove(struct platform_device *pdev)
 	struct dra7xx_pcie *dra7xx = platform_get_drvdata(pdev);
 	struct pcie_port *pp = &dra7xx->pp;
 	struct device *dev = &pdev->dev;
-	int count = dra7xx->phy_count;
+	int count = dra7xx->lanes;
 
 	if (pp->irq_domain)
 		irq_domain_remove(pp->irq_domain);
@@ -523,7 +607,7 @@ static int dra7xx_pcie_resume(struct device *dev)
 static int dra7xx_pcie_suspend_noirq(struct device *dev)
 {
 	struct dra7xx_pcie *dra7xx = dev_get_drvdata(dev);
-	int count = dra7xx->phy_count;
+	int count = dra7xx->lanes;
 
 	while (count--) {
 		phy_power_off(dra7xx->phy[count]);
@@ -536,7 +620,7 @@ static int dra7xx_pcie_suspend_noirq(struct device *dev)
 static int dra7xx_pcie_resume_noirq(struct device *dev)
 {
 	struct dra7xx_pcie *dra7xx = dev_get_drvdata(dev);
-	int phy_count = dra7xx->phy_count;
+	int phy_count = dra7xx->lanes;
 	int ret;
 	int i;
 
@@ -570,8 +654,18 @@ static const struct dev_pm_ops dra7xx_pcie_pm_ops = {
 				      dra7xx_pcie_resume_noirq)
 };
 
+static const struct dra7xx_pcie_data dra746_pcie_data = {
+	.b1co_mode_sel_mask = BIT(2),
+};
+
+static const struct dra7xx_pcie_data dra726_pcie_data = {
+	.b1co_mode_sel_mask = GENMASK(3, 2),
+};
+
 static const struct of_device_id of_dra7xx_pcie_match[] = {
-	{ .compatible = "ti,dra7-pcie", },
+	{ .compatible = "ti,dra7-pcie", .data = &dra746_pcie_data },
+	{ .compatible = "ti,dra746-pcie", .data = &dra746_pcie_data },
+	{ .compatible = "ti,dra726-pcie", .data = &dra726_pcie_data },
 	{},
 };
 MODULE_DEVICE_TABLE(of, of_dra7xx_pcie_match);

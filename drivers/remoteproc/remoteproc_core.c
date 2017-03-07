@@ -242,8 +242,8 @@ int rproc_alloc_vring(struct rproc_vdev *rvdev, int i)
 	}
 	notifyid = ret;
 
-	dev_dbg(dev, "vring%d: va %p dma %llx size %x idr %d\n", i, va,
-		(unsigned long long)dma, size, notifyid);
+	dev_dbg(dev, "vring%d: va %p dma %pad size %x idr %d\n", i, va,
+		&dma, size, notifyid);
 
 	rvring->va = va;
 	rvring->dma = dma;
@@ -751,8 +751,8 @@ static int rproc_handle_carveout(struct rproc *rproc,
 		goto free_carv;
 	}
 
-	dev_dbg(dev, "carveout va %p, dma %llx, len 0x%x\n", va,
-		(unsigned long long)dma, rsc->len);
+	dev_dbg(dev, "carveout va %p, dma %pad, len 0x%x\n", va,
+		&dma, rsc->len);
 
 	/*
 	 * Ok, this is non-standard.
@@ -797,8 +797,8 @@ static int rproc_handle_carveout(struct rproc *rproc,
 		mapping->len = rsc->len;
 		list_add_tail(&mapping->node, &rproc->mappings);
 
-		dev_dbg(dev, "carveout mapped 0x%x to 0x%llx\n",
-			rsc->da, (unsigned long long)dma);
+		dev_dbg(dev, "carveout mapped 0x%x to %pad\n",
+			rsc->da, &dma);
 	}
 
 	/*
@@ -839,86 +839,22 @@ free_carv:
 }
 
 /**
- * rproc_handle_intmem() - (deprecated) handle internal memory resource entry
+ * rproc_handle_intmem() - placeholder to handle internal memory resource entry
  * @rproc: rproc handle
  * @rsc: the intmem resource entry
  * @offset: offset of the resource data in resource table
  * @avail: size of available data (for image validation)
  *
  * ** DEPRECATION WARNING **
- * This is a deprecated function, it is being defined to print a deprecation
- * warning for prior product firmwares so that they can stop using this
- * resource type and move away from using it.
- *
- * This function will handle firmware requests for mapping a memory region
- * internal to a remote processor into kernel. It neither allocates any
- * physical pages, nor performs any iommu mapping, as this resource entry
- * is primarily used for representing physical internal memories. If the
- * internal memory region can only be accessed through an iommu, please
- * use a devmem resource entry.
- *
- * These resource entries should be grouped near the carveout entries in
- * the firmware's resource table, as other firmware entries might request
- * placing other data objects inside these memory regions (e.g. data/code
- * segments, trace resource entries, ...).
+ * This is a dummy function, it is only being defined to print a deprecation
+ * warning for prior product firmwares so that they can stop using this resource
+ * type and move away from using it.
  */
 static int rproc_handle_intmem(struct rproc *rproc, struct fw_rsc_intmem *rsc,
 			       int offset, int avail)
 {
-	struct rproc_mem_entry *intmem;
-	struct device *dev = &rproc->dev;
-	void *va;
-	int ret;
-
-	dev_warn(dev, "RSC_INTMEM is deprecated. Please do not use this resource type to support loading into internal memories.\n");
-
-	if (sizeof(*rsc) > avail) {
-		dev_err(dev, "intmem rsc is truncated\n");
-		return -EINVAL;
-	}
-
-	if (rsc->version != 1) {
-		dev_err(dev, "intmem rsc version %d is not supported\n",
-			rsc->version);
-		return -EINVAL;
-	}
-
-	if (rsc->reserved) {
-		dev_err(dev, "intmem rsc has non zero reserved bytes\n");
-		return -EINVAL;
-	}
-
-	dev_dbg(dev, "intmem rsc: da 0x%x, pa 0x%x, len 0x%x\n",
-		rsc->da, rsc->pa, rsc->len);
-
-	intmem = kzalloc(sizeof(*intmem), GFP_KERNEL);
-	if (!intmem)
-		return -ENOMEM;
-
-	va = (__force void *)ioremap_nocache(rsc->pa, rsc->len);
-	if (!va) {
-		dev_err(dev, "ioremap_nocache err: %d\n", rsc->len);
-		ret = -ENOMEM;
-		goto free_intmem;
-	}
-
-	dev_dbg(dev, "intmem mapped pa 0x%x of len 0x%x into kernel va %p\n",
-		rsc->pa, rsc->len, va);
-
-	intmem->va = va;
-	intmem->len = rsc->len;
-	intmem->dma = rsc->pa;
-	intmem->da = rsc->da;
-	intmem->priv = (void *)1;    /* prevents freeing */
-
-	/* reuse the rproc->carveouts list, so that loading is automatic */
-	list_add_tail(&intmem->node, &rproc->carveouts);
-
+	WARN(1, "RSC_INTMEM is deprecated. Please do not use this resource type to support loading into internal memories.\n");
 	return 0;
-
-free_intmem:
-	kfree(intmem);
-	return ret;
 }
 
 /**
@@ -1107,11 +1043,8 @@ static void rproc_resource_cleanup(struct rproc *rproc)
 
 	/* clean up carveout allocations */
 	list_for_each_entry_safe(entry, tmp, &rproc->carveouts, node) {
-		if (!entry->priv)
-			dma_free_coherent(dev->parent, entry->len, entry->va,
-					  entry->dma);
-		else
-			iounmap((__force void __iomem *)entry->va);
+		dma_free_coherent(dev->parent, entry->len, entry->va,
+				  entry->dma);
 		list_del(&entry->node);
 		kfree(entry);
 	}
@@ -1138,7 +1071,11 @@ static int rproc_fw_boot(struct rproc *rproc, const struct firmware *fw)
 	if (ret)
 		return ret;
 
-	dev_info(dev, "Booting fw image %s, size %zd\n", name, fw->size);
+	if (!rproc->use_userspace_loader)
+		dev_info(dev, "Booting fw image %s, size %zd\n",
+			 name, fw->size);
+	else
+		dev_info(dev, "Booting unspecified pre-loaded fw image\n");
 
 	/*
 	 * if enabling an IOMMU isn't relevant for this rproc, this is
@@ -1181,12 +1118,14 @@ static int rproc_fw_boot(struct rproc *rproc, const struct firmware *fw)
 			goto clean_up;
 		}
 	}
-
-	/* load the ELF segments to memory */
-	ret = rproc_load_segments(rproc, fw);
-	if (ret) {
-		dev_err(dev, "Failed to load program segments: %d\n", ret);
-		goto clean_up;
+	if (!rproc->use_userspace_loader) {
+		/* load the ELF segments to memory */
+		ret = rproc_load_segments(rproc, fw);
+		if (ret) {
+			dev_err(dev, "Failed to load program segments: %d\n",
+				ret);
+			goto clean_up;
+		}
 	}
 
 	/*
@@ -1287,13 +1226,64 @@ static void rproc_fw_config_virtio(const struct firmware *fw, void *context)
 
 out:
 	release_firmware(fw);
-	/* allow rproc_del() contexts, if any, to proceed */
-	complete_all(&rproc->firmware_loading_complete);
+	if (!rproc->use_userspace_loader) {
+		/* allow rproc_del() contexts, if any, to proceed */
+		complete_all(&rproc->firmware_loading_complete);
+	}
 }
+
+/**
+ * rproc_add_vdevs_direct() - add virtio devices directly from a resource table
+ * @rproc: handle of a remote processor
+ *
+ * This function is added to support remoteproc drivers using userspace loaders
+ * to process a published resource table directly and add the virtio devices for
+ * supporting the virtio rpmsg infrastructure. The firmwares are not looked up
+ * and processed by the remoteproc core for such drivers.
+ *
+ * The remoteproc drivers are expected to undo the addition using the
+ * @rproc_remove_vdevs_direct() function.
+ */
+void rproc_add_vdevs_direct(struct rproc *rproc)
+{
+	if (!rproc->use_userspace_loader) {
+		dev_err(&rproc->dev, "cannot be called on rprocs supporting in-kernel loader!\n");
+		return;
+	}
+
+	rproc_fw_config_virtio(NULL, (void *)rproc);
+}
+EXPORT_SYMBOL(rproc_add_vdevs_direct);
+
+/**
+ * rproc_remove_vdevs_direct() - remove virtio devices directly
+ * @rproc: handle of a remote processor
+ *
+ * This function is added to support remoteproc drivers using userspace
+ * loaders to remove any directly added virtio devices through the
+ * @rproc_add_vdevs_direct() function.
+ */
+void rproc_remove_vdevs_direct(struct rproc *rproc)
+{
+	struct rproc_vdev *rvdev, *tmp;
+
+	if (!rproc->use_userspace_loader) {
+		dev_err(&rproc->dev, "cannot be called on rprocs supporting in-kernel loader!\n");
+		return;
+	}
+
+	list_for_each_entry_safe(rvdev, tmp, &rproc->rvdevs, node)
+		rproc_remove_virtio_dev(rvdev);
+}
+EXPORT_SYMBOL(rproc_remove_vdevs_direct);
 
 static int rproc_add_virtio_devices(struct rproc *rproc)
 {
 	int ret;
+
+	/* nothing to do if relying on external userspace loader */
+	if (rproc->use_userspace_loader)
+		return 0;
 
 	/* rproc_del() calls must wait until async loader completes */
 	init_completion(&rproc->firmware_loading_complete);
@@ -1413,7 +1403,7 @@ EXPORT_SYMBOL(rproc_get_alias_id);
  */
 int rproc_boot(struct rproc *rproc)
 {
-	const struct firmware *firmware_p;
+	const struct firmware *firmware_p = NULL;
 	struct device *dev;
 	int ret;
 
@@ -1452,16 +1442,19 @@ int rproc_boot(struct rproc *rproc)
 
 	dev_info(dev, "powering up %s\n", rproc->name);
 
-	/* load firmware */
-	ret = request_firmware(&firmware_p, rproc->firmware, dev);
-	if (ret < 0) {
-		dev_err(dev, "request_firmware failed: %d\n", ret);
-		goto downref_rproc;
+	if (!rproc->use_userspace_loader) {
+		/* load firmware */
+		ret = request_firmware(&firmware_p, rproc->firmware, dev);
+		if (ret < 0) {
+			dev_err(dev, "request_firmware failed: %d\n", ret);
+			goto downref_rproc;
+		}
 	}
 
 	ret = rproc_fw_boot(rproc, firmware_p);
 
-	release_firmware(firmware_p);
+	if (!rproc->use_userspace_loader)
+		release_firmware(firmware_p);
 
 downref_rproc:
 	if (ret) {
@@ -1612,11 +1605,6 @@ int rproc_add(struct rproc *rproc)
 	if (ret < 0)
 		return ret;
 
-	/* expose to rproc_get_by_phandle users */
-	mutex_lock(&rproc_list_mutex);
-	list_add(&rproc->node, &rproc_list);
-	mutex_unlock(&rproc_list_mutex);
-
 	dev_info(dev, "%s is available\n", rproc->name);
 
 	dev_info(dev, "Note: remoteproc is still under development and considered experimental.\n");
@@ -1624,8 +1612,16 @@ int rproc_add(struct rproc *rproc)
 
 	/* create debugfs entries */
 	rproc_create_debug_dir(rproc);
+	ret = rproc_add_virtio_devices(rproc);
+	if (ret < 0)
+		return ret;
 
-	return rproc_add_virtio_devices(rproc);
+	/* expose to rproc_get_by_phandle users */
+	mutex_lock(&rproc_list_mutex);
+	list_add(&rproc->node, &rproc_list);
+	mutex_unlock(&rproc_list_mutex);
+
+	return 0;
 }
 EXPORT_SYMBOL(rproc_add);
 
@@ -1802,8 +1798,10 @@ int rproc_del(struct rproc *rproc)
 	if (!rproc)
 		return -EINVAL;
 
-	/* if rproc is just being registered, wait */
-	wait_for_completion(&rproc->firmware_loading_complete);
+	if (!rproc->use_userspace_loader) {
+		/* if rproc is just being registered, wait */
+		wait_for_completion(&rproc->firmware_loading_complete);
+	}
 
 	/* clean up remote vdev entries */
 	list_for_each_entry_safe(rvdev, tmp, &rproc->rvdevs, node)

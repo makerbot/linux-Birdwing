@@ -126,7 +126,7 @@ static int __asoc_simple_card_dai_init(struct snd_soc_dai *dai,
 	int ret;
 
 	if (set->sysclk) {
-		ret = snd_soc_dai_set_sysclk(dai, 0, set->sysclk,
+		ret = snd_soc_dai_set_sysclk(dai, set->sysclk_id, set->sysclk,
 					     set->sysclk_dir);
 		if (ret && ret != -ENOTSUPP) {
 			dev_err(dai->dev, "simple-card: set_sysclk error\n");
@@ -135,7 +135,9 @@ static int __asoc_simple_card_dai_init(struct snd_soc_dai *dai,
 	}
 
 	if (set->slots) {
-		ret = snd_soc_dai_set_tdm_slot(dai, 0, 0,
+		ret = snd_soc_dai_set_tdm_slot(dai,
+					       set->tx_slot_mask,
+					       set->rx_slot_mask,
 						set->slots,
 						set->slot_width);
 		if (ret && ret != -ENOTSUPP) {
@@ -228,7 +230,9 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
 		return ret;
 
 	/* Parse TDM slot */
-	ret = snd_soc_of_parse_tdm_slot(np, &dai->slots, &dai->slot_width);
+	ret = snd_soc_of_parse_tdm_slot(np, &dai->tx_slot_mask,
+					&dai->rx_slot_mask,
+					&dai->slots, &dai->slot_width);
 	if (ret)
 		return ret;
 
@@ -264,6 +268,9 @@ asoc_simple_card_sub_parse_of(struct device_node *np,
 		if (!IS_ERR(clk))
 			dai->sysclk = clk_get_rate(clk);
 	}
+
+	if (!of_property_read_u32(np, "system-clock-id", &val))
+		dai->sysclk_id = val;
 
 	return 0;
 }

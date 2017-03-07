@@ -52,6 +52,12 @@ static int __init am43xx_map_scu(void)
 	return 0;
 }
 
+static int am33xx_check_off_mode_enable(void)
+{
+	/* off mode not supported on am335x so return 0 always */
+	return 0;
+}
+
 static int am43xx_check_off_mode_enable(void)
 {
 	return enable_off_mode;
@@ -118,6 +124,12 @@ static int am43xx_suspend_init(void (*do_sram_cpuidle)(u32 wfi_flags))
 	ret = amx3_common_init();
 
 	return ret;
+}
+
+static int am33xx_pm_deinit(void)
+{
+	am33xx_idle_deinit();
+	return 0;
 }
 
 static void amx3_pre_suspend_common(void)
@@ -254,13 +266,14 @@ void __iomem *am43xx_get_rtc_base_addr(void)
 
 static struct am33xx_pm_ops am33xx_ops = {
 	.init = am33xx_suspend_init,
+	.deinit = am33xx_pm_deinit,
 	.soc_suspend = am33xx_suspend,
 	.cpu_suspend = am33xx_cpu_suspend,
 	.save_context = am33xx_save_context,
 	.restore_context = am33xx_restore_context,
 	.prepare_rtc_suspend = am43xx_prepare_rtc_suspend,
 	.prepare_rtc_resume = am43xx_prepare_rtc_resume,
-	.check_off_mode_enable = am43xx_check_off_mode_enable,
+	.check_off_mode_enable = am33xx_check_off_mode_enable,
 	.get_rtc_base_addr = am43xx_get_rtc_base_addr,
 };
 

@@ -586,19 +586,14 @@ static int __verify_length(struct vb2_buffer *vb, const struct v4l2_buffer *b)
 
 	if (V4L2_TYPE_IS_MULTIPLANAR(b->type)) {
 		for (plane = 0; plane < vb->num_planes; ++plane) {
-			if (b->memory == V4L2_MEMORY_DMABUF)
-				continue;
 			length = (b->memory == V4L2_MEMORY_USERPTR)
 			       ? b->m.planes[plane].length
 			       : vb->v4l2_planes[plane].length;
+
 			bytesused = b->m.planes[plane].bytesused
 				  ? b->m.planes[plane].bytesused : length;
 
 			if (b->m.planes[plane].bytesused > length)
-				return -EINVAL;
-
-			if (b->m.planes[plane].data_offset > 0 &&
-			    b->m.planes[plane].data_offset >= bytesused)
 				return -EINVAL;
 		}
 	} else {
@@ -1305,12 +1300,12 @@ static void __fill_vb2_buffer(struct vb2_buffer *vb, const struct v4l2_buffer *b
 				struct v4l2_plane *pdst = &v4l2_planes[plane];
 				struct v4l2_plane *psrc = &b->m.planes[plane];
 
-                                /*
-                                 * Supress the warning for zero bytesused.
-                                 * The warning will go away after proper
-                                 * fix is done for "HACK: Remove the V4L2
-                                 * check and fix the DMA address"
-                                 */
+				/*
+				 * Suppress the warning for zero bytesused.
+				 * The warning will go away after proper
+				 * fix is done for "HACK: vb2: Remove the V4L2
+				 * check for DMABUF"
+				 */
 				/*if (psrc->bytesused == 0)
 					vb2_warn_zero_bytesused(vb);*/
 
@@ -2669,10 +2664,10 @@ unsigned int vb2_poll(struct vb2_queue *q, struct file *file, poll_table *wait)
 		return res | POLLERR;
 
 	/*
-	 * For output streams you can write as long as there are fewer buffers
-	 * queued than there are buffers available.
+	 * For output streams you can call write() as long as there are fewer
+	 * buffers queued than there are buffers available.
 	 */
-	if (V4L2_TYPE_IS_OUTPUT(q->type) && q->queued_count < q->num_buffers)
+	if (V4L2_TYPE_IS_OUTPUT(q->type) && q->fileio && q->queued_count < q->num_buffers)
 		return res | POLLOUT | POLLWRNORM;
 
 	if (list_empty(&q->done_list))

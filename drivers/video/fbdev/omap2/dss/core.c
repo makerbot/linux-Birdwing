@@ -165,6 +165,56 @@ int dss_debugfs_create_file(const char *name, void (*write)(struct seq_file *))
 #endif /* CONFIG_OMAP2_DSS_DEBUGFS */
 
 /* PLATFORM DEVICE */
+
+static int dss_suspend_all_devices(void)
+{
+	struct omap_dss_device *dssdev = NULL;
+
+	for_each_dss_dev(dssdev) {
+		if (!dssdev->driver)
+			continue;
+
+		if (dssdev->state == OMAP_DSS_DISPLAY_ACTIVE) {
+			dssdev->driver->disable(dssdev);
+			dssdev->activate_after_resume = true;
+		} else {
+			dssdev->activate_after_resume = false;
+		}
+	}
+
+	return 0;
+}
+
+static int dss_resume_all_devices(void)
+{
+	struct omap_dss_device *dssdev = NULL;
+
+	for_each_dss_dev(dssdev) {
+		if (!dssdev->driver)
+			continue;
+
+		if (dssdev->activate_after_resume) {
+			dssdev->driver->enable(dssdev);
+			dssdev->activate_after_resume = false;
+		}
+	}
+
+	return 0;
+}
+
+static void dss_disable_all_devices(void)
+{
+	struct omap_dss_device *dssdev = NULL;
+
+	for_each_dss_dev(dssdev) {
+		if (!dssdev->driver)
+			continue;
+
+		if (dssdev->state == OMAP_DSS_DISPLAY_ACTIVE)
+			dssdev->driver->disable(dssdev);
+	}
+}
+
 static int omap_dss_pm_notif(struct notifier_block *b, unsigned long v, void *d)
 {
 	DSSDBG("pm notif %lu\n", v);
@@ -191,6 +241,16 @@ static struct notifier_block omap_dss_pm_notif_block = {
 	.notifier_call = omap_dss_pm_notif,
 };
 
+void dss_install_pm_handler(void)
+{
+	register_pm_notifier(&omap_dss_pm_notif_block);
+}
+
+void dss_uninstall_pm_handler(void)
+{
+	unregister_pm_notifier(&omap_dss_pm_notif_block);
+}
+
 static int __init omap_dss_probe(struct platform_device *pdev)
 {
 	struct omap_dss_board_info *pdata = pdev->dev.platform_data;
@@ -211,8 +271,6 @@ static int __init omap_dss_probe(struct platform_device *pdev)
 	else if (pdata->default_device)
 		core.default_display_name = pdata->default_device->name;
 
-	register_pm_notifier(&omap_dss_pm_notif_block);
-
 	return 0;
 
 err_debugfs:
@@ -222,8 +280,6 @@ err_debugfs:
 
 static int omap_dss_remove(struct platform_device *pdev)
 {
-	unregister_pm_notifier(&omap_dss_pm_notif_block);
-
 	dss_uninitialize_debugfs();
 
 	return 0;

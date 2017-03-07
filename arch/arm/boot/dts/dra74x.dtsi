@@ -110,11 +110,14 @@
 
 		dsp2: dsp@41000000 {
 			compatible = "ti,dra7-rproc-dsp";
-			reg = <0x41000000 0x48000>;
-			reg-names = "l2ram";
+			reg = <0x41000000 0x48000>,
+			      <0x41600000 0x8000>,
+			      <0x41700000 0x8000>;
+			reg-names = "l2ram", "l1pram", "l1dram";
 			ti,hwmods = "dsp2";
 			syscon-bootreg = <&scm_conf 0x560>;
 			iommus = <&mmu0_dsp2>, <&mmu1_dsp2>;
+			ti,rproc-standby-info = <0x4a005620>;
 			status = "disabled";
 		};
 	};
@@ -176,8 +179,8 @@
 	reg = <0x58000000 0x80>,
 	      <0x58004054 0x4>,
 	      <0x58004300 0x20>,
-	      <0x58005054 0x4>,
-	      <0x58005300 0x20>;
+	      <0x58009054 0x4>,
+	      <0x58009300 0x20>;
 	reg-names = "dss", "pll1_clkctrl", "pll1",
 		    "pll2_clkctrl", "pll2";
 

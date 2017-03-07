@@ -660,6 +660,7 @@ static int rpmsg_proto_probe(struct rpmsg_channel *rpdev)
 	if (ret) {
 		dev_err(dev, "failed to add rpmsg addr %d: %d\n", dst, ret);
 		kfree(sock_list);
+		goto out;
 	}
 	rpdev->ept->priv = sock_list;
 
@@ -798,4 +799,5 @@ module_exit(rpmsg_proto_exit);
 
 MODULE_DESCRIPTION("Remote processor messaging protocol");
 MODULE_LICENSE("GPL v2");
+MODULE_ALIAS("rpmsg:rpmsg-proto");
 MODULE_ALIAS_NETPROTO(AF_RPMSG);
