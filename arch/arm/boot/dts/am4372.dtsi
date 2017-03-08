@@ -691,135 +691,63 @@
 			};
 		};
 
-		epwmss0: epwmss@48300000 {
-			compatible = "ti,am4372-pwmss","ti,am33xx-pwmss";
-			reg = <0x48300000 0x10>;
-			#address-cells = <1>;
-			#size-cells = <1>;
-			ranges;
-			ti,hwmods = "epwmss0";
-			status = "disabled";
-
-			ecap0: ecap@48300100 {
-				compatible = "ti,am4372-ecap","ti,am33xx-ecap";
-				#pwm-cells = <3>;
-				reg = <0x48300100 0x80>;
-				ti,hwmods = "ecap0";
-				status = "disabled";
-			};
-
-			ehrpwm0: ehrpwm@48300200 {
-				compatible = "ti,am4372-ehrpwm","ti,am33xx-ehrpwm";
-				#pwm-cells = <3>;
-				reg = <0x48300200 0x80>;
-				ti,hwmods = "ehrpwm0";
-				status = "disabled";
-			};
-		};
-
 		epwmss1: epwmss@48302000 {
 			compatible = "ti,am4372-pwmss","ti,am33xx-pwmss";
 			reg = <0x48302000 0x10>;
+			ti,hwmods = "epwmss1";
 			#address-cells = <1>;
 			#size-cells = <1>;
-			ranges;
-			ti,hwmods = "epwmss1";
 			status = "disabled";
+			ranges;
 
-			ecap1: ecap@48302100 {
-				compatible = "ti,am4372-ecap","ti,am33xx-ecap";
-				#pwm-cells = <3>;
-				reg = <0x48302100 0x80>;
-				ti,hwmods = "ecap1";
+			ehrpwm1: pwm@48302200 {
 				status = "disabled";
-			};
-
-			ehrpwm1: ehrpwm@48302200 {
-				compatible = "ti,am4372-ehrpwm","ti,am33xx-ehrpwm";
+				compatible = "ti,am33xx-ehrpwm";
 				#pwm-cells = <3>;
 				reg = <0x48302200 0x80>;
 				ti,hwmods = "ehrpwm1";
-				status = "disabled";
-			};
-		};
-
-		epwmss2: epwmss@48304000 {
-			compatible = "ti,am4372-pwmss","ti,am33xx-pwmss";
-			reg = <0x48304000 0x10>;
-			#address-cells = <1>;
-			#size-cells = <1>;
-			ranges;
-			ti,hwmods = "epwmss2";
-			status = "disabled";
-
-			ecap2: ecap@48304100 {
-				compatible = "ti,am4372-ecap","ti,am33xx-ecap";
-				#pwm-cells = <3>;
-				reg = <0x48304100 0x80>;
-				ti,hwmods = "ecap2";
-				status = "disabled";
-			};
-
-			ehrpwm2: ehrpwm@48304200 {
-				compatible = "ti,am4372-ehrpwm","ti,am33xx-ehrpwm";
-				#pwm-cells = <3>;
-				reg = <0x48304200 0x80>;
-				ti,hwmods = "ehrpwm2";
-				status = "disabled";
+                clocks = <&ehrpwm1_tbclk>; 
+                clock-names = "tbclk";
 			};
 		};
 
 		epwmss3: epwmss@48306000 {
 			compatible = "ti,am4372-pwmss","ti,am33xx-pwmss";
 			reg = <0x48306000 0x10>;
+			ti,hwmods = "epwmss3";
 			#address-cells = <1>;
 			#size-cells = <1>;
-			ranges;
-			ti,hwmods = "epwmss3";
 			status = "disabled";
+			ranges;
 
-			ehrpwm3: ehrpwm@48306200 {
-				compatible = "ti,am4372-ehrpwm","ti,am33xx-ehrpwm";
+			ehrpwm3: pwm@48306200 {
+				status = "disabled";
+				compatible = "ti,am33xx-ehrpwm";
 				#pwm-cells = <3>;
 				reg = <0x48306200 0x80>;
 				ti,hwmods = "ehrpwm3";
-				status = "disabled";
-			};
-		};
-
-		epwmss4: epwmss@48308000 {
-			compatible = "ti,am4372-pwmss","ti,am33xx-pwmss";
-			reg = <0x48308000 0x10>;
-			#address-cells = <1>;
-			#size-cells = <1>;
-			ranges;
-			ti,hwmods = "epwmss4";
-			status = "disabled";
-
-			ehrpwm4: ehrpwm@48308200 {
-				compatible = "ti,am4372-ehrpwm","ti,am33xx-ehrpwm";
-				#pwm-cells = <3>;
-				reg = <0x48308200 0x80>;
-				ti,hwmods = "ehrpwm4";
-				status = "disabled";
+                clocks = <&ehrpwm3_tbclk>; 
+                clock-names = "tbclk";
 			};
 		};
 
 		epwmss5: epwmss@4830a000 {
 			compatible = "ti,am4372-pwmss","ti,am33xx-pwmss";
 			reg = <0x4830a000 0x10>;
+			ti,hwmods = "epwmss5";
 			#address-cells = <1>;
 			#size-cells = <1>;
-			ranges;
-			ti,hwmods = "epwmss5";
 			status = "disabled";
+			ranges;
 
-			ehrpwm5: ehrpwm@4830a200 {
-				compatible = "ti,am4372-ehrpwm","ti,am33xx-ehrpwm";
+			ehrpwm5: pwm@4830a200 {
+				status = "disabled";
+				compatible = "ti,am33xx-ehrpwm";
 				#pwm-cells = <3>;
 				reg = <0x4830a200 0x80>;
 				ti,hwmods = "ehrpwm5";
-				status = "disabled";
+                clocks = <&ehrpwm5_tbclk>; 
+                clock-names = "tbclk";
 			};
 		};
 

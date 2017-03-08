@@ -284,7 +284,6 @@
 			0x1FC (PIN_OUTPUT | MUX_MODE4)	/* cam1_data5 (pru1 gpo13)*/
 			0x200 (PIN_OUTPUT | MUX_MODE4)	/* cam1_data6 (pru1 gpo14)*/
 			0x204 (PIN_OUTPUT | MUX_MODE4)	/* cam1_data7 (pru1 gpo15)*/
-			0x230 (PIN_OUTPUT | MUX_MODE4)	/* uart3_ctsn (pru1 gpo18)*/
 		>;
 	};
 
@@ -346,6 +345,26 @@
 		>;
 	};
 
+	ehrpwm1_pins: ehrpwm1_pins {
+		pinctrl-single,pins = <
+			0x158 (PIN_OUTPUT | MUX_MODE8)	/* spi0_d1 (eHRPWM1A)*/
+			0x15C (PIN_OUTPUT | MUX_MODE8)	/* spi0_cs0 (eHRPWM1B)*/
+		>;
+	};
+
+	ehrpwm3_pins: ehrpwm3_pins {
+		pinctrl-single,pins = <
+			0x218 (PIN_OUTPUT | MUX_MODE6)	/* cam0_data4 (eHRPWM3A)*/
+			0x21C (PIN_OUTPUT | MUX_MODE6)	/* cam0_data5 (eHRPWM3B)*/
+		>;
+	};
+
+	ehrpwm5_pins: ehrpwm5_pins {
+		pinctrl-single,pins = <
+			0x230 (PIN_OUTPUT | MUX_MODE6)	/* uart3_ctsn (eHRPWM5A)*/
+		>;
+	};
+
 	unused_pins: unused_pins {
 		pinctrl-single,pins = <
 			0x004 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_ad1 */
@@ -371,16 +390,12 @@
 			0x144 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* rmii1_refclk */
 			0x150 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* spi0_sclk */
 			0x154 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* spi0_d0 */
-			0x158 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* spi0_d1 */
-			0x15C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* spi0_cs0 */
 			0x160 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* spi0_cs1 */
 			0x164 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* ecap0_in_pwm0_out */
 			0x1B0 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_hd */
 			0x1B4 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_vd */
 			0x210 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_data2 */
 			0x214 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_data3 */
-			0x218 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_data4 */
-			0x21C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_data5 */
 			0x220 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_data6 */
 			0x224 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_data7 */
 			0x238 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpio5_8 */
@@ -479,10 +494,6 @@
 	};
 };
 
-&epwmss0 {
-	status = "okay";
-};
-
 &tscadc {
 	status = "okay";
 
@@ -503,48 +514,31 @@
 	};
 };
 
-&epwmss0 {
-	status = "okay";
-};
-
 &epwmss1 {
 	status = "okay";
-};
-
-&epwmss2 {
-	status = "okay";
+	ehrpwm1: pwm@48302200 {
+		status = "okay";
+		pinctrl-names = "default";
+		pinctrl-0 = <&ehrpwm1_pins>;
+	};
 };
 
 &epwmss3 {
 	status = "okay";
-};
-
-&epwmss4 {
-	status = "okay";
+	ehrpwm3: pwm@48306200 {
+		status = "okay";
+		pinctrl-names = "default";
+		pinctrl-0 = <&ehrpwm3_pins>;
+	};
 };
 
 &epwmss5 {
 	status = "okay";
-};
-
-&ecap0 {
-	status = "okay";
-};
-
-&ecap1 {
-	status = "okay";
-};
-
-&ehrpwm1 {
-	status = "okay";
-};
-
-&ehrpwm3 {
-	status = "okay";
-};
-
-&ehrpwm5 {
-	status = "okay";
+	ehrpwm5: pwm@4830a200 {
+		status = "okay";
+		pinctrl-names = "default";
+		pinctrl-0 = <&ehrpwm5_pins>;
+	};
 };
 
 &gpio0 {
