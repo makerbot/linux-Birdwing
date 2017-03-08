@@ -100,7 +100,7 @@ struct davinci_mdio_data {
 	struct device	*dev;
 	struct mii_bus	*bus;
 	bool		suspended;
-	unsigned long	access_time; /* jiffies */
+	unsigned long	access_time; /* microseconds */
 	/* Indicates that driver shouldn't modify phy_mask in case
 	 * if MDIO bus is registered from DT.
 	 */
@@ -148,10 +148,13 @@ static void __davinci_mdio_reset(struct davinci_mdio_data *data)
 	/*
 	 * In the worst case, we could be kicking off a user-access immediately
 	 * after the mdio bus scan state-machine triggered its own read.  If
-	 * so, our request could get deferred by one access cycle.  We
-	 * defensively allow for 4 access cycles.
+	 * so, our request could get deferred by one access cycle.
+	 *
+	 * The original TI code then doubled this for safety, but this only gets
+	 * used to calculate the worst case delay for resetting 32 phys (do we
+	 * even actually reset 32 phys?), so fuck it.
 	 */
-	data->access_time = access_time * 4; // Don't convert usecs to jiffies here, http://comments.gmane.org/gmane.linux.network/279586
+	data->access_time = access_time * 2;
 	if (!data->access_time)
 		data->access_time = 1;
 }
@@ -163,8 +166,11 @@ static int davinci_mdio_reset(struct mii_bus *bus)
 
 	__davinci_mdio_reset(data);
 
-	/* wait for scan logic to settle */
-	msleep(PHY_MAX_ADDR * data->access_time);
+	/* Wait for enough time to access each possible phy?
+	 * We convert the delay to milliseconds and add one to
+	 * account for rounding down.
+	 */
+	msleep((PHY_MAX_ADDR * data->access_time) / 1000 + 1);
 
 	/* dump hardware version info */
 	ver = __raw_readl(&data->regs->version);
