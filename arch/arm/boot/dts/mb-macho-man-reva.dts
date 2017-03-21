@@ -21,17 +21,128 @@
 
 	aliases {};
 
-	evm_v3_3d: fixedregulator-v3_3d {
+	/* Not clear if we need this... */
+	v3_3_sb: fixedregulator-v3_3_sb {
 		compatible = "regulator-fixed";
-		regulator-name = "evm_v3_3d";
+		regulator-name = "v3_3_sb";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 		enable-active-high;
 	};
 
-	vmmcwl_fixed: fixedregulator-mmcwl {
+	/* Hi voltage enable line to the psu */
+	vpsu_hiv: fixedregulator-vpsu_hiv {
 		compatible = "regulator-fixed";
-		regulator-name = "vmmcwl_fixed";
+		regulator-name = "vpsu_hiv";
+		regulator-min-microvolt = <36000000>;
+		regulator-max-microvolt = <36000000>;
+		gpio = <&gpio2 1 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		startup-delay-us = <2000>;
+		regulator-always-on;
+	};
+
+	/* The main 36V supply */
+	v36_main: fixedregulator-v36_main {
+		compatible = "regulator-fixed";
+		regulator-name = "v36_main";
+		regulator-min-microvolt = <36000000>;
+		regulator-max-microvolt = <36000000>;
+		vin-supply = <&vpsu_hiv>;
+		gpio = <&gpio4 2 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		startup-delay-us = <2000>;
+		regulator-always-on;
+	};
+
+	/* The main 12V supply */
+	v12_main: fixedregulator-v12_main {
+		compatible = "regulator-fixed";
+		regulator-name = "v12_main";
+		regulator-min-microvolt = <12000000>;
+		regulator-max-microvolt = <12000000>;
+		vin-supply = <&v36_main>;
+		gpio = <&gpio2 2 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-always-on;
+	};
+
+	/* The main 3.3V supply */
+	v3_3_main: fixedregulator-v3_3_main {
+		compatible = "regulator-fixed";
+		regulator-name = "v3_3_main";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		vin-supply = <&v36_main>;
+		gpio = <&gpio2 4 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-always-on;
+	};
+
+	/* The 36V supply to the rock */
+	v36_if: fixedregulator-v36_if {
+		compatible = "regulator-fixed";
+		regulator-name = "v36_if";
+		regulator-min-microvolt = <36000000>;
+		regulator-max-microvolt = <36000000>;
+		vin-supply = <&v36_main>;
+		gpio = <&gpio4 24 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-always-on;
+	};
+
+	/* The 12V supply to the rock */
+	v12_if: fixedregulator-v12_if {
+		compatible = "regulator-fixed";
+		regulator-name = "v12_if";
+		regulator-min-microvolt = <12000000>;
+		regulator-max-microvolt = <12000000>;
+		vin-supply = <&v36_main>;
+		gpio = <&gpio4 11 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-always-on;
+	};
+
+	/* The 3.3V supply to the rock */
+	v3_3_if: fixedregulator-v3_3_if {
+		compatible = "regulator-fixed";
+		regulator-name = "v3_3_if";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		vin-supply = <&v36_main>;
+		gpio = <&gpio4 3 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-always-on;
+	};
+
+	/* The 36V supply to mick foley */
+	v36_th: fixedregulator-v36_th {
+		compatible = "regulator-fixed";
+		regulator-name = "v36_th";
+		regulator-min-microvolt = <36000000>;
+		regulator-max-microvolt = <36000000>;
+		vin-supply = <&v36_main>;
+		gpio = <&gpio4 25 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-always-on;
+	};
+
+	/* The 12V supply to mick foley */
+	v12_th: fixedregulator-v12_th {
+		compatible = "regulator-fixed";
+		regulator-name = "v12_th";
+		regulator-min-microvolt = <12000000>;
+		regulator-max-microvolt = <12000000>;
+		vin-supply = <&v36_main>;
+		gpio = <&gpio4 0 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-always-on;
+	};
+
+	/* Not actually a power supply but convenient to treat as one */
+	vmmcwl: fixedregulator-mmcwl {
+		compatible = "regulator-fixed";
+		regulator-name = "vmmcwl";
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <1800000>;
 		/* WLAN_EN GPIO for this board - Bank0, pin8 */
@@ -54,7 +165,7 @@
 
 &am43xx_pinmux {
 	pinctrl-names = "default", "sleep";
-	pinctrl-0 = <&debugss_pins &unused_pins>;
+	pinctrl-0 = <&debugss_pins &power_pins &unused_pins>;
 	pinctrl-1 = <>;
 
 	/* i2c0 pins used for the pcf8523 hardware RTC */
@@ -365,6 +476,17 @@
 		>;
 	};
 
+	power_pins: power_pins {
+		pinctrl-single,pins = <
+			0x08C (PIN_OUTPUT_PULLUP | MUX_MODE7)	/* gpmc_clk.gpio2_1 (vpsu_hiv) */
+			0x090 (PIN_OUTPUT_PULLUP | MUX_MODE7)	/* gpmc_advn_ale.gpio2_2 (v12_main) */
+			0x098 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_wen.gpio2_4 (v3_3_main) */
+			0x1B0 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_hd.gpio4_0 (v12_th) */
+			0x210 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_data2.gpio4_24 (v36_if) */
+			0x214 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_data3.gpio4_25 (v36_th) */
+		>;
+	};
+
 	unused_pins: unused_pins {
 		pinctrl-single,pins = <
 			0x004 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_ad1 */
@@ -376,10 +498,7 @@
 			0x01C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_ad7 */
 			0x07C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_csn0  */
 			0x088 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_csn3 */
-			0x08C (PIN_OUTPUT_PULLUP | MUX_MODE7)	/* gpmc_clk / gpio2.1 / pwr-main */
-			0x090 (PIN_OUTPUT_PULLUP | MUX_MODE7)	/* gpmc_advn_ale / gpio2.2 / 12v en */
 			0x094 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_oen_ren */
-			0x098 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_wen */
 			0x09C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_be0n_cle */
 			0x10C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* mii1_crs */
 			0x110 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* mii1_rxerr */
@@ -392,10 +511,7 @@
 			0x154 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* spi0_d0 */
 			0x160 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* spi0_cs1 */
 			0x164 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* ecap0_in_pwm0_out */
-			0x1B0 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_hd */
 			0x1B4 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_vd */
-			0x210 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_data2 */
-			0x214 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_data3 */
 			0x220 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_data6 */
 			0x224 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_data7 */
 			0x238 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpio5_8 */
@@ -568,7 +684,7 @@
 /* eMMC sits on mmc2 */
 &mmc2 {
 	status = "okay";
-	vmmc-supply = <&evm_v3_3d>;
+	vmmc-supply = <&v3_3_sb>;
 	bus-width = <8>;
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&emmc_pins_default>;
@@ -577,7 +693,7 @@
 
 &mmc3 {
 	status = "okay";
-	vmmc-supply = <&vmmcwl_fixed>;
+	vmmc-supply = <&vmmcwl>;
 	bus-width = <4>;
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&mmc3_pins_default &wlan_pins_default>;
