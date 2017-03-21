@@ -111,6 +111,12 @@ const struct linux_logo * __init_refok fb_find_logo(int depth)
 		/* M32R Linux logo */
 		logo = &logo_m32r_clut224;
 #endif
+#ifdef CONFIG_LOGO_SOMBRERO_CLUT224
+		logo = &logo_sombrero_clut224;
+#endif
+#ifdef CONFIG_LOGO_MAKERBOT_CLUT224
+		logo = &logo_makerbot_clut224;
+#endif
 	}
 	return logo;
 }

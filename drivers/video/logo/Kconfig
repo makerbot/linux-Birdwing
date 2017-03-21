@@ -82,4 +82,10 @@ config LOGO_M32R_CLUT224
 	depends on M32R
 	default y
 
+config LOGO_SOMBRERO_CLUT224
+	bool "Sombrero logo"
+
+config LOGO_MAKERBOT_CLUT224
+	bool "Boring logo"
+
 endif # LOGO
