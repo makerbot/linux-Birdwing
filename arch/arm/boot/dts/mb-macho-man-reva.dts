@@ -124,7 +124,6 @@
 		vin-supply = <&v36_main>;
 		gpio = <&gpio4 25 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
-		regulator-always-on;
 	};
 
 	/* The 12V supply to mick foley */
@@ -136,7 +135,13 @@
 		vin-supply = <&v36_main>;
 		gpio = <&gpio4 0 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
-		regulator-always-on;
+	};
+
+	th_consumer: mb-th-consumer {
+		compatible = "mb,reg-th-consumer";
+		regulator-name = "mb-th-regulator";
+		regulator-boot-on;
+		regulator-supplies = "v12_th", "v36_th";
 	};
 
 	/* Not actually a power supply but convenient to treat as one */
