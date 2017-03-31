@@ -527,7 +527,7 @@
 			0x260 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* spi2_sclk */
 			0x268 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* spi2_d1 */
 			0x26C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* spi2_cs0 */
-			0x278 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* xdma_evt_intr1 */
+			0x278 (PIN_INPUT_PULLDOWN | WAKEUP_ENABLE | MUX_MODE7)	/* xdma_evt_intr1 */
 			0x27C (PIN_INPUT | PULL_DISABLE)	/* nresetin_out */
 		>;
 	};
@@ -607,26 +607,6 @@
 		/* Should just match the screen resolution */
 		touchscreen-size-x = <800>;
 		touchscreen-size-y = <480>;
-	};
-};
-
-&tscadc {
-	status = "okay";
-
-	adc {
-		ti,adc-channels = <0 1 2 3 4 5 6 7>;
-	};
-};
-
-&magadc {
-	status = "okay";
-
-	mag {
-		ti,tracks = <0>;
-	};
-
-	adc {
-		ti,adc-channels = <0 1 2 3 4 5 6 7>;
 	};
 };
 
@@ -776,10 +756,10 @@
 	ti,scale-data-fw = "am43x-evm-scale-data.bin";
 };
 
-&rtc {
-	status = "okay";
-	ext-clk-src;
-};
+/* &rtc { */
+/* 	status = "okay"; */
+/* 	ext-clk-src; */
+/* }; */
 
 &pruss0 {
 	pinctrl-names = "default";
