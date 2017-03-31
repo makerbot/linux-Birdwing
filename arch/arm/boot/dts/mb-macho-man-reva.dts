@@ -170,7 +170,7 @@
 
 &am43xx_pinmux {
 	pinctrl-names = "default", "sleep";
-	pinctrl-0 = <&debugss_pins &power_pins &unused_pins>;
+	pinctrl-0 = <&debugss_pins &power_pins &mm_ads_pres_pins &unused_pins>;
 	pinctrl-1 = <>;
 
 	/* i2c0 pins used for the pcf8523 hardware RTC */
@@ -494,8 +494,8 @@
 
 	mm_ads_pres_pins: mm_ads_pres_pins {
 		pinctrl-single,pins = <
-			0x00C (PIN_INPUT_PULLDOWN | MUX_MODE5)	/* gpmc_ad3 | MM_PRES_AA */
-			0x01C (PIN_INPUT_PULLDOWN | MUX_MODE5)	/* gpmc_ad7 | MM_PRES_BB */
+			0x00C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_ad3 | MM_PRES_AA */
+			0x01C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_ad7 | MM_PRES_BB */
 		>;
 	};
 
