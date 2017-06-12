@@ -124,7 +124,6 @@
 		vin-supply = <&v36_main>;
 		gpio = <&gpio4 25 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
-		regulator-always-on;
 	};
 
 	/* The 12V supply to mick foley */
@@ -136,7 +135,13 @@
 		vin-supply = <&v36_main>;
 		gpio = <&gpio4 0 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
-		regulator-always-on;
+	};
+
+	th_consumer: mb-th-consumer {
+		compatible = "mb,reg-th-consumer";
+		regulator-name = "mb-th-regulator";
+		regulator-boot-on;
+		regulator-supplies = "v12_th", "v36_th";
 	};
 
 	/* Not actually a power supply but convenient to treat as one */
@@ -165,7 +170,7 @@
 
 &am43xx_pinmux {
 	pinctrl-names = "default", "sleep";
-	pinctrl-0 = <&debugss_pins &power_pins &unused_pins>;
+	pinctrl-0 = <&debugss_pins &power_pins &mm_ads_pres_pins &unused_pins>;
 	pinctrl-1 = <>;
 
 	/* i2c0 pins used for the pcf8523 hardware RTC */
@@ -487,15 +492,20 @@
 		>;
 	};
 
+	mm_ads_pres_pins: mm_ads_pres_pins {
+		pinctrl-single,pins = <
+			0x00C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_ad3 | MM_PRES_AA */
+			0x01C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_ad7 | MM_PRES_BB */
+		>;
+	};
+
 	unused_pins: unused_pins {
 		pinctrl-single,pins = <
 			0x004 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_ad1 */
 			0x008 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_ad2 */
-			0x00C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_ad3 */
 			0x010 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_ad4 */
 			0x014 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_ad5 */
 			0x018 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_ad6 */
-			0x01C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_ad7 */
 			0x07C (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_csn0  */
 			0x088 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_csn3 */
 			0x094 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_oen_ren */

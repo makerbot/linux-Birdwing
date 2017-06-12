@@ -54,6 +54,12 @@ config REGULATOR_USERSPACE_CONSUMER
 
 	  If unsure, say no.
 
+config REGULATOR_MB_TH_CONSUMER
+       tristate "MakerBot-specific toolhead regulator consumer support"
+       	help
+	  Similar to the general-case userspace regulator consumer, but
+	  provides a specific API for the MakerBot power architecture.
+
 config REGULATOR_88PM800
 	tristate "Marvell 88PM800 Power regulators"
 	depends on MFD_88PM800
