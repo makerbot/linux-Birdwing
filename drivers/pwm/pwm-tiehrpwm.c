@@ -67,10 +67,18 @@
 #define AQSFRC			0x1A
 #define AQCSFRC			0x1C
 
+#define AQCTL_CBD_MASK		(BIT(11) | BIT(10))
+#define AQCTL_CBD_FRCLOW	BIT(10)
+#define AQCTL_CBD_FRCHIGH	BIT(11)
+#define AQCTL_CBD_FRCTOGGLE	(BIT(11) | BIT(10))
 #define AQCTL_CBU_MASK		(BIT(9) | BIT(8))
 #define AQCTL_CBU_FRCLOW	BIT(8)
 #define AQCTL_CBU_FRCHIGH	BIT(9)
 #define AQCTL_CBU_FRCTOGGLE	(BIT(9) | BIT(8))
+#define AQCTL_CAD_MASK		(BIT(7) | BIT(6))
+#define AQCTL_CAD_FRCLOW	BIT(6)
+#define AQCTL_CAD_FRCHIGH	BIT(7)
+#define AQCTL_CAD_FRCTOGGLE	(BIT(7) | BIT(6))
 #define AQCTL_CAU_MASK		(BIT(5) | BIT(4))
 #define AQCTL_CAU_FRCLOW	BIT(4)
 #define AQCTL_CAU_FRCHIGH	BIT(5)
@@ -84,14 +92,10 @@
 #define AQCTL_ZRO_FRCHIGH	BIT(1)
 #define AQCTL_ZRO_FRCTOGGLE	(BIT(1) | BIT(0))
 
-#define AQCTL_CHANA_POLNORMAL	(AQCTL_CAU_FRCLOW | AQCTL_PRD_FRCHIGH | \
-				AQCTL_ZRO_FRCHIGH)
-#define AQCTL_CHANA_POLINVERSED	(AQCTL_CAU_FRCHIGH | AQCTL_PRD_FRCLOW | \
-				AQCTL_ZRO_FRCLOW)
-#define AQCTL_CHANB_POLNORMAL	(AQCTL_CBU_FRCLOW | AQCTL_PRD_FRCHIGH | \
-				AQCTL_ZRO_FRCHIGH)
-#define AQCTL_CHANB_POLINVERSED	(AQCTL_CBU_FRCHIGH | AQCTL_PRD_FRCLOW | \
-				AQCTL_ZRO_FRCLOW)
+#define AQCTL_CHANA_POLNORMAL	(AQCTL_CAU_FRCLOW | AQCTL_CAD_FRCHIGH)
+#define AQCTL_CHANA_POLINVERSED	(AQCTL_CAU_FRCHIGH | AQCTL_CAD_FRCLOW)
+#define AQCTL_CHANB_POLNORMAL	(AQCTL_CBU_FRCLOW | AQCTL_CBD_FRCHIGH)
+#define AQCTL_CHANB_POLINVERSED	(AQCTL_CBU_FRCHIGH | AQCTL_CBD_FRCLOW)
 
 #define AQSFRC_RLDCSF_MASK	(BIT(7) | BIT(6))
 #define AQSFRC_RLDCSF_ZRO	0
@@ -209,7 +213,7 @@ static void configure_polarity(struct ehrpwm_pwm_chip *pc, int chan)
 	 */
 	if (chan == 1) {
 		aqctl_reg = AQCTLB;
-		aqctl_mask = AQCTL_CBU_MASK;
+		aqctl_mask = AQCTL_CBU_MASK | AQCTL_CBD_MASK;
 
 		if (pc->polarity[chan] == PWM_POLARITY_INVERSED)
 			aqctl_val = AQCTL_CHANB_POLINVERSED;
@@ -217,7 +221,7 @@ static void configure_polarity(struct ehrpwm_pwm_chip *pc, int chan)
 			aqctl_val = AQCTL_CHANB_POLNORMAL;
 	} else {
 		aqctl_reg = AQCTLA;
-		aqctl_mask = AQCTL_CAU_MASK;
+		aqctl_mask = AQCTL_CAU_MASK | AQCTL_CAD_MASK;
 
 		if (pc->polarity[chan] == PWM_POLARITY_INVERSED)
 			aqctl_val = AQCTL_CHANA_POLINVERSED;
@@ -303,9 +307,9 @@ static int ehrpwm_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 
 	ehrpwm_write(pc->mmio_base, TBPRD, period_cycles);
 
-	/* Configure ehrpwm counter for up-count mode */
+	/* Configure ehrpwm counter for up-down-count mode */
 	ehrpwm_modify(pc->mmio_base, TBCTL, TBCTL_CTRMODE_MASK,
-			TBCTL_CTRMODE_UP);
+			TBCTL_CTRMODE_UPDOWN);
 
 	if (pwm->hwpwm == 1)
 		/* Channel 1 configured with compare B register */
