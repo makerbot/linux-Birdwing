@@ -108,6 +108,19 @@ int rtc_valid_tm(struct rtc_time *tm)
 		|| ((unsigned)tm->tm_sec) >= 60)
 		return -EINVAL;
 
+	/*
+	 * Hack for morepork -- we are still running a 32 bit system so time_t
+	 * is still a signed 32 bit integer.  If we boot with a 64 bit time
+	 * that overflows time_t (maybe due to a failed RTC battery), or a time
+	 * close enough that we overflow it while powered on, then the system
+	 * will crash.  We ignore as invalid all RTC dates after about 2034, 4
+	 * years before the overflow, which should make it exceedingly unlikely
+	 * that we will trigger this bug while giving us 17 years to find a
+	 * better solution.
+	 */
+	if (rtc_tm_to_time64(tm) > 0x78000000)
+		return -EINVAL;
+
 	return 0;
 }
 EXPORT_SYMBOL(rtc_valid_tm);
