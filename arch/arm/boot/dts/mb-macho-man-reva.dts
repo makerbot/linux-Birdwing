@@ -393,7 +393,6 @@
 			0x1D0 (PIN_OUTPUT | MUX_MODE4)	/* cam1_data8 (pru1 gpo0)*/
 			0x1D4 (PIN_OUTPUT | MUX_MODE3)	/* cam1_hd (pru1 gpo1)*/
 			0x1D8 (PIN_OUTPUT | MUX_MODE3)	/* cam1_vd (pru1 gpo2)*/
-			0x1DC (PIN_OUTPUT | MUX_MODE3)	/* cam1_pclk (pru1 gpo3)*/
 			0x1F0 (PIN_OUTPUT | MUX_MODE4)	/* cam1_data2 (pru1 gpo10)*/
 			0x1F4 (PIN_OUTPUT | MUX_MODE4)	/* cam1_data3 (pru1 gpo11)*/
 			0x1F8 (PIN_OUTPUT | MUX_MODE4)	/* cam1_data4 (pru1 gpo12)*/
@@ -483,12 +482,13 @@
 
 	power_pins: power_pins {
 		pinctrl-single,pins = <
-			0x08C (PIN_OUTPUT_PULLUP | MUX_MODE7)	/* gpmc_clk.gpio2_1 (vpsu_hiv) */
-			0x090 (PIN_OUTPUT_PULLUP | MUX_MODE7)	/* gpmc_advn_ale.gpio2_2 (v12_main) */
-			0x098 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_wen.gpio2_4 (v3_3_main) */
-			0x1B0 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_hd.gpio4_0 (v12_th) */
-			0x210 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_data2.gpio4_24 (v36_if) */
-			0x214 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_data3.gpio4_25 (v36_th) */
+			0x08C (PIN_OUTPUT_PULLDOWN | MUX_MODE7)	/* gpmc_clk.gpio2_1 (vpsu_hiv) */
+			0x090 (PIN_OUTPUT_PULLDOWN | MUX_MODE7)	/* gpmc_advn_ale.gpio2_2 (v12_main) */
+			0x098 (PIN_OUTPUT_PULLDOWN | MUX_MODE7)	/* gpmc_wen.gpio2_4 (v3_3_main) */
+			0x1B0 (PIN_OUTPUT_PULLDOWN | MUX_MODE7)	/* cam0_hd.gpio4_0 (v12_th) */
+			0x1DC (PIN_OUTPUT_PULLDOWN | MUX_MODE7)	/* cam1_pclk.gpio4_11 (v12_if)*/
+			0x210 (PIN_OUTPUT_PULLDOWN | MUX_MODE7)	/* cam0_data2.gpio4_24 (v36_if) */
+			0x214 (PIN_OUTPUT_PULLDOWN | MUX_MODE7)	/* cam0_data3.gpio4_25 (v36_th) */
 		>;
 	};
 
