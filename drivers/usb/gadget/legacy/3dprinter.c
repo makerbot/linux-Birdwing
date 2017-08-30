@@ -528,7 +528,6 @@ setup_rx_reqs(struct printer_dev *dev)
 		error = usb_ep_queue(dev->out_ep, req, GFP_ATOMIC);
 
 		if (error) {
-			DBG(dev, "rx submit --> %d\n", error);
 			list_del_init(&req->list);
 			list_add(&req->list, &dev->rx_reqs);
 			break;
