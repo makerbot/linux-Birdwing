@@ -633,18 +633,13 @@
 		touchscreen-size-x = <800>;
 		touchscreen-size-y = <480>;
 	};
-	
+
 	tlc59108: tlc59116@40 {
 		#address-cells = <1>;
 		#size-cells = <0>;
 		status = "okay";
 		compatible = "ti,tlc59108";
 		reg = <0x40>;
-
-		backlight_led: bl@2 {
-			label = "backlight";
-			reg = <0x2>;
-		};
 	};
 };
 
