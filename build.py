@@ -93,6 +93,9 @@ def build(num_cores=4):
     run_make_cmd(['zImage'], num_cores)
     if os.path.exists(staging_path):
         shutil.rmtree(staging_path)
+    # We need to create an artifact with a /lib -> /usr/lib symlink
+    os.makedirs(staging_path + '/usr/lib')
+    os.symlink('usr/lib', staging_path + '/lib')
     if args.no_modules: return
     run_make_cmd(['modules'], num_cores)
     run_make_cmd(['modules_install'], 1)
