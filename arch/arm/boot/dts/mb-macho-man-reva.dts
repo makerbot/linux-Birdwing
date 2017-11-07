@@ -399,7 +399,7 @@
 			0x100 (PIN_OUTPUT | MUX_MODE5)	/* mmc0_clk (pru gpo12)*/
 			0x104 (PIN_OUTPUT | MUX_MODE5)	/* mmc0_cmd (pri gpo13)*/
 			0x1C0 (PIN_INPUT_PULLDOWN | MUX_MODE5)	/* cam0_pclk (pru gpi14) INPUT*/
-			0x1C4 (PIN_INPUT_PULLDOWN | MUX_MODE5)	/* cam0_data8 (pru gpi15) INPUT*/
+			0x1C4 (PIN_INPUT_PULLUP | MUX_MODE5)	/* cam0_data8 (pru gpi15) INPUT*/
 			0x1C8 (PIN_INPUT_PULLDOWN | MUX_MODE5)	/* cam0_data9 (pru gpo16)*/
 			0x1CC (PIN_OUTPUT | MUX_MODE3)	/* cam1_data9 (pru gpo17)*/
 			0x228 (PIN_OUTPUT | MUX_MODE4)	/* uart3_rxd (pru gpo18)*/
