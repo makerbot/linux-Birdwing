@@ -514,6 +514,14 @@
 		>;
 	};
 
+  /* filament bay */
+	uart2_pins_default: pinmux_uart2_pins_default {
+		pinctrl-single,pins = <
+			0x150 (PIN_INPUT_PULLUP | MUX_MODE1)	/* spi0_sclk.uart2_rxd */
+			0x154 (PIN_OUTPUT_PULLDOWN | MUX_MODE1)	/* spi0_d0.uart2_txd */
+		>;
+  };
+
 	unused_pins: unused_pins {
 		pinctrl-single,pins = <
 			0x004 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* gpmc_ad1 */
@@ -532,8 +540,6 @@
 			0x134 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* mii1_rxd3 */
 			0x140 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* mii1_rxd0 */
 			0x144 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* rmii1_refclk */
-			0x150 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* spi0_sclk */
-			0x154 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* spi0_d0 */
 			0x160 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* spi0_cs1 */
 			0x164 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* ecap0_in_pwm0_out */
 			0x1B4 (PIN_INPUT_PULLDOWN | MUX_MODE7)	/* cam0_vd */
@@ -782,6 +788,12 @@
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&uart0_pins_default>;
 	pinctrl-1 = <&uart0_pins_sleep>;
+};
+
+&uart2 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart2_pins_default>;
 };
 
 &wkup_m3_ipc {
