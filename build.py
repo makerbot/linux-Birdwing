@@ -6,22 +6,22 @@ import subprocess
 import argparse
 
 parser = argparse.ArgumentParser(description='Build the morepork kernel.')
-parser.add_argument('-r', '--revision', type=str, default='macho-man-reva',
-                    help='electronics revision: stardust-reva or [macho-man-reva]')
+parser.add_argument('-r', '--revision', type=str, default='macho-man',
+                    help='electronics revision: stardust-reva or [macho-man]')
 parser.add_argument('--dt-only', action='store_true',
-                    help='Only build and install the device tree')
+                    help='Only build and install the device tree(s)')
 parser.add_argument('--no-sgx', action='store_true',
                     help='Skip building the sgx kernel modules')
 parser.add_argument('--no-modules', action='store_true',
                     help='Skip building/installing all modules')
 args = parser.parse_args()
 
-if args.revision == 'macho-man-reva':
+if args.revision == 'macho-man':
     config = 'mb_macho_man_reva_defconfig'
-    dt = 'mb-macho-man-reva.dtb'
+    dts = ['mb-macho-man-reva.dtb', 'mb-macho-man-revd.dtb']
 elif args.revision == 'stardust-reva':
     config = 'mb_stardust_reva_defconfig'
-    dt = 'mb-stardust-reva.dtb'
+    dts = ['mb-stardust-reva.dtb']
 else:
     print("Unrecognized electroncis revision %s" % args.revision)
     exit(-1)
@@ -88,7 +88,8 @@ def build_sgx(num_cores=4):
 
 def build(num_cores=4):
     run_make_cmd([config], num_cores)
-    run_make_cmd([dt], num_cores)
+    for dt in dts:
+        run_make_cmd([dt], num_cores)
     if args.dt_only: return
     run_make_cmd(['zImage'], num_cores)
     if os.path.exists(staging_path):
@@ -159,9 +160,10 @@ def install(path):
     install_boot = os.path.join(install_path, 'boot')
     image_path = os.path.join(this_dir, 'obj/arch/arm/boot')
     with open(os.path.join(this_dir, "install_manifest.txt"), 'w') as f:
-        install_file(
-            os.path.join(image_path, 'dts', dt),
-            os.path.join(install_boot, dt), f)
+        for dt in dts:
+            install_file(
+                os.path.join(image_path, 'dts', dt),
+                os.path.join(install_boot, dt), f)
         if args.dt_only: return
         install_file(
             os.path.join(image_path, 'zImage'),
