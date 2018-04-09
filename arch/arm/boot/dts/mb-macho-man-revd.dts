@@ -174,7 +174,6 @@
 		regulator-max-microvolt = <3300000>;
 		vin-supply = <&v3_3_main>;
 		gpio = <&gpio2 4 GPIO_ACTIVE_LOW>; /* (D10) gpmc_wen 3V3-AA-ENn */
-		enable-active-high;
 		regulator-always-on;
 	};
 
@@ -186,7 +185,6 @@
 		regulator-max-microvolt = <3300000>;
 		vin-supply = <&v3_3_main>;
 		gpio = <&gpio2 3 GPIO_ACTIVE_LOW>; /* (E10) gpmc_oen_ren 3V3-BB-ENn */
-		enable-active-high;
 		regulator-always-on;
 	};
 
