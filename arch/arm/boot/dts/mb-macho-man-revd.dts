@@ -840,21 +840,21 @@
 	status = "okay";
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&uart1_pins_default>;
-	pinctrl-0 = <&uart1_pins_sleep>;
+	pinctrl-1 = <&uart1_pins_sleep>;
 };
 
 &uart2 {
 	status = "okay";
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&uart2_pins_default>;
-	pinctrl-0 = <&uart2_pins_sleep>;
+	pinctrl-1 = <&uart2_pins_sleep>;
 };
 
 &uart3 {
 	status = "okay";
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&uart3_pins_default>;
-	pinctrl-0 = <&uart3_pins_sleep>;
+	pinctrl-1 = <&uart3_pins_sleep>;
 };
 
 &wkup_m3_ipc {
