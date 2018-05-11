@@ -233,6 +233,7 @@ static struct platform_driver mb_th_consumer_driver = {
 	.remove		= mb_th_consumer_remove,
 	.driver		= {
 		.name		= "mb-th-consumer",
+		.of_match_table = of_match_ptr(mb_th_consumer_of_match),
 	},
 };
 

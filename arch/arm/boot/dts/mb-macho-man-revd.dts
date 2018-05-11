@@ -174,8 +174,15 @@
 		regulator-max-microvolt = <3300000>;
 		vin-supply = <&v3_3_main>;
 		gpio = <&gpio2 4 GPIO_ACTIVE_LOW>; /* (D10) gpmc_wen 3V3-AA-ENn */
-		regulator-always-on;
+		enable-active-low;
 	};
+
+  v3_3_aa_consumer: mb-v3_3_aa-consumer {
+    compatible = "mb,reg-th-consumer";
+		regulator-name = "mb-v3_3_aa-regulator";
+		regulator-boot-on;
+		regulator-supplies = "v3_3_aa";
+  };
 
 	/* The 3.3V supply to filament bay bb */
 	v3_3_bb: fixedregulator-v3_3_bb {
@@ -185,8 +192,15 @@
 		regulator-max-microvolt = <3300000>;
 		vin-supply = <&v3_3_main>;
 		gpio = <&gpio2 3 GPIO_ACTIVE_LOW>; /* (E10) gpmc_oen_ren 3V3-BB-ENn */
-		regulator-always-on;
+		enable-active-low;
 	};
+
+  v3_3_bb_consumer: mb-v3_3_bb-consumer {
+    compatible = "mb,reg-th-consumer";
+		regulator-name = "mb-v3_3_bb-regulator";
+		regulator-boot-on;
+		regulator-supplies = "v3_3_bb";
+  };
 
 	/* Not actually a power supply but convenient to treat as one */
 	vmmcwl: fixedregulator-mmcwl {
