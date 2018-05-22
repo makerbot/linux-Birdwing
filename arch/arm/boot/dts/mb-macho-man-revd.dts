@@ -579,7 +579,7 @@
 			0x1B4 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (AD18) cam0_vd.gpio4_1 12V-CH-EN */
 			0x23C (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (F24) gpio5_9.gpio5_9 12V-TH-EN */
 			0x248 (PIN_OUTPUT_PULLDOWN | MUX_MODE7)	/* (E25) gpio5_12.gpio5_12 3V3-IF-EN */
-			0x26C (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (T23) spi2_cs0.gpio3_25 PWR-EN */
+			0x26C (PIN_OUTPUT_PULLUP | MUX_MODE7) /* (T23) spi2_cs0.gpio3_25 PWR-EN */
 		>;
 	};
 
