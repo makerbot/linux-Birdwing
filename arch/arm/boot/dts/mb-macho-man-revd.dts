@@ -177,12 +177,12 @@
 		enable-active-low;
 	};
 
-  v3_3_aa_consumer: mb-v3_3_aa-consumer {
-    compatible = "mb,reg-th-consumer";
+	v3_3_aa_consumer: mb-v3_3_aa-consumer {
+		compatible = "mb,reg-th-consumer";
 		regulator-name = "mb-v3_3_aa-regulator";
 		regulator-boot-on;
 		regulator-supplies = "v3_3_aa";
-  };
+	};
 
 	/* The 3.3V supply to filament bay bb */
 	v3_3_bb: fixedregulator-v3_3_bb {
@@ -195,12 +195,12 @@
 		enable-active-low;
 	};
 
-  v3_3_bb_consumer: mb-v3_3_bb-consumer {
-    compatible = "mb,reg-th-consumer";
+	v3_3_bb_consumer: mb-v3_3_bb-consumer {
+		compatible = "mb,reg-th-consumer";
 		regulator-name = "mb-v3_3_bb-regulator";
 		regulator-boot-on;
 		regulator-supplies = "v3_3_bb";
-  };
+	};
 
 	/* Not actually a power supply but convenient to treat as one */
 	vmmcwl: fixedregulator-mmcwl {
@@ -208,10 +208,10 @@
 		regulator-name = "vmmcwl";
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <1800000>;
-		/* WLAN_EN GPIO for this board - Bank0, pin8 */
-		gpio = <&gpio0 16 GPIO_ACTIVE_HIGH>; /* (C16) mii1_txd3 WIFI-EN_1V8 */
-		enable-active-high;
 		startup-delay-us = <70000>;
+		/* (D14) mii1_tx_clk.gpio0_8 WIFI-EN_1V8 (gpio3_9 0x7, gpio0_8 0x9) */
+		gpio = <&gpio0 8 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
 	};
 
 	/* Power button */
@@ -290,44 +290,44 @@
 	};
 
 	/* WIFI-MMC */
-	mmc2_pins_default: pinmux_mmc2_pins_default {
+	mmc3_pins_default: pinmux_mmc3_pins_default {
 		pinctrl-single,pins = <
-			0x13C (PIN_INPUT | MUX_MODE6)        /* (B16) mii1_rxd1.mmc2_clk WL_SDIO_CLK */
-			0x114 (PIN_INPUT | MUX_MODE6)        /* (A13) mii1_txen.mmc2_cmd WL_SDIO_CMD */
-			0x118 (PIN_INPUT_PULLUP | MUX_MODE5) /* (A15) mii1_rxdv.mmc2_dat0 WL_SDIO_D0 */
-			0x11C (PIN_INPUT_PULLUP | MUX_MODE5) /* (C16) mii1_txd3.mmc2_dat1 WL_SDIO_D1 */
-			0x120 (PIN_INPUT_PULLUP | MUX_MODE5) /* (C13) mii1_txd2.mmc2_dat2 WL_SDIO_D2 */
-			0x108 (PIN_INPUT_PULLUP | MUX_MODE5) /* (D16) mii1_col.mmc2_dat3 WL_SDIO_D3 */
+			0x13C (PIN_INPUT | MUX_MODE6) /* (B16) mii1_rxd1.mmc2_clk WL_SDIO_CLK */
+			0x114 (PIN_INPUT | MUX_MODE6) /* (A13) mii1_txen.mmc2_cmd WL_SDIO_CMD */
+			0x118 (PIN_INPUT_PULLUP | MUX_MODE5 | INPUT_EN) /* (A15) mii1_rxdv.mmc2_dat0 WL_SDIO_D0 */
+			0x11C (PIN_INPUT_PULLUP | MUX_MODE5 | INPUT_EN) /* (C16) mii1_txd3.mmc2_dat1 WL_SDIO_D1 */
+			0x120 (PIN_INPUT_PULLUP | MUX_MODE5 | INPUT_EN) /* (C13) mii1_txd2.mmc2_dat2 WL_SDIO_D2 */
+			0x108 (PIN_INPUT_PULLUP | MUX_MODE5 | INPUT_EN) /* (D16) mii1_col.mmc2_dat3 WL_SDIO_D3 */
 		>;
 	};
 
 	/* WIFI-MMC sleep */
-	mmc2_pins_sleep: pinmux_mmc2_pins_sleep {
+	mmc3_pins_sleep: pinmux_mmc3_pins_sleep {
 		pinctrl-single,pins = <
-			0x13C (PIN_INPUT_PULLUP | MUX_MODE7) /* (B16) mii1_rxd1.gpio2_20 */
-			0x114 (PIN_INPUT_PULLUP | MUX_MODE7) /* (A13) mii1_tx_en.gpio3_3 */
-			0x118 (PIN_INPUT_PULLUP | MUX_MODE7) /* (A15) mii1_rx_dv */
-			0x11C (PIN_INPUT_PULLUP | MUX_MODE7) /* (C16) mii1_txd3.gpio0_16 */
-			0x120 (PIN_INPUT_PULLUP | MUX_MODE7) /* (C13) mii1_txd2.gpio0_17 */
-			0x108 (PIN_INPUT_PULLUP | MUX_MODE7) /* (D16) mii1_col */
+			0x13C (PIN_INPUT | MUX_MODE6 | INPUT_EN) /* (B16) mii1_rxd1.gpio2_20 WL_SDIO_CLK */
+			0x114 (PIN_INPUT | MUX_MODE6 | INPUT_EN) /* (A13) mii1_txen.gpio3_3 WL_SDIO_CMD */
+			0x118 (PIN_INPUT_PULLUP | MUX_MODE5 | INPUT_EN) /* (A15) mii1_rxdv.gpio3_4 WL_SDIO_D0 */
+			0x11C (PIN_INPUT_PULLUP | MUX_MODE5 | INPUT_EN) /* (C16) mii1_txd3.gpio0_16 WL_SDIO_D1 */
+			0x120 (PIN_INPUT_PULLUP | MUX_MODE5 | INPUT_EN) /* (C13) mii1_txd2.gpio0_17 WL_SDIO_D2 */
+			0x108 (PIN_INPUT_PULLUP | MUX_MODE5 | INPUT_EN) /* (D16) mii1_col.gpio3_0 WL_SDIO_D3 */
 		>;
 	};
 
 	/* WIFI-EN, WIFI-IRQ, BT-EN */
 	wlan_pins_default: pinmux_wlan_pins_default {
 		pinctrl-single,pins = <
-			0x138 (PIN_INPUT | WAKEUP_ENABLE | MUX_MODE7) /* (E16) mii1_rxd2.gpio2_19 WIFI-IRQ_1V8 */
-			0x12C (PIN_INPUT_PULLUP | MUX_MODE7) /* (D14) mii1_tx_clk.gpio3_9 WIFI-EN_1V8 */
-			0x128 (PIN_INPUT_PULLUP | MUX_MODE7) /* (B15) mii1_txd0.gpio0_28 BT-EN_1V8 */
+			0x128 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (B15) mii1_txd0.gpio0_28 BT-EN_1V8 */
+			0x12C (PIN_OUTPUT_PULLDOWN | MUX_MODE9) /* (D14) mii1_tx_clk.gpio0_8 WIFI-EN_1V8 (gpio3_9 0x7, gpio0_8 0x9)*/
+			0x138 (PIN_INPUT | WAKEUP_ENABLE | MUX_MODE9) /* (E16) mii1_rxd2.gpio0_11 WIFI-IRQ_1V8 (gpio2_19 0x7, gpio0_11 0x9)*/
 		>;
 	};
 
 	/* WIFI-EN, WIFI-IRQ, BT-EN sleep */
 	wlan_pins_sleep: pinmux_wlan_pins_sleep {
 		pinctrl-single,pins = <
-			0x138 (PIN_INPUT | WAKEUP_ENABLE | MUX_MODE7) /* (E16) mii1_rxd2.gpio2_19 */
-			0x12C (PIN_INPUT_PULLUP | MUX_MODE7) /* (D14) mii1_tx_clk.gpio3_9 */
-			0x128 (PIN_INPUT_PULLUP | MUX_MODE7) /* (B15) mii1_txd0.gpio0_28 */
+			0x128 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (B15) mii1_txd0.gpio0_28 BT-EN_1V8 */
+			0x12C (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (D14) mii1_tx_clk.gpio3_9 WIFI-EN_1V8 */
+			0x138 (PIN_INPUT | WAKEUP_ENABLE | MUX_MODE7) /* (E16) mii1_rxd2.gpio2_19 WIFI-IRQ_1V8 */
 		>;
 	};
 
@@ -425,9 +425,9 @@
 	uart1_pins_sleep: pinmux_uart1_pins_sleep {
 		pinctrl-single,pins = <
 			0x178 (PIN_INPUT_PULLUP | MUX_MODE7) /* (K22) uart1_ctsn.gpio0_12 */
-			0x17C (PIN_INPUT_PULLUP | MUX_MODE7) /* (L22) uart1_rtsn */
-			0x180 (PIN_INPUT_PULLUP | MUX_MODE7) /* (K21) uart1_rxd */
-			0x184 (PIN_INPUT_PULLUP | MUX_MODE7) /* (L21) uart1_txd */
+			0x17C (PIN_INPUT_PULLUP | MUX_MODE7) /* (L22) uart1_rtsn.gpio0_13 */
+			0x180 (PIN_INPUT_PULLUP | MUX_MODE7) /* (K21) uart1_rxd.gpio0_14 */
+			0x184 (PIN_INPUT_PULLUP | MUX_MODE7) /* (L21) uart1_txd.gpio0_15 */
 		>;
 	};
 
@@ -578,7 +578,7 @@
 			0x1B0 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (AE17) cam0_hd.gpio4_0 12V-IF-EN */
 			0x1B4 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (AD18) cam0_vd.gpio4_1 12V-CH-EN */
 			0x23C (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (F24) gpio5_9.gpio5_9 12V-TH-EN */
-			0x248 (PIN_OUTPUT_PULLDOWN | MUX_MODE7)	/* (E25) gpio5_12.gpio5_12 3V3-IF-EN */
+			0x248 (PIN_OUTPUT_PULLDOWN | MUX_MODE7)  /* (E25) gpio5_12.gpio5_12 3V3-IF-EN */
 			0x26C (PIN_OUTPUT_PULLUP | MUX_MODE7) /* (T23) spi2_cs0.gpio3_25 PWR-EN */
 		>;
 	};
@@ -760,12 +760,9 @@
 };
 
 /* mmc channels are named 1/2/3 here instead of 0/1/2 :( */
-&mmc3 {
+&mmc2 {
 	status = "okay";
 	ti,non-removable;
-	dmas = <&edma_xbar 30 0 1>,
-		<&edma_xbar 31 0 2>;
-	dma-names = "tx", "rx";
 	vmmc-supply = <&v3_3_sb>;
 	bus-width = <8>;
 	pinctrl-names = "default", "sleep";
@@ -773,16 +770,20 @@
 	pinctrl-1 = <&emmc_pins_sleep>;
 };
 
-&mmc2 {
+&mmc3 {
 	status = "okay";
 	vmmc-supply = <&vmmcwl>;
 	bus-width = <4>;
 	pinctrl-names = "default", "sleep";
-	pinctrl-0 = <&mmc2_pins_default &wlan_pins_default>;
-	pinctrl-1 = <&mmc2_pins_sleep &wlan_pins_sleep>;
-	ti,non-removable;
-	cap-power-off-card;
-	keep-power-in-suspend;
+	pinctrl-0 = <&mmc3_pins_default &wlan_pins_default>;
+	pinctrl-1 = <&mmc3_pins_sleep &wlan_pins_sleep>;
+	ti,non-removable;  /* non-removable slot; assume always present */
+	/* ti,needs-special-hs-handling; HSMMC IP needs special setting for handling High Speed */
+	cap-power-off-card;  /* powering off the card is safe */
+	keep-power-in-suspend;  /* preserve card power during a suspend/resume cycle */
+	/* These DMAs are normally assigned within the dtsi file (am4372.dtsi), but are missing for mmc3) */
+	dmas = <&edma_xbar 30 0 1>, <&edma_xbar 31 0 2>;
+	dma-names = "tx", "rx";
 	#address-cells = <1>;
 	#size-cells = <0>;
 	wlcore: wlcore@0 {
