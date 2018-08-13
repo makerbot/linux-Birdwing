@@ -913,6 +913,16 @@
 	};
 };
 
+&magadc {
+	status = "okay";
+  mag {
+    ti,tracks = <0>;
+  };
+	adc {
+		ti,adc-channels = <0  2  4  6 >;
+	};
+};
+
 /* TODO: This clearly belongs in dss and not in the root node.
  *     But the dss is poorly written so this cannot go there.
  */
