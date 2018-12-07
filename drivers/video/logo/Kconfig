@@ -88,4 +88,7 @@ config LOGO_SOMBRERO_CLUT224
 config LOGO_MAKERBOT_CLUT224
 	bool "Boring logo"
 
+config LOGO_METHOD_CLUT224
+	bool "Method splash screen"
+
 endif # LOGO

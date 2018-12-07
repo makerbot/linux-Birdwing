@@ -117,6 +117,9 @@ const struct linux_logo * __init_refok fb_find_logo(int depth)
 #ifdef CONFIG_LOGO_MAKERBOT_CLUT224
 		logo = &logo_makerbot_clut224;
 #endif
+#ifdef CONFIG_LOGO_METHOD_CLUT224
+		logo = &logo_method_clut224;
+#endif
 	}
 	return logo;
 }
