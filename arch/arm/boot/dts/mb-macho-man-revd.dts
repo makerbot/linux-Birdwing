@@ -200,7 +200,7 @@
 		compatible = "mb,reg-th-consumer";
 		regulator-name = "mb-v36-regulator";
 		regulator-boot-on;
-		regulator-supplies = "v36_th"
+		regulator-supplies = "v36_th";
 	};
 
 	/* The 3.3V supply to filament bay aa */
