@@ -15,6 +15,8 @@
 #include <dt-bindings/pwm/pwm.h>
 #include <dt-bindings/gpio/gpio.h>
 
+// For Pin Mux Modes, refer to the TI AM437x Processors Datasheet (am4376.pdf)
+
 / {
 	model = "MakerBot Macho Man RevD";
 	compatible = "makerbot,macho-man-revd","ti,am4372","ti,am43", "ti,cpsw";
@@ -89,6 +91,13 @@
 		regulator-always-on;
 	};
 
+	v3_3_ch_consumer: mb-v3_3_ch-consumer {
+		compatible = "mb,reg-ch-consumer";
+		regulator-name = "mb-ch-regulator";
+		regulator-boot-on;
+		regulator-supplies = "v3_3_ch";
+	};
+
 	/* The chamber heater 12V supply */
 	v12_ch: fixedregulator-v12_ch {
 		compatible = "regulator-fixed";
@@ -99,6 +108,13 @@
 		gpio = <&gpio4 1 GPIO_ACTIVE_HIGH>; /* (AD18) cam0_vd 12V-CH-EN */
 		enable-active-high;
 		regulator-always-on;
+	};
+
+	v12_ch_consumer: mb-v12_ch-consumer {
+		compatible = "mb,reg-ch-consumer";
+		regulator-name = "mb-ch-regulator";
+		regulator-boot-on;
+		regulator-supplies = "v12_ch";
 	};
 
 	/* The 36V supply to The Rock */
@@ -125,7 +141,7 @@
 		regulator-always-on;
 	};
 
-	/* The 3.3V supply to The Rock */
+	/* The 3.3V supply to The Rock, also known as the Top Bunk Enable */
 	v3_3_if: fixedregulator-v3_3_if {
 		compatible = "regulator-fixed";
 		regulator-name = "v3_3_if";
@@ -135,6 +151,13 @@
 		gpio = <&gpio5 12 GPIO_ACTIVE_HIGH>; /* (E25) gpio5_12 3V3-IF-EN */
 		enable-active-high;
 		regulator-always-on;
+	};
+
+	v3_3_if_consumer: mb-v3_3_if-consumer {
+		compatible = "mb,reg-if-consumer";
+		regulator-name = "mb-v3_3_if-regulator";
+		regulator-boot-on;
+		regulator-supplies = "v3_3_if";
 	};
 
 	/* The 36V supply to Mick Foley */
@@ -164,6 +187,20 @@
 		regulator-name = "mb-th-regulator";
 		regulator-boot-on;
 		regulator-supplies = "v12_th", "v36_th";
+	};
+
+	v12_consumer: mb-v12-consumer {
+		compatible = "mb,reg-th-consumer";
+		regulator-name = "mb-v12-regulator";
+		regulator-boot-on;
+		regulator-supplies = "v12_th";
+	};
+
+	v36_consumer: mb-v36-consumer {
+		compatible = "mb,reg-th-consumer";
+		regulator-name = "mb-v36-regulator";
+		regulator-boot-on;
+		regulator-supplies = "v36_th"
 	};
 
 	/* The 3.3V supply to filament bay aa */
@@ -495,7 +532,7 @@
 			0x1C8 (PIN_INPUT_PULLUP | MUX_MODE5)   /* (AA19) cam0_data9.pr0_pru0_gpi16 ENDSTOP-X */
 			0x1CC (PIN_INPUT_PULLUP | MUX_MODE5) /* (AC24) cam1_data9.pr0_pru0_gpi17 ENDSTOP-Y */
 			0x228 (PIN_INPUT_PULLUP | MUX_MODE5) /* (H25) uart3_rxd.pr0_pru0_gpi18 ENDSTOP-Z */
-			0x22C (PIN_INPUT_PULLUP | MUX_MODE5) /* (H24) uart3_txd.pr0_pru0_gpi19 LID-OR-DOOR */
+			0x22C (PIN_INPUT_PULLUP | MUX_MODE7) /* (H24) uart3_txd.pr0_pru0_gpi19 LID-OR-DOOR */
 		>;
 	};
 
