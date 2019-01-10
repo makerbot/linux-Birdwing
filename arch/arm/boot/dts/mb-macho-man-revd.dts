@@ -93,7 +93,7 @@
 
 	v3_3_ch_consumer: mb-v3_3_ch-consumer {
 		compatible = "mb,reg-ch-consumer";
-		regulator-name = "mb-ch-regulator";
+		regulator-name = "mb-v3_3_ch-regulator";
 		regulator-boot-on;
 		regulator-supplies = "v3_3_ch";
 	};
@@ -112,7 +112,7 @@
 
 	v12_ch_consumer: mb-v12_ch-consumer {
 		compatible = "mb,reg-ch-consumer";
-		regulator-name = "mb-ch-regulator";
+		regulator-name = "mb-v12_ch-regulator";
 		regulator-boot-on;
 		regulator-supplies = "v12_ch";
 	};
