@@ -186,19 +186,26 @@ void ieee80211_scan_rx(struct ieee80211_local *local, struct sk_buff *skb)
 	if (ieee80211_is_probe_resp(mgmt->frame_control)) {
 		struct cfg80211_scan_request *scan_req;
 		struct cfg80211_sched_scan_request *sched_scan_req;
+		u32 scan_req_flags = 0, sched_scan_req_flags = 0;
 
 		scan_req = rcu_dereference(local->scan_req);
 		sched_scan_req = rcu_dereference(local->sched_scan_req);
+
+		if (scan_req)
+			scan_req_flags = scan_req->flags;
+
+		if (sched_scan_req)
+			sched_scan_req_flags = sched_scan_req->flags;
 
 		/* ignore ProbeResp to foreign address unless scanning
 		 * with randomised address
 		 */
 		if (!(sdata1 &&
 		      (ether_addr_equal(mgmt->da, sdata1->vif.addr) ||
-		       scan_req->flags & NL80211_SCAN_FLAG_RANDOM_ADDR)) &&
+		       scan_req_flags & NL80211_SCAN_FLAG_RANDOM_ADDR)) &&
 		    !(sdata2 &&
 		      (ether_addr_equal(mgmt->da, sdata2->vif.addr) ||
-		       sched_scan_req->flags & NL80211_SCAN_FLAG_RANDOM_ADDR)))
+		       sched_scan_req_flags & NL80211_SCAN_FLAG_RANDOM_ADDR)))
 			return;
 
 		elements = mgmt->u.probe_resp.variable;
