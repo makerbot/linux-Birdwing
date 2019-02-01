@@ -88,11 +88,10 @@
 		vin-supply = <&v3_3_main>;
 		gpio = <&gpio1 4 GPIO_ACTIVE_HIGH>; /* (B7) gpmc_ad4 3V3-CH-EN */
 		enable-active-high;
-		regulator-always-on;
 	};
 
 	v3_3_ch_consumer: mb-v3_3_ch-consumer {
-		compatible = "mb,reg-ch-consumer";
+		compatible = "mb,reg-th-consumer";
 		regulator-name = "mb-v3_3_ch-regulator";
 		regulator-boot-on;
 		regulator-supplies = "v3_3_ch";
@@ -107,11 +106,10 @@
 		vin-supply = <&v12_main>;
 		gpio = <&gpio4 1 GPIO_ACTIVE_HIGH>; /* (AD18) cam0_vd 12V-CH-EN */
 		enable-active-high;
-		regulator-always-on;
 	};
 
 	v12_ch_consumer: mb-v12_ch-consumer {
-		compatible = "mb,reg-ch-consumer";
+		compatible = "mb,reg-th-consumer";
 		regulator-name = "mb-v12_ch-regulator";
 		regulator-boot-on;
 		regulator-supplies = "v12_ch";
@@ -126,7 +124,6 @@
 		vin-supply = <&v36_main>;
 		gpio = <&gpio2 5 GPIO_ACTIVE_HIGH>; /* (C10) gpmc_be0n_cle 36V-IF-EN */
 		enable-active-high;
-		regulator-always-on;
 	};
 
 	/* The 12V supply to The Rock */
@@ -138,7 +135,6 @@
 		vin-supply = <&v12_main>;
 		gpio = <&gpio4 0 GPIO_ACTIVE_HIGH>; /* (AE17) cam0_hd 12V-IF-EN */
 		enable-active-high;
-		regulator-always-on;
 	};
 
 	/* The 3.3V supply to The Rock, also known as the Top Bunk Enable */
@@ -150,11 +146,10 @@
 		vin-supply = <&v3_3_main>;
 		gpio = <&gpio5 12 GPIO_ACTIVE_HIGH>; /* (E25) gpio5_12 3V3-IF-EN */
 		enable-active-high;
-		regulator-always-on;
 	};
 
 	v3_3_if_consumer: mb-v3_3_if-consumer {
-		compatible = "mb,reg-if-consumer";
+		compatible = "mb,reg-th-consumer";
 		regulator-name = "mb-v3_3_if-regulator";
 		regulator-boot-on;
 		regulator-supplies = "v3_3_if";
@@ -189,18 +184,18 @@
 		regulator-supplies = "v12_th", "v36_th";
 	};
 
-	v12_consumer: mb-v12-consumer {
+	v12_if_consumer: mb-v12_if-consumer {
 		compatible = "mb,reg-th-consumer";
-		regulator-name = "mb-v12-regulator";
+		regulator-name = "mb-v12_if-regulator";
 		regulator-boot-on;
-		regulator-supplies = "v12_th";
+		regulator-supplies = "v12_if";
 	};
 
-	v36_consumer: mb-v36-consumer {
+	v36_if_consumer: mb-v36_if-consumer {
 		compatible = "mb,reg-th-consumer";
-		regulator-name = "mb-v36-regulator";
+		regulator-name = "mb-v36_if-regulator";
 		regulator-boot-on;
-		regulator-supplies = "v36_th";
+		regulator-supplies = "v36_if";
 	};
 
 	/* The 3.3V supply to filament bay aa */
