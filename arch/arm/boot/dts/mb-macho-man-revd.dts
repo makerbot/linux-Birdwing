@@ -257,7 +257,7 @@
 			linux,wakeup;
 			linux,code = <116>;
 			label = "POWER";
-				gpios = <&gpio0 24 GPIO_ACTIVE_LOW>; /* (H20) clkreq BUTTON-PWRn */
+			gpios = <&gpio0 24 GPIO_ACTIVE_HIGH>; /* (H20) clkreq BUTTON-PWRn */
 		};
 	};
 };
@@ -662,6 +662,7 @@
 			0x2AC (PIN_INPUT_PULLDOWN | MUX_MODE0) /* (AE5) RTC_XTALIN.OSC1_IN */
 			0x2B0 (PIN_OUTPUT_PULLDOWN | MUX_MODE0) /* (AE4) RTC_XTALOUT.OSC1_OUT */
 			0x2BC (PIN_OUTPUT_PULLDOWN | MUX_MODE0) /* (AD6) RTC_PMIC_EN.RTC_PMIC_EN */
+			0x278 (PIN_INPUT_PULLDOWN | WAKEUP_ENABLE | MUX_MODE7)	/* xdma_evt_intr1 */
 			/* 0x00C PIN_INPUT (A6) gpmc_ad3 MUX-STAT revc-new - (pulled low if on standby power, pulled high for 36V power) */
 			/* 0x17C (L22) uart1_rtsn RTC-INTn revc-new - (interrupt output from the RTC) */
 			/* 0x220 (AE20) cam0_data6 AUX-PWM revc-new */
