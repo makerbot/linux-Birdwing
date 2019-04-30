@@ -14,6 +14,8 @@ parser.add_argument('--no-sgx', action='store_true',
                     help='Skip building the sgx kernel modules')
 parser.add_argument('--no-modules', action='store_true',
                     help='Skip building/installing all modules')
+parser.add_argument('--menuconfig', '-m', action='store_true',
+                    help='Run menuconfig instead of building')
 args = parser.parse_args()
 
 if args.revision == 'macho-man':
@@ -64,6 +66,14 @@ def run_make_cmd(action, num_cores, cwd=this_dir):
         'INSTALL_MOD_PATH=' + staging_path,
     ]
     run_cmd(make_prefix + action, cwd=cwd)
+
+def menuconfig():
+    run_make_cmd([config], 1)
+    run_make_cmd(['menuconfig'], 1)
+    run_make_cmd(['savedefconfig'], 1)
+    defconfig_src = os.path.join(this_dir, 'obj/defconfig')
+    defconfig_tgt = os.path.join(this_dir, 'arch/arm/configs', config)
+    shutil.copy2(defconfig_src, defconfig_tgt)
 
 def build_sgx(num_cores=4):
     sgx_path = os.path.join(install_dir, 'sgx')
@@ -190,5 +200,7 @@ if 'TR_BUILD' in os.environ:
     if TR_ARG_install:
         install(install_dir)
 
+elif args.menuconfig:
+    menuconfig()
 else:
     build()
