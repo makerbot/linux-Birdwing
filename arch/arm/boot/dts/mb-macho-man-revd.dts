@@ -74,7 +74,19 @@
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 		vin-supply = <&v36_main>;
-		gpio = <&gpio2 1 GPIO_ACTIVE_HIGH>; /* (A16) rmii1_ref_clk BUCK-3V3-EN */
+		gpio = <&gpio2 1 GPIO_ACTIVE_HIGH>; /* (A12) rmii1_ref_clk BUCK-3V3-EN */
+		enable-active-high;
+		regulator-always-on;
+	};
+
+  /* The main 5V supply */
+	v5_main: fixedregulator-v5_main {
+		compatible = "regulator-fixed";
+		regulator-name = "v5_main";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		vin-supply = <&v36_main>;
+		gpio = <&gpio4 10 GPIO_ACTIVE_HIGH>; /* (AC23) cam1_vd BUCK-5V-EN */
 		enable-active-high;
 		regulator-always-on;
 	};
@@ -609,6 +621,7 @@
 			0x09C (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (C10) gpmc_be0n_cle.gpio2_5 36V-IF-EN */
 			0x1B0 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (AE17) cam0_hd.gpio4_0 12V-IF-EN */
 			0x1B4 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (AD18) cam0_vd.gpio4_1 12V-CH-EN */
+			0x1D8 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (AC23) cam1_vd.gpio4_10 BUCK-5V-EN*/
 			0x23C (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (F24) gpio5_9.gpio5_9 12V-TH-EN */
 			0x248 (PIN_OUTPUT_PULLDOWN | MUX_MODE7)  /* (E25) gpio5_12.gpio5_12 3V3-IF-EN */
 			0x26C (PIN_OUTPUT_PULLUP | MUX_MODE7) /* (T23) spi2_cs0.gpio3_25 PWR-EN */
