@@ -20,12 +20,12 @@ args = parser.parse_args()
 
 if args.revision == 'macho-man':
     config = 'mb_macho_man_reva_defconfig'
-    dts = ['mb-macho-man-reva.dtb', 'mb-macho-man-revd.dtb']
+    dts = ['mb-macho-man-revd.dtb', 'mb-method-rev1.dtb']
 elif args.revision == 'stardust-reva':
     config = 'mb_stardust_reva_defconfig'
     dts = ['mb-stardust-reva.dtb']
 else:
-    print("Unrecognized electroncis revision %s" % args.revision)
+    print("Unrecognized electronics revision %s" % args.revision)
     exit(-1)
 
 this_dir = os.path.realpath(os.path.dirname(__file__))

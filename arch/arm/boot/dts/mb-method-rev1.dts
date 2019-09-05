@@ -1,0 +1,34 @@
+/*
+ * Copyright (C) 2013 Texas Instruments Incorporated - http://www.ti.com/
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+/* AM437x GP EVM */
+
+/dts-v1/;
+
+#include "mb-method-common.dtsi"
+
+// For Pin Mux Modes, refer to the TI AM437x Processors Datasheet (am4376.pdf)
+
+/ {
+	model = "MakerBot Method Rev1";
+	compatible = "makerbot,method-rev1", "ti,am4372", "ti,am43", "ti,cpsw";
+
+	aliases {};
+
+  /* The main 5V supply */
+	v5_main: fixedregulator-v5_main {
+		compatible = "regulator-fixed";
+		regulator-name = "v5_main";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		vin-supply = <&v36_main>;
+		gpio = <&gpio4 10 GPIO_ACTIVE_HIGH>; /* (AC23) cam1_vd BUCK-5V-EN */
+		enable-active-high;
+		regulator-always-on;
+	};
+};
