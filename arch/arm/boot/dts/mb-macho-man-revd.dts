@@ -17,6 +17,8 @@
 / {
 	model = "MakerBot Macho Man RevD";
 	compatible = "makerbot,macho-man-revd", "ti,am4372", "ti,am43", "ti,cpsw";
+};
 
-	aliases {};
+&rtc_sys {
+	quartz-load-femtofarads = <12500>;
 };

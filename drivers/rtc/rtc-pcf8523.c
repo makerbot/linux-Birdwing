@@ -82,8 +82,21 @@ static int pcf8523_write(struct i2c_client *client, u8 reg, u8 value)
 	return 0;
 }
 
-static int pcf8523_select_capacitance(struct i2c_client *client, bool high)
+static int pcf8523_voltage_low(struct i2c_client *client)
 {
+	u8 value;
+	int err;
+
+	err = pcf8523_read(client, REG_CONTROL3, &value);
+	if (err < 0)
+		return err;
+
+	return !!(value & REG_CONTROL3_BLF);
+}
+
+static int pcf8523_load_capacitance(struct i2c_client *client)
+{
+	u32 load;
 	u8 value;
 	int err;
 
@@ -91,14 +104,26 @@ static int pcf8523_select_capacitance(struct i2c_client *client, bool high)
 	if (err < 0)
 		return err;
 
-	if (!high)
-		value &= ~REG_CONTROL1_CAP_SEL;
-	else
+	load = 12500;
+	of_property_read_u32(client->dev.of_node, "quartz-load-femtofarads",
+			     &load);
+
+	switch (load) {
+	default:
+		dev_warn(&client->dev, "Unknown quartz-load-femtofarads value: %d. Assuming 12500",
+			 load);
+		/* fall through */
+	case 12500:
 		value |= REG_CONTROL1_CAP_SEL;
+		dev_info(&client->dev, "PCF8523 RTC capacitance set to 12500 femtofarads");
+		break;
+	case 7000:
+		value &= ~REG_CONTROL1_CAP_SEL;
+		dev_info(&client->dev, "PCF8523 RTC capacitance set to 7000 femtofarads");
+		break;
+	}
 
 	err = pcf8523_write(client, REG_CONTROL1, value);
-	if (err < 0)
-		return err;
 
 	return err;
 }
@@ -164,6 +189,14 @@ static int pcf8523_rtc_read_time(struct device *dev, struct rtc_time *tm)
 	struct i2c_msg msgs[2];
 	int err;
 
+	err = pcf8523_voltage_low(client);
+	if (err < 0) {
+		return err;
+	} else if (err > 0) {
+		dev_err(dev, "low voltage detected, time is unreliable\n");
+		return -EINVAL;
+	}
+
 	msgs[0].addr = client->addr;
 	msgs[0].flags = 0;
 	msgs[0].len = 1;
@@ -178,28 +211,8 @@ static int pcf8523_rtc_read_time(struct device *dev, struct rtc_time *tm)
 	if (err < 0)
 		return err;
 
-	if (regs[0] & REG_SECONDS_OS) {
-		/*
-		 * If the oscillator was stopped, try to clear the flag. Upon
-		 * power-up the flag is always set, but if we cannot clear it
-		 * the oscillator isn't running properly for some reason. The
-		 * sensible thing therefore is to return an error, signalling
-		 * that the clock cannot be assumed to be correct.
-		 */
-
-		regs[0] &= ~REG_SECONDS_OS;
-
-		err = pcf8523_write(client, REG_SECONDS, regs[0]);
-		if (err < 0)
-			return err;
-
-		err = pcf8523_read(client, REG_SECONDS, &regs[0]);
-		if (err < 0)
-			return err;
-
-		if (regs[0] & REG_SECONDS_OS)
-			return -EAGAIN;
-	}
+	if (regs[0] & REG_SECONDS_OS)
+		return -EINVAL;
 
 	tm->tm_sec = bcd2bin(regs[0] & 0x7f);
 	tm->tm_min = bcd2bin(regs[1] & 0x7f);
@@ -209,7 +222,7 @@ static int pcf8523_rtc_read_time(struct device *dev, struct rtc_time *tm)
 	tm->tm_mon = bcd2bin(regs[5] & 0x1f) - 1;
 	tm->tm_year = bcd2bin(regs[6]) + 100;
 
-	return rtc_valid_tm(tm);
+	return 0;
 }
 
 static int pcf8523_rtc_set_time(struct device *dev, struct rtc_time *tm)
@@ -219,11 +232,23 @@ static int pcf8523_rtc_set_time(struct device *dev, struct rtc_time *tm)
 	u8 regs[8];
 	int err;
 
+	/*
+	 * The hardware can only store values between 0 and 99 in it's YEAR
+	 * register (with 99 overflowing to 0 on increment).
+	 * After 2100-02-28 we could start interpreting the year to be in the
+	 * interval [2100, 2199], but there is no path to switch in a smooth way
+	 * because the chip handles YEAR=0x00 (and the out-of-spec
+	 * YEAR=0xa0) as a leap year, but 2100 isn't.
+	 */
+	if (tm->tm_year < 100 || tm->tm_year >= 200)
+		return -EINVAL;
+
 	err = pcf8523_stop_rtc(client);
 	if (err < 0)
 		return err;
 
 	regs[0] = REG_SECONDS;
+	/* This will purposely overwrite REG_SECONDS_OS */
 	regs[1] = bin2bcd(tm->tm_sec);
 	regs[2] = bin2bcd(tm->tm_min);
 	regs[3] = bin2bcd(tm->tm_hour);
@@ -256,17 +281,13 @@ static int pcf8523_rtc_ioctl(struct device *dev, unsigned int cmd,
 			     unsigned long arg)
 {
 	struct i2c_client *client = to_i2c_client(dev);
-	u8 value;
-	int ret = 0, err;
+	int ret;
 
 	switch (cmd) {
 	case RTC_VL_READ:
-		err = pcf8523_read(client, REG_CONTROL3, &value);
-		if (err < 0)
-			return err;
-
-		if (value & REG_CONTROL3_BLF)
-			ret = 1;
+		ret = pcf8523_voltage_low(client);
+		if (ret < 0)
+			return ret;
 
 		if (copy_to_user((void __user *)arg, &ret, sizeof(int)))
 			return -EFAULT;
@@ -299,9 +320,10 @@ static int pcf8523_probe(struct i2c_client *client,
 	if (!pcf)
 		return -ENOMEM;
 
-	err = pcf8523_select_capacitance(client, true);
+	err = pcf8523_load_capacitance(client);
 	if (err < 0)
-		return err;
+		dev_warn(&client->dev, "failed to set xtal load capacitance: %d",
+			 err);
 
 	err = pcf8523_set_pm(client, 0);
 	if (err < 0)
@@ -326,6 +348,7 @@ MODULE_DEVICE_TABLE(i2c, pcf8523_id);
 #ifdef CONFIG_OF
 static const struct of_device_id pcf8523_of_match[] = {
 	{ .compatible = "nxp,pcf8523" },
+	{ .compatible = "microcrystal,rv8523" },
 	{ }
 };
 MODULE_DEVICE_TABLE(of, pcf8523_of_match);
@@ -334,7 +357,6 @@ MODULE_DEVICE_TABLE(of, pcf8523_of_match);
 static struct i2c_driver pcf8523_driver = {
 	.driver = {
 		.name = DRIVER_NAME,
-		.owner = THIS_MODULE,
 		.of_match_table = of_match_ptr(pcf8523_of_match),
 	},
 	.probe = pcf8523_probe,

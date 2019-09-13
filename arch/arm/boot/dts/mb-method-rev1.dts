@@ -18,8 +18,6 @@
 	model = "MakerBot Method Rev1";
 	compatible = "makerbot,method-rev1", "ti,am4372", "ti,am43", "ti,cpsw";
 
-	aliases {};
-
   /* The main 5V supply */
 	v5_main: fixedregulator-v5_main {
 		compatible = "regulator-fixed";
@@ -31,4 +29,8 @@
 		enable-active-high;
 		regulator-always-on;
 	};
+};
+
+&rtc_sys {
+	quartz-load-femtofarads = <7000>;
 };
