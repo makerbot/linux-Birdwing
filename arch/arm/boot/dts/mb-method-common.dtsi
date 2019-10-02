@@ -730,18 +730,15 @@
 		reg = <0x27>;
 	};
 
-	edt-ft5306@38 {
+	ft6x06@38 {
 		status = "okay";
-		compatible = "edt,edt-ft5306", "edt,edt-ft5x06";
+		compatible = "focaltech,ft6236";
 		pinctrl-names = "default";
 		pinctrl-0 = <&edt_ft5xx6_ts_pins>;
 		reg = <0x38>;
 
-		/* This is what am437x-sk-evm.dts does but the device driver
-		 * code seems to be looking for irq-gpios...
-		 */
 		interrupt-parent = <&gpio3>;
-		interrupts = <22 0>;
+		interrupts = <22 IRQ_TYPE_EDGE_FALLING>;
 
 		/* Should just match the screen resolution */
 		touchscreen-size-x = <800>;
