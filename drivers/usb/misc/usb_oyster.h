@@ -1,8 +1,8 @@
 #ifndef USB_OYSTER_H
 #define USB_OYSTER_H
 
-#define USB_OYSTER_VENDOR_ID	0x0483
-#define USB_OYSTER_PRODUCT_ID	0x5740
+#define USB_OYSTER_VENDOR_ID	0x23C1
+#define USB_OYSTER_PRODUCT_ID	0x0101
 
 // Table of VID PIDs that this driver supports
 static const struct usb_device_id oyster_table[] = {
