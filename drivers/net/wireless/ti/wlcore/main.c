@@ -27,6 +27,7 @@
 #include <linux/vmalloc.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
+#include <linux/timer.h>
 
 #include "wlcore.h"
 #include "debug.h"
@@ -6584,9 +6585,22 @@ out:
 	complete_all(&wl->nvs_loading_complete);
 }
 
+static void wlcore_nvs_fetch(unsigned long data) {
+	int ret;
+	struct wl1271 *wl = (struct wl1271 *) data;
+
+	ret = request_firmware_nowait(THIS_MODULE, FW_ACTION_HOTPLUG,
+				      WL12XX_NVS_NAME, wl->dev, GFP_KERNEL,
+				      wl, wlcore_nvs_cb);
+	if (ret < 0) {
+		wl1271_error("request_firmware_nowait failed: %d", ret);
+		complete_all(&wl->nvs_loading_complete);
+	}
+}
+
 int wlcore_probe(struct wl1271 *wl, struct platform_device *pdev)
 {
-	int ret;
+	struct timer_list *t;
 
 	if (!wl->ops || !wl->ptable)
 		return -EINVAL;
@@ -6595,15 +6609,17 @@ int wlcore_probe(struct wl1271 *wl, struct platform_device *pdev)
 	wl->pdev = pdev;
 	platform_set_drvdata(pdev, wl);
 
-	ret = request_firmware_nowait(THIS_MODULE, FW_ACTION_HOTPLUG,
-				      WL12XX_NVS_NAME, &pdev->dev, GFP_KERNEL,
-				      wl, wlcore_nvs_cb);
-	if (ret < 0) {
-		wl1271_error("request_firmware_nowait failed: %d", ret);
-		complete_all(&wl->nvs_loading_complete);
-	}
+	/* HACK: Wait for enough time to be sure that the separate ext4 partition
+	 * that we actually store this file on has actually been mounted.
+	 */
+	t = &wl->nvs_fetch_timer;
+	init_timer(t);
+	t->expires = jiffies + 5 * HZ;
+	t->data = (unsigned long)wl;
+	t->function = wlcore_nvs_fetch;
+	add_timer(t);
 
-	return ret;
+	return 0;
 }
 EXPORT_SYMBOL_GPL(wlcore_probe);
 

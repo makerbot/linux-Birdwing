@@ -23,6 +23,7 @@
 #define __WLCORE_H__
 
 #include <linux/platform_device.h>
+#include <linux/timer.h>
 
 #include "wlcore_i.h"
 #include "event.h"
@@ -503,6 +504,9 @@ struct wl1271 {
 
 	/* dynamic fw traces */
 	u32 dynamic_fw_traces;
+
+	/* HACK: Timer for delayed initialization */
+	struct timer_list nvs_fetch_timer;
 };
 
 int wlcore_probe(struct wl1271 *wl, struct platform_device *pdev);
