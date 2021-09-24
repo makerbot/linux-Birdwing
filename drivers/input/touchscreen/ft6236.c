@@ -133,6 +133,17 @@ static irqreturn_t ft6236_interrupt(int irq, void *dev_id)
 		if (ft6236->invert_y)
 			y = ft6236->max_y - y;
 
+		/* Hack specifically for method printers -- all method printers use a
+		 * 800 by 480 display, but some printers shipped with a broken touchscreen
+		 * firmware that reports points outside of these bounds.  I apologize to
+		 * anyone in the future who has arrived here trying to figure out why the
+		 * bigger touchscreen on our newest printer is not working correctly.
+		 */
+		if (x > 799)
+			x = 799;
+		if (y > 479)
+			y = 479;
+
 		if (ft6236->swap_xy) {
 			input_report_abs(input, ABS_MT_POSITION_X, y);
 			input_report_abs(input, ABS_MT_POSITION_Y, x);
