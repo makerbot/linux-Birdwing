@@ -261,7 +261,7 @@
 
 &am43xx_pinmux {
 	pinctrl-names = "default", "sleep";
-	pinctrl-0 = <&debugss_pins &power_pins &unused_pins>;
+	pinctrl-0 = <&debugss_pins &power_pins &unused_pins &mobo_usb_hub_reset_pins>;
 	pinctrl-1 = <>;
 
 	/* i2c0 pins used for the pcf8523 hardware RTC */
@@ -586,12 +586,9 @@
 		>;
 	};
 
-	ehrpwm3_pins: ehrpwm3_pins {
-		pinctrl-single,pins = <
-			0x218 (PIN_OUTPUT | MUX_MODE6) /* (AE19) cam0_data4.ehrpwm3A CH-PWM-A */
-			0x21C (PIN_OUTPUT | MUX_MODE6) /* (AD19) cam0_data5.ehrpwm3B CH-PWM-B */
-		>;
-	};
+	ehrpwm3_pins: ehrpwm3_pins { }; /* Only on gen-1 HW */
+
+	mobo_usb_hub_reset_pins: mobo_usb_hub_reset_pins { }; /* Only on gen-2 HW */
 
 	power_pins: power_pins {
 		pinctrl-single,pins = <
@@ -751,15 +748,6 @@
 		status = "okay";
 		compatible = "ti,tlc59108";
 		reg = <0x40>;
-	};
-};
-
-&epwmss3 {
-	status = "okay";
-	ehrpwm3: pwm@48306200 {
-		status = "okay";
-		pinctrl-names = "default";
-		pinctrl-0 = <&ehrpwm3_pins>;
 	};
 };
 
