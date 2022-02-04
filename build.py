@@ -1,9 +1,10 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 import os
 import shutil
 import subprocess
 import argparse
+import itertools
 
 parser = argparse.ArgumentParser(description='Build the morepork kernel.')
 parser.add_argument('-r', '--revision', type=str, default='macho-man',
@@ -20,7 +21,14 @@ args = parser.parse_args()
 
 if args.revision == 'macho-man':
     config = 'mb_macho_man_reva_defconfig'
-    dts = ['mb-macho-man-revd.dtb', 'mb-method-rev1.dtb']
+    fire_lava_dts = ['mb-macho-man-revd.dtb', 'mb-method-rev1.dtb']
+    fire_lava_dts_install_name = fire_lava_dts
+    magma_dts = ['mb-method-xl-rev1.dtb']
+    # We need this hack for now becuase u-boot is hardcoded to read specific
+    # file names. That is it needs the name 'mb-macho-man-revd.dtb' for GEN-1
+    # and 'mb-method-rev1.dtb' for GEN-2 hardware.
+    magma_dts_install_name = ['mb-method-rev1.dtb']
+    dts = fire_lava_dts + magma_dts
 elif args.revision == 'stardust-reva':
     config = 'mb_stardust_reva_defconfig'
     dts = ['mb-stardust-reva.dtb']
@@ -165,21 +173,38 @@ def install_file(src_path, install_path, manifest_file):
     shutil.copy2(src_path, install_path)
     manifest_file.write(install_path + '\n')
 
-def install(path):
-    install_path = os.path.join(path, 'rootfs')
-    install_boot = os.path.join(install_path, 'boot')
+def install(install_dir):
+    dts_installs = []
+    # Generate tuples containing dts files and their install locations
+    if args.revision == 'macho-man':
+        per_machine_dir = os.path.join(install_dir, 'per_machine')
+        machines = ['fire', 'lava', 'magma']
+        for machine in machines:
+            machine_dir = os.path.join(per_machine_dir, machine)
+            rootfs_dir = os.path.join(machine_dir, 'rootfs')
+            if machine == 'fire' or machine == 'lava':
+                dts_installs.append((rootfs_dir, fire_lava_dts, fire_lava_dts_install_name))
+            elif machine == 'magma':
+                dts_installs.append((rootfs_dir, magma_dts, magma_dts_install_name))
+    else:
+        dts_installs = [(os.path.join(install_dir, 'rootfs'), dts, dts)]
+    # Install dts and rootfs files
     image_path = os.path.join(this_dir, 'obj/arch/arm/boot')
     with open(os.path.join(this_dir, "install_manifest.txt"), 'w') as f:
-        for dt in dts:
-            install_file(
-                os.path.join(image_path, 'dts', dt),
-                os.path.join(install_boot, dt), f)
+        for dts_in in dts_installs:
+            install_boot_dir = os.path.join(dts_in[0], 'boot')
+            for dt_in,dt_out in itertools.izip(dts_in[1],dts_in[2]):
+                install_file(
+                    os.path.join(image_path, 'dts', dt_in),
+                    os.path.join(install_boot_dir, dt_out), f)
         if args.dt_only: return
+        rootfs_dir = os.path.join(install_dir, 'rootfs')
+        install_boot_dir = os.path.join(rootfs_dir, 'boot')
         install_file(
             os.path.join(image_path, 'zImage'),
-            os.path.join(install_boot, 'zImage'), f)
+            os.path.join(install_boot_dir, 'zImage'), f)
         if args.no_modules: return
-        install_tree(staging_path, install_path, f)
+        install_tree(staging_path, rootfs_dir, f)
 
 def clean():
     run_make_cmd(['mrproper'], 1)

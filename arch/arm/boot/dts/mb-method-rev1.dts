@@ -10,41 +10,11 @@
 
 /dts-v1/;
 
-#include "mb-method-common.dtsi"
+#include "mb-method-rev1-common.dtsi"
 
 // For Pin Mux Modes, refer to the TI AM437x Processors Datasheet (am4376.pdf)
 
 / {
-	model = "MakerBot Method Rev1";
+	model = "MakerBot Method/Method X GEN-2";
 	compatible = "makerbot,method-rev1", "ti,am4372", "ti,am43", "ti,cpsw";
-
-  /* The main 5V supply */
-	v5_main: fixedregulator-v5_main {
-		compatible = "regulator-fixed";
-		regulator-name = "v5_main";
-		regulator-min-microvolt = <5000000>;
-		regulator-max-microvolt = <5000000>;
-		vin-supply = <&v36_main>;
-		gpio = <&gpio4 10 GPIO_ACTIVE_HIGH>; /* (AC23) cam1_vd BUCK-5V-EN */
-		enable-active-high;
-	};
-
-	v5_main_consumer: mb-v5_main-consumer {
-		compatible = "mb,reg-th-consumer";
-		regulator-name = "mb-v5_main-regulator";
-		regulator-boot-on;
-		regulator-supplies = "v5_main";
-	};
-};
-
-&am43xx_pinmux {
-	mobo_usb_hub_reset_pins: mobo_usb_hub_reset_pins {
-		pinctrl-single,pins = <
-			0x21C (PIN_OUTPUT_PULLUP | MUX_MODE7) /* (AD19) cam0_data5.gpio4_27 MOBO-USB-HUB-GRSTz */
-		>;
-	};
-};
-
-&rtc_sys {
-	quartz-load-femtofarads = <7000>;
 };
