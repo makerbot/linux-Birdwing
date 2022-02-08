@@ -22,9 +22,10 @@
 &am43xx_pinmux {
 	/delete-property/ehrpwm3_pins;  /* magma machines do not use this */
 
-	mobo_usb_hub_reset_pins: mobo_usb_hub_reset_pins {
+	gpio4_pins: gpio4_pins {
 		pinctrl-single,pins = <
-			0x21C (PIN_OUTPUT_PULLUP | MUX_MODE7) /* (AD19) cam0_data5.gpio4_27 MOBO-USB-HUB-GRSTz */
+			0x218 (PIN_OUTPUT_PULLUP | MUX_MODE7) /* (AE19) cam0_data4.gpio4_26 MOBO-USB-HUB-GRSTz */
+			0x21C (PIN_OUTPUT_PULLUP | MUX_MODE7) /* (AD19) cam0_data5.gpio4_27 DRGN-HEAT-EN-OUT */
 		>;
 	};
 };

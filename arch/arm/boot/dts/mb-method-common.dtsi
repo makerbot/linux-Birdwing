@@ -261,7 +261,7 @@
 
 &am43xx_pinmux {
 	pinctrl-names = "default", "sleep";
-	pinctrl-0 = <&debugss_pins &power_pins &unused_pins &mobo_usb_hub_reset_pins>;
+	pinctrl-0 = <&debugss_pins &power_pins &unused_pins &gpio4_pins>;
 	pinctrl-1 = <>;
 
 	/* i2c0 pins used for the pcf8523 hardware RTC */
@@ -525,6 +525,7 @@
 			0x1CC (PIN_INPUT_PULLUP | MUX_MODE5) /* (AC24) cam1_data9.pr0_pru0_gpi17 ENDSTOP-Y */
 			0x228 (PIN_INPUT_PULLUP | MUX_MODE5) /* (H25) uart3_rxd.pr0_pru0_gpi18 ENDSTOP-Z */
 			0x22C (PIN_INPUT_PULLUP | MUX_MODE7) /* (H24) uart3_txd.pr0_pru0_gpi19 LID-OR-DOOR */
+			0x268 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (P20) spi2_d1.gpio3_23 CHAMBER-INTn (AC Voltage Fault) */
 		>;
 	};
 
@@ -593,7 +594,7 @@
 		>;
 	};
 
-	mobo_usb_hub_reset_pins: mobo_usb_hub_reset_pins { }; /* Only on gen-2 HW */
+	gpio4_pins: gpio4_pins { }; /* Gen-2 Method XL */
 
 	power_pins: power_pins {
 		pinctrl-single,pins = <
@@ -667,7 +668,6 @@
 			/* 0x17C (L22) uart1_rtsn RTC-INTn revc-new - (interrupt output from the RTC) */
 			/* 0x220 (AE20) cam0_data6 AUX-PWM revc-new */
 			/* 0x260 (N20) spi2_sclk MII-PWDN-INTn revc-new */
-			/* 0x268 (P20) spi2_d1 CH-12C-INTn revc-new */
 			/* 0x274 (C24) xdma_event_intr1 CLKOUT2 revc-new */
 			/* 0x284 CTRL_CONF_NNMI (G25) EXTINTn PMIC-INTn revc-new */
 			/* 0x2B4 CTRL_CONF_RTC_PORZ (AE6) RTC_PWRONRSTn -> tied to ground revc-new */
