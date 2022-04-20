@@ -21,7 +21,7 @@
 		regulator-name = "v5_main";
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
-		vin-supply = <&v36_main>;
+		vin-supply = <&vpsu_hiv>;
 		gpio = <&gpio4 10 GPIO_ACTIVE_HIGH>; /* (AC23) cam1_vd BUCK-5V-EN */
 		enable-active-high;
 	};
@@ -32,8 +32,4 @@
 		regulator-boot-on;
 		regulator-supplies = "v5_main";
 	};
-};
-
-&rtc_sys {
-	quartz-load-femtofarads = <7000>;
 };

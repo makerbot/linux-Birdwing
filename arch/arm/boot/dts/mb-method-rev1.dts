@@ -18,3 +18,19 @@
 	model = "MakerBot Method/Method X GEN-2";
 	compatible = "makerbot,method-rev1", "ti,am4372", "ti,am43", "ti,cpsw";
 };
+
+// GEN-1 has 12.5 pF capacitance on RTC
+// GEN-2 has 7 pF capacitance on RTC
+&rtc_sys {
+	quartz-load-femtofarads = <7000>;
+};
+
+// Method/Method-X use motherboard PWM for chamber heating
+&epwmss3 {
+	status = "okay";
+	ehrpwm3: pwm@48306200 {
+		status = "okay";
+		pinctrl-names = "default";
+		pinctrl-0 = <&ehrpwm3_pins>;
+	};
+};

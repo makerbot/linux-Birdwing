@@ -35,31 +35,7 @@
 		regulator-name = "vpsu_hiv";
 		regulator-min-microvolt = <36000000>;
 		regulator-max-microvolt = <36000000>;
-		gpio = <&gpio1 5 GPIO_ACTIVE_HIGH>; /* (A7) gpmc_ad5 PWR-MAIN-ON */
-		enable-active-high;
-		regulator-always-on;
-	};
-
-	/* The main 36V supply */
-	v36_main: fixedregulator-v36_main {
-		compatible = "regulator-fixed";
-		regulator-name = "v36_main";
-		regulator-min-microvolt = <36000000>;
-		regulator-max-microvolt = <36000000>;
-		vin-supply = <&vpsu_hiv>;
-		gpio = <&gpio2 2 GPIO_ACTIVE_HIGH>; /* (A9) gpmc_advn_ale 36V-EN */
-		enable-active-high;
-		regulator-always-on;
-	};
-
-	/* The main 12V supply */
-	v12_main: fixedregulator-v12_main {
-		compatible = "regulator-fixed";
-		regulator-name = "v12_main";
-		regulator-min-microvolt = <12000000>;
-		regulator-max-microvolt = <12000000>;
-		vin-supply = <&v36_main>;
-		gpio = <&gpio1 29 GPIO_ACTIVE_HIGH>; /* (A8) gpmc_csn0 12V-EN */
+		gpio = <&gpio1 5 GPIO_ACTIVE_HIGH>; /* (A7) gpmc_ad5.gpio1_5 PWR-MAIN-ON */
 		enable-active-high;
 		regulator-always-on;
 	};
@@ -70,8 +46,8 @@
 		regulator-name = "v3_3_main";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
-		vin-supply = <&v36_main>;
-		gpio = <&gpio2 1 GPIO_ACTIVE_HIGH>; /* (A12) rmii1_ref_clk BUCK-3V3-EN */
+		vin-supply = <&vpsu_hiv>;
+		gpio = <&gpio2 1 GPIO_ACTIVE_HIGH>; /* (A12) gpmc_clk.gpio2_1 BUCK-3V3-EN */
 		enable-active-high;
 		regulator-always-on;
 	};
@@ -83,7 +59,7 @@
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 		vin-supply = <&v3_3_main>;
-		gpio = <&gpio1 4 GPIO_ACTIVE_HIGH>; /* (B7) gpmc_ad4 3V3-CH-EN */
+		gpio = <&gpio1 4 GPIO_ACTIVE_HIGH>; /* (B7) gpmc_ad4.gpio1_4 3V3-CH-EN */
 		enable-active-high;
 	};
 
@@ -100,8 +76,8 @@
 		regulator-name = "v12_ch";
 		regulator-min-microvolt = <12000000>;
 		regulator-max-microvolt = <12000000>;
-		vin-supply = <&v12_main>;
-		gpio = <&gpio4 1 GPIO_ACTIVE_HIGH>; /* (AD18) cam0_vd 12V-CH-EN */
+		vin-supply = <&vpsu_hiv>;
+		gpio = <&gpio4 1 GPIO_ACTIVE_HIGH>; /* (AD18) cam0_vd.gpio4_1 12V-CH-EN */
 		enable-active-high;
 	};
 
@@ -112,36 +88,50 @@
 		regulator-supplies = "v12_ch";
 	};
 
-	/* The 36V supply to The Rock */
+	/* The 36V supply to the Front Panel PCB*/
 	v36_if: fixedregulator-v36_if {
 		compatible = "regulator-fixed";
 		regulator-name = "v36_if";
 		regulator-min-microvolt = <36000000>;
 		regulator-max-microvolt = <36000000>;
-		vin-supply = <&v36_main>;
-		gpio = <&gpio2 5 GPIO_ACTIVE_HIGH>; /* (C10) gpmc_be0n_cle 36V-IF-EN */
+		vin-supply = <&vpsu_hiv>;
+		gpio = <&gpio2 5 GPIO_ACTIVE_HIGH>; /* (C10) gpmc_be0n_cle.gpio2_5 36V-TOP-EN */
 		enable-active-high;
 	};
 
-	/* The 12V supply to The Rock */
+	v36_if_consumer: mb-v36_if-consumer {
+		compatible = "mb,reg-th-consumer";
+		regulator-name = "mb-v36_if-regulator";
+		regulator-boot-on;
+		regulator-supplies = "v36_if";
+	};
+
+	/* The 12V supply to Front Panel PCB */
 	v12_if: fixedregulator-v12_if {
 		compatible = "regulator-fixed";
 		regulator-name = "v12_if";
 		regulator-min-microvolt = <12000000>;
 		regulator-max-microvolt = <12000000>;
-		vin-supply = <&v12_main>;
-		gpio = <&gpio4 0 GPIO_ACTIVE_HIGH>; /* (AE17) cam0_hd 12V-IF-EN */
+		vin-supply = <&vpsu_hiv>;
+		gpio = <&gpio4 0 GPIO_ACTIVE_HIGH>; /* (AE17) cam0_hd.gpio4_0 12V-TOP-EN */
 		enable-active-high;
 	};
 
-	/* The 3.3V supply to The Rock, also known as the Top Bunk Enable */
+	v12_if_consumer: mb-v12_if-consumer {
+		compatible = "mb,reg-th-consumer";
+		regulator-name = "mb-v12_if-regulator";
+		regulator-boot-on;
+		regulator-supplies = "v12_if";
+	};
+
+	/* The 3.3V supply to Front Panel PCB */
 	v3_3_if: fixedregulator-v3_3_if {
 		compatible = "regulator-fixed";
 		regulator-name = "v3_3_if";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 		vin-supply = <&v3_3_main>;
-		gpio = <&gpio5 12 GPIO_ACTIVE_HIGH>; /* (E25) gpio5_12 3V3-IF-EN */
+		gpio = <&gpio5 12 GPIO_ACTIVE_HIGH>; /* (E25) gpio5_12.gpio5_12 3V3-TOP-EN */
 		enable-active-high;
 	};
 
@@ -152,49 +142,6 @@
 		regulator-supplies = "v3_3_if";
 	};
 
-	/* The 36V supply to Mick Foley */
-	v36_th: fixedregulator-v36_th {
-		compatible = "regulator-fixed";
-		regulator-name = "v36_th";
-		regulator-min-microvolt = <36000000>;
-		regulator-max-microvolt = <36000000>;
-		vin-supply = <&v36_main>;
-		gpio = <&gpio1 6 GPIO_ACTIVE_HIGH>; /* (C8) gpmc_ad6 36V-TH-EN */
-		enable-active-high;
-	};
-
-	/* The 12V supply to Mick Foley */
-	v12_th: fixedregulator-v12_th {
-		compatible = "regulator-fixed";
-		regulator-name = "v12_th";
-		regulator-min-microvolt = <12000000>;
-		regulator-max-microvolt = <12000000>;
-		vin-supply = <&v12_main>;
-		gpio = <&gpio5 9 GPIO_ACTIVE_HIGH>; /* (F24) gpio5_9 12V-TH-EN */
-		enable-active-high;
-	};
-
-	th_consumer: mb-th-consumer {
-		compatible = "mb,reg-th-consumer";
-		regulator-name = "mb-th-regulator";
-		regulator-boot-on;
-		regulator-supplies = "v12_th", "v36_th";
-	};
-
-	v12_if_consumer: mb-v12_if-consumer {
-		compatible = "mb,reg-th-consumer";
-		regulator-name = "mb-v12_if-regulator";
-		regulator-boot-on;
-		regulator-supplies = "v12_if";
-	};
-
-	v36_if_consumer: mb-v36_if-consumer {
-		compatible = "mb,reg-th-consumer";
-		regulator-name = "mb-v36_if-regulator";
-		regulator-boot-on;
-		regulator-supplies = "v36_if";
-	};
-
 	/* The 3.3V supply to filament bay aa */
 	v3_3_aa: fixedregulator-v3_3_aa {
 		compatible = "regulator-fixed";
@@ -202,7 +149,7 @@
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 		vin-supply = <&v3_3_main>;
-		gpio = <&gpio2 4 GPIO_ACTIVE_LOW>; /* (D10) gpmc_wen 3V3-AA-ENn */
+		gpio = <&gpio2 4 GPIO_ACTIVE_LOW>; /* (D10) gpmc_wen.gpio2_4 3V3-AA-ENn */
 		enable-active-low;
 	};
 
@@ -220,7 +167,7 @@
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 		vin-supply = <&v3_3_main>;
-		gpio = <&gpio2 3 GPIO_ACTIVE_LOW>; /* (E10) gpmc_oen_ren 3V3-BB-ENn */
+		gpio = <&gpio2 3 GPIO_ACTIVE_LOW>; /* (E10) gpmc_oen_ren.gpio2_3 3V3-BB-ENn */
 		enable-active-low;
 	};
 
@@ -238,8 +185,7 @@
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <1800000>;
 		startup-delay-us = <70000>;
-		/* (D14) mii1_tx_clk.gpio0_8 WIFI-EN_1V8 (gpio3_9 0x7, gpio0_8 0x9) */
-		gpio = <&gpio0 8 GPIO_ACTIVE_HIGH>;
+		gpio = <&gpio3 9 GPIO_ACTIVE_HIGH>; /* (D14) mii1_tx_clk.gpio3_9 WIFI-EN_1V8 */
 		enable-active-high;
 	};
 
@@ -254,67 +200,68 @@
 			linux,wakeup;
 			linux,code = <116>;
 			label = "POWER";
-			gpios = <&gpio0 24 GPIO_ACTIVE_HIGH>; /* (H20) clkreq BUTTON-PWRn */
+			gpios = <&gpio0 24 GPIO_ACTIVE_HIGH>; /* (H20) clkreq.gpio0_24 BUTTON-PWRn */
 		};
 	};
 };
 
 &am43xx_pinmux {
 	pinctrl-names = "default", "sleep";
-	pinctrl-0 = <&debugss_pins &power_pins &unused_pins &gpio4_pins>;
+	pinctrl-0 = <&debugss_pins &power_pins &rtc_pins &gpio_pins &mxl_pins
+		&misc_pins &unused_pins>;
 	pinctrl-1 = <>;
 
 	/* i2c0 pins used for the pcf8523 hardware RTC */
 	i2c0_pins: i2c0_pins {
 		pinctrl-single,pins = <
-			0x188 (PIN_INPUT_PULLUP | SLEWCTRL_FAST | MUX_MODE0)  /* (AB24) i2c0_sda.i2c0_sda */
-			0x18C (PIN_INPUT_PULLUP | SLEWCTRL_FAST | MUX_MODE0)  /* (Y22) i2c0_scl.i2c0_scl */
+			0x188 (PIN_INPUT_PULLUP | SLEWCTRL_FAST | MUX_MODE0) /* (AB24) i2c0_sda.i2c0_sda */
+			0x18C (PIN_INPUT_PULLUP | SLEWCTRL_FAST | MUX_MODE0) /* (Y22) i2c0_scl.i2c0_scl */
 		>;
 	};
 
 	i2c1_pins: i2c1_pins {
 		pinctrl-single,pins = <
-			0x208 (PIN_INPUT_PULLUP | SLEWCTRL_FAST | MUX_MODE3)  /* (AE18) cam0_data0.i2c1_sda */
-			0x20C (PIN_INPUT_PULLUP | SLEWCTRL_FAST | MUX_MODE3)  /* (AB18) cam0_data1.i2c1_scl */
+			0x208 (PIN_INPUT_PULLUP | SLEWCTRL_FAST | MUX_MODE3) /* (AE18) cam0_data0.i2c1_sda */
+			0x20C (PIN_INPUT_PULLUP | SLEWCTRL_FAST | MUX_MODE3) /* (AB18) cam0_data1.i2c1_scl */
 		>;
 	};
 
 	i2c2_pins: i2c2_pins {
 		pinctrl-single,pins = <
-			0x1E8 (PIN_INPUT_PULLUP | SLEWCTRL_FAST | MUX_MODE3)  /* (AB20) cam1_data0.i2c2_sda */
-			0x1EC (PIN_INPUT_PULLUP | SLEWCTRL_FAST | MUX_MODE3)  /* (AC21) cam1_data1.i2c2_scl */
+			0x1E8 (PIN_INPUT_PULLUP | SLEWCTRL_FAST | MUX_MODE3) /* (AB20) cam1_data0.i2c2_sda */
+			0x1EC (PIN_INPUT_PULLUP | SLEWCTRL_FAST | MUX_MODE3) /* (AC21) cam1_data1.i2c2_scl */
 		>;
 	};
 
 	/* eMMC */
 	emmc_pins_default: emmc_pins_default {
 		pinctrl-single,pins = <
-			0x020 (PIN_INPUT_PULLUP | MUX_MODE2)  /* (B10) gpmc_ad8.mmc1_dat0 */
-			0x024 (PIN_INPUT_PULLUP | MUX_MODE2)  /* (A10) gpmc_ad9.mmc1_dat1 */
-			0x028 (PIN_INPUT_PULLUP | MUX_MODE2)  /* (F11) gpmc_ad10.mmc1_dat2 */
-			0x02C (PIN_INPUT_PULLUP | MUX_MODE2)  /* (D11) gpmc_ad11.mmc1_dat3 */
-			0x030 (PIN_INPUT_PULLUP | MUX_MODE2)  /* (E11) gpmc_ad12.mmc1_dat4 */
-			0x034 (PIN_INPUT_PULLUP | MUX_MODE2)  /* (C11) gpmc_ad13.mmc1_dat5 */
-			0x038 (PIN_INPUT_PULLUP | MUX_MODE2)  /* (B11) gpmc_ad14.mmc1_dat6 */
-			0x03C (PIN_INPUT_PULLUP | MUX_MODE2)  /* (A11) gpmc_ad15.mmc1_dat7 */
-			0x080 (PIN_INPUT_PULLUP | MUX_MODE2)  /* (???) gpmc_csn1.mmc1_clk */
-			0x084 (PIN_INPUT_PULLUP | MUX_MODE2)  /* (???) gpmc_csn2.mmc1_cmd */
+			0x020 (PIN_INPUT_PULLUP | MUX_MODE2) /* (B10) gpmc_ad8.mmc1_dat0 */
+			0x024 (PIN_INPUT_PULLUP | MUX_MODE2) /* (A10) gpmc_ad9.mmc1_dat1 */
+			0x028 (PIN_INPUT_PULLUP | MUX_MODE2) /* (F11) gpmc_ad10.mmc1_dat2 */
+			0x02C (PIN_INPUT_PULLUP | MUX_MODE2) /* (D11) gpmc_ad11.mmc1_dat3 */
+			0x030 (PIN_INPUT_PULLUP | MUX_MODE2) /* (E11) gpmc_ad12.mmc1_dat4 */
+			0x034 (PIN_INPUT_PULLUP | MUX_MODE2) /* (C11) gpmc_ad13.mmc1_dat5 */
+			0x038 (PIN_INPUT_PULLUP | MUX_MODE2) /* (B11) gpmc_ad14.mmc1_dat6 */
+			0x03C (PIN_INPUT_PULLUP | MUX_MODE2) /* (A11) gpmc_ad15.mmc1_dat7 */
+			0x080 (PIN_INPUT_PULLUP | MUX_MODE2) /* (B9) gpmc_csn1.mmc1_clk */
+			0x084 (PIN_INPUT_PULLUP | MUX_MODE2) /* (F10) gpmc_csn2.mmc1_cmd */
 		>;
 	};
 
 	/* eMMC sleep */
 	emmc_pins_sleep: emmc_pins_sleep {
 		pinctrl-single,pins = <
-			0x020 (PIN_INPUT_PULLDOWN | MUX_MODE7)  /* (B10) gpmc_ad8.gpio0_22 */
-			0x024 (PIN_INPUT_PULLDOWN | MUX_MODE7)  /* (A10) gpmc_ad9.gpio0_23 */
-			0x028 (PIN_INPUT_PULLDOWN | MUX_MODE7)  /* (F11) gpmc_ad10.gpio0_26 */
-			0x02C (PIN_INPUT_PULLDOWN | MUX_MODE7)  /* (D11) gpmc_ad11.gpio0_27 */
-			0x030 (PIN_INPUT_PULLDOWN | MUX_MODE7)  /* (E11) gpmc_ad12.gpio1_12 */
-			0x034 (PIN_INPUT_PULLDOWN | MUX_MODE7)  /* (C11) gpmc_ad13.gpio1_13 */
-			0x038 (PIN_INPUT_PULLDOWN | MUX_MODE7)  /* (B11) gpmc_ad14.gpio1_14 */
-			0x03C (PIN_INPUT_PULLDOWN | MUX_MODE7)  /* (A11) gpmc_ad15.gpio1_15 */
-			0x080 (PIN_INPUT_PULLDOWN | MUX_MODE7)  /* (???) gpmc_csn1.gpio1_30 */
-			0x084 (PIN_INPUT_PULLDOWN | MUX_MODE7)  /* (???) gpmc_csn2.gpio1_31 */
+			0x020 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (B10) gpmc_ad8.gpio0_22 */
+			0x024 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (A10) gpmc_ad9.gpio0_23 */
+			0x028 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (F11) gpmc_ad10.gpio0_26 */
+			0x02C (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (D11) gpmc_ad11.gpio0_27 */
+			0x030 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (E11) gpmc_ad12.gpio1_12 */
+			0x034 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (C11) gpmc_ad13.gpio1_13 */
+			0x038 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (B11) gpmc_ad14.gpio1_14 */
+			0x03C (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (A11) gpmc_ad15.gpio1_15 */
+			0x080 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (B9) gpmc_csn1.gpio1_30 */
+			0x084 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (F10) gpmc_csn2.gpio1_31 */
 		>;
 	};
 
@@ -345,16 +292,16 @@
 	/* WIFI-EN, WIFI-IRQ, BT-EN */
 	wlan_pins_default: pinmux_wlan_pins_default {
 		pinctrl-single,pins = <
-			0x128 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (B15) mii1_txd0.gpio0_28 BT-EN_1V8 */
-			0x12C (PIN_OUTPUT_PULLDOWN | MUX_MODE9) /* (D14) mii1_tx_clk.gpio0_8 WIFI-EN_1V8 (gpio3_9 0x7, gpio0_8 0x9)*/
-			0x138 (PIN_INPUT | WAKEUP_ENABLE | MUX_MODE9) /* (E16) mii1_rxd2.gpio0_11 WIFI-IRQ_1V8 (gpio2_19 0x7, gpio0_11 0x9)*/
+			0x128 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (B15) mii1_txd0.gpio0_28 BT-EN_1V8 (GEN-1 Only) */
+			0x12C (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (D14) mii1_tx_clk.gpio3_9 WIFI-EN_1V8 */
+			0x138 (PIN_INPUT | WAKEUP_ENABLE | MUX_MODE9) /* (E16) mii1_rxd2.gpio0_11 WIFI-IRQ_1V8 */
 		>;
 	};
 
 	/* WIFI-EN, WIFI-IRQ, BT-EN sleep */
 	wlan_pins_sleep: pinmux_wlan_pins_sleep {
 		pinctrl-single,pins = <
-			0x128 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (B15) mii1_txd0.gpio0_28 BT-EN_1V8 */
+			0x128 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (B15) mii1_txd0.gpio0_28 BT-EN_1V8 (GEN-1 Only) */
 			0x12C (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (D14) mii1_tx_clk.gpio3_9 WIFI-EN_1V8 */
 			0x138 (PIN_INPUT | WAKEUP_ENABLE | MUX_MODE7) /* (E16) mii1_rxd2.gpio2_19 WIFI-IRQ_1V8 */
 		>;
@@ -363,14 +310,14 @@
 	/* Ethernet-MII */
 	cpsw_default: cpsw_default {
 		pinctrl-single,pins = <
-			0x000 (PIN_OUTPUT_PULLUP | MUX_MODE7)  /* TODO verify : (B5) gpmc_ad0.gpio1_0 */
+			0x000 (PIN_OUTPUT_PULLUP | MUX_MODE7) /* TODO verify : (B5) gpmc_ad0.gpio1_0 */
 			0x040 (PIN_OUTPUT | MUX_MODE1) /* (C3) gpmc_a0.gmii2_txen MII-TXEN */
 			0x044 (PIN_INPUT_PULLDOWN | MUX_MODE1) /* (C5) gpmc_a1.gmii2_rxdv MII-RXDV */
 			0x048 (PIN_OUTPUT | MUX_MODE1) /* (C6) gpmc_a2.gmii2_txd3 MII-TXD3 */
 			0x04C (PIN_OUTPUT | MUX_MODE1) /* (A4) gpmc_a3.gmii2_txd2 MII-TXD2 */
 			0x050 (PIN_OUTPUT | MUX_MODE1) /* (D7) gpmc_a4.gmii2_txd1 MII-TXD1 */
 			0x054 (PIN_OUTPUT | MUX_MODE1) /* (E7) gpmc_a5.gmii2_txd0 MII-TXD0 */
-			0x058 (PIN_INPUT | MUX_MODE1)  /* (E8) gpmc_a6.gmii2_txclk MII-TXCLK */
+			0x058 (PIN_INPUT | MUX_MODE1) /* (E8) gpmc_a6.gmii2_txclk MII-TXCLK */
 			0x05C (PIN_INPUT | MUX_MODE1) /* (F6) gpmc_a7.gmii2_rxclk MII-RXCLK */
 			0x060 (PIN_INPUT | MUX_MODE1) /* (F7) gpmc_a8.gmii2_rxd3 MII-RXD3 */
 			0x064 (PIN_INPUT | MUX_MODE1) /* (B4) gpmc_a9.gmii2_rxd2 MII-RXD2 */
@@ -379,7 +326,8 @@
 			0x070 (PIN_INPUT | MUX_MODE1) /* (A2) gpmc_wait0.gmii2_crs MII-CRS */
 			0x074 (PIN_INPUT_PULLDOWN | MUX_MODE1) /* (B3) gpmc_wpn.gmii2_rxer MII-RXER */
 			0x078 (PIN_INPUT | MUX_MODE1) /* (A3) gpmc_be1n.gmii2_col MII-COL */
-			0x270 (PIN_OUTPUT | MUX_MODE3) /* TODO verify : (D24) xdma_event_intr0.clkout1 PHY-25MHz */
+			0x270 (PIN_OUTPUT | MUX_MODE3) /* (D24) xdma_event_intr0.clkout1 CLKOUT1/CLKOUT1-25MHZ */
+			0x274 (PIN_OUTPUT | MUX_MODE3) /* (C24) xdma_event_intr1.clkout2 CLKOUT2 (GEN-1 Only) */ 
 		>;
 	};
 
@@ -409,7 +357,7 @@
 	/* MDIO */
 	davinci_mdio_default: davinci_mdio_default {
 		pinctrl-single,pins = <
-			0x148 (PIN_INPUT | SLEWCTRL_FAST | MUX_MODE0)  /* (A17) mdio_data.mdio_data MDIO-DATA */
+			0x148 (PIN_INPUT | SLEWCTRL_FAST | MUX_MODE0) /* (A17) mdio_data.mdio_data MDIO-DATA */
 			0x14C (PIN_OUTPUT | MUX_MODE0) /* (B17) mdio_clk.mdio_clk MDIO-CLK */
 		>;
 	};
@@ -425,8 +373,8 @@
 	/* Console Output (TTL) UART-DEBUG */
 	uart0_pins_default: uart0_pins_default {
 		pinctrl-single,pins = <
-			0x168 (DS0_PULL_UP_DOWN_EN | INPUT_EN | MUX_MODE0)  /* (L25) uart0_ctsn.uart0_ctsn */
-			0x16C (DS0_PULL_UP_DOWN_EN | INPUT_EN | MUX_MODE0)  /* (J25) uart0_rtsn.uart0_rtsn */
+			0x168 (DS0_PULL_UP_DOWN_EN | INPUT_EN | MUX_MODE0) /* (L25) uart0_ctsn.uart0_ctsn */
+			0x16C (DS0_PULL_UP_DOWN_EN | INPUT_EN | MUX_MODE0) /* (J25) uart0_rtsn.uart0_rtsn */
 			0x170 (PIN_INPUT_PULLUP | DS0_PULL_UP_DOWN_EN | MUX_MODE0) /* (K25) uart0_rxd.uart0_rxd */
 			0x174 (PIN_INPUT | DS0_PULL_UP_DOWN_EN | MUX_MODE0) /* (J24) uart0_txd.uart0_txd */
 		>;
@@ -434,18 +382,18 @@
 
 	uart0_pins_sleep: uart0_pins_sleep {
 		pinctrl-single,pins = <
-			0x168 (DS0_PULL_UP_DOWN_EN | INPUT_EN | MUX_MODE7)  /* (L25) uart0_ctsn.gpio1_8 */
-			0x16C (DS0_PULL_UP_DOWN_EN | INPUT_EN | MUX_MODE7)  /* (J25) uart0_rtsn.gpio1_9 */
+			0x168 (DS0_PULL_UP_DOWN_EN | INPUT_EN | MUX_MODE7) /* (L25) uart0_ctsn.gpio1_8 */
+			0x16C (DS0_PULL_UP_DOWN_EN | INPUT_EN | MUX_MODE7) /* (J25) uart0_rtsn.gpio1_9 */
 			0x170 (PIN_INPUT_PULLUP | DS0_PULL_UP_DOWN_EN | MUX_MODE0) /* (K25) uart0_rxd.uart0_rxd */
 			0x174 (PIN_INPUT_PULLDOWN | DS0_PULL_UP_DOWN_EN | MUX_MODE0) /* (J24) uart0_txd.uart0_txd */
 		>;
 	};
 
-	/* UART-BT */
+	/* UART1 is used for Bluetooth on GEN-1 and Dragon on GEN-2 */
 	uart1_pins_default: pinmux_uart1_pins_default {
 		pinctrl-single,pins = <
-			0x178 (PIN_INPUT | MUX_MODE0) /* (K22) uart1_ctsn.uart1_ctsn */
-			0x17C (PIN_OUTPUT_PULLDOWN | MUX_MODE0) /* (L22) uart1_rtsn.uart1_rtsn */
+			0x178 (PIN_INPUT | MUX_MODE0) /* (K22) uart1_ctsn.uart1_ctsn (GEN-1 Only) */
+			0x17C (PIN_OUTPUT_PULLDOWN | MUX_MODE0) /* (L22) uart1_rtsn.uart1_rtsn (GEN-1 Only) */
 			0x180 (PIN_INPUT_PULLUP | DS0_PULL_UP_DOWN_EN | MUX_MODE0) /* (K21) uart1_rxd.uart1_rxd */
 			0x184 (PIN_INPUT | DS0_PULL_UP_DOWN_EN | MUX_MODE0) /* (L21) uart1_txd.uart1_txd */
 		>;
@@ -453,14 +401,14 @@
 
 	uart1_pins_sleep: pinmux_uart1_pins_sleep {
 		pinctrl-single,pins = <
-			0x178 (PIN_INPUT_PULLUP | MUX_MODE7) /* (K22) uart1_ctsn.gpio0_12 */
-			0x17C (PIN_INPUT_PULLUP | MUX_MODE7) /* (L22) uart1_rtsn.gpio0_13 */
+			0x178 (PIN_INPUT_PULLUP | MUX_MODE7) /* (K22) uart1_ctsn.gpio0_12 (GEN-1 Only) */
+			0x17C (PIN_INPUT_PULLUP | MUX_MODE7) /* (L22) uart1_rtsn.gpio0_13 (GEN-1 Only) */
 			0x180 (PIN_INPUT_PULLUP | MUX_MODE7) /* (K21) uart1_rxd.gpio0_14 */
 			0x184 (PIN_INPUT_PULLUP | MUX_MODE7) /* (L21) uart1_txd.gpio0_15 */
 		>;
 	};
 
-	/* UART-DRAWER-BB */
+	/* UART-DRAWER-BB, Method/Method X Only */
 	uart2_pins_default: uart2_pins_default {
 		pinctrl-single,pins = <
 			0x150 (PIN_INPUT_PULLUP | DS0_PULL_UP_DOWN_EN | MUX_MODE1) /* (P23) spi0_sclk.uart2_rxd */
@@ -475,7 +423,7 @@
 		>;
 	};
 
-	/* UART-DRAWER-AA */
+	/* UART-DRAWER-AA, Method/Method X Only */
 	uart3_pins_default: uart3_pins_default {
 		pinctrl-single,pins = <
 			0x160 (PIN_INPUT_PULLUP | DS0_PULL_UP_DOWN_EN | MUX_MODE1) /* (R25) spi0_cs1.uart3_rxd */
@@ -503,14 +451,15 @@
 		>;
 	};
 
+	// PRU pins for Method/Method X on both GEN-1 and GEN-2
 	pruss_pins: pruss_pins {
 		pinctrl-single,pins = <
 			0x0F0 (PIN_OUTPUT | MUX_MODE5) /* (B1) mmc0_dat3.pr0_pru0_gpo8 MOT-B-STEP */
 			0x0F4 (PIN_OUTPUT | MUX_MODE5) /* (B2) mmc0_dat2.pr0_pru0_gpo9 MOT-B-DIR */
-			0x0F8 (PIN_OUTPUT | MUX_MODE5) /* (C2) mmc0_dat1.pr0_pru0_gpo10 MOT-AA-STEP */
-			0x0FC (PIN_OUTPUT | MUX_MODE5) /* (C1) mmc0_dat0.pr0_pru0_gpo11 MOT-AA-DIR */
-			0x100 (PIN_OUTPUT | MUX_MODE5) /* (D1) mmc0_clk.pr0_pru0_gpo12 MOT-BB-STEP */
-			0x104 (PIN_OUTPUT | MUX_MODE5) /* (D2) mmc0_cmd.pr0_pru0_gpo13 MOT-BB-DIR */
+			0x0F8 (PIN_OUTPUT | MUX_MODE5) /* (C2) mmc0_dat1.pr0_pru0_gpo10 MOT-AA-STEP (Method/Method-X) */
+			0x0FC (PIN_OUTPUT | MUX_MODE5) /* (C1) mmc0_dat0.pr0_pru0_gpo11 MOT-AA-DIR (Method/Method-X) */
+			0x100 (PIN_OUTPUT | MUX_MODE5) /* (D1) mmc0_clk.pr0_pru0_gpo12 MOT-BB-STEP (Method/Method-X) */
+			0x104 (PIN_OUTPUT | MUX_MODE5) /* (D2) mmc0_cmd.pr0_pru0_gpo13 MOT-BB-DIR (Method/Method-X) */
 			0x190 (PIN_OUTPUT | MUX_MODE5) /* (N24) mcasp0_aclkx.pr0_pru0_gpo0 MOT-X-STEP */
 			0x194 (PIN_OUTPUT | MUX_MODE5) /* (N22) mcasp0_fsx.pr0_pru0_gpo1 MOT-X-DIR */
 			0x198 (PIN_OUTPUT | MUX_MODE5) /* (H23) mcasp0_axr0.pr0_pru0_gpo2 MOT-Y-STEP */
@@ -521,11 +470,10 @@
 			0x1AC (PIN_OUTPUT | MUX_MODE5) /* (L24) mcasp0_ahclkx.pr0_pru0_gpo7 MOT-A-STEP */
 			0x1C0 (PIN_OUTPUT | MUX_MODE3) /* (AC20) cam0_pclk.pr0_pru0_gpo14 TH-SYNC-OUT */
 			0x1C4 (PIN_INPUT | MUX_MODE5) /* (AB19) cam0_data8.pr0_pru0_gpi15 TH-SYNC-IN */
-			0x1C8 (PIN_INPUT_PULLUP | MUX_MODE5)   /* (AA19) cam0_data9.pr0_pru0_gpi16 ENDSTOP-X */
+			0x1C8 (PIN_INPUT_PULLUP | MUX_MODE5) /* (AA19) cam0_data9.pr0_pru0_gpi16 ENDSTOP-X */
 			0x1CC (PIN_INPUT_PULLUP | MUX_MODE5) /* (AC24) cam1_data9.pr0_pru0_gpi17 ENDSTOP-Y */
+			0x22C (PIN_INPUT_PULLUP | MUX_MODE5) /* (H24) uart3_txd.pr0_pru0_gpi19 LID-OR-DOOR */
 			0x228 (PIN_INPUT_PULLUP | MUX_MODE5) /* (H25) uart3_rxd.pr0_pru0_gpi18 ENDSTOP-Z */
-			0x22C (PIN_INPUT_PULLUP | MUX_MODE7) /* (H24) uart3_txd.pr0_pru0_gpi19 LID-OR-DOOR */
-			0x268 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (P20) spi2_d1.gpio3_23 CHAMBER-INTn (AC Voltage Fault) */
 		>;
 	};
 
@@ -594,90 +542,145 @@
 		>;
 	};
 
-	gpio4_pins: gpio4_pins { }; /* Gen-2 Method XL */
-
 	power_pins: power_pins {
 		pinctrl-single,pins = <
 			0x010 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (B7) gpmc_ad4.gpio1_4 3V3-CH-EN */
 			0x014 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (A7) gpmc_ad5.gpio1_5 PWR-MAIN-ON */
-			0x018 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (C8) gpmc_ad6.gpio1_6 36V-TH-EN */
-			0x07C (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (A8) gpmc_csn0.gpio1_29 12V-EN */
 			0x08C (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (A12) gpmc_clk.gpio2_1 BUCK-3V3-EN*/
-			0x090 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (A9) gpmc_advn_ale.gpio2_2 36V-EN */
 			0x094 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (E10) gpmc_oen_ren.gpio2_3 3V3-BB-ENn */
 			0x098 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (D10) gpmc_wen.gpio2_4 3V3-AA-ENn */
 			0x09C (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (C10) gpmc_be0n_cle.gpio2_5 36V-IF-EN */
 			0x1B0 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (AE17) cam0_hd.gpio4_0 12V-IF-EN */
 			0x1B4 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (AD18) cam0_vd.gpio4_1 12V-CH-EN */
-			0x1D8 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (AC23) cam1_vd.gpio4_10 BUCK-5V-EN (REV1) */
-			0x23C (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (F24) gpio5_9.gpio5_9 12V-TH-EN */
-			0x248 (PIN_OUTPUT_PULLDOWN | MUX_MODE7)  /* (E25) gpio5_12.gpio5_12 3V3-IF-EN */
-			0x26C (PIN_OUTPUT_PULLUP | MUX_MODE7) /* (T23) spi2_cs0.gpio3_25 PWR-EN */
+			0x1D8 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (AC23) cam1_vd.gpio4_10 BUCK-5V-EN (GEN-2) */
+			0x248 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (E25) gpio5_12.gpio5_12 3V3-IF-EN */
 		>;
 	};
 
+	rtc_pins: rtc_pins {
+		pinctrl-single,pins = <
+			/* (AD6) RTC_PMIC_EN.RTC_PMIC_EN (Not Connected) */
+			/* (AE2) RTC_KALDO_ENn.RTC_KALDO_ENn (No Mux) */
+			0x2B8 (PIN_INPUT | MUX_MODE0) /* (AE3) RTC_WAKEUP.RTC_WAKEUP */
+			/* (AE4) RTC_XTALOUT.OSC1_OUT (Not Connected) */
+			0x2AC (PIN_INPUT_PULLDOWN | MUX_MODE0) /* (AE5) RTC_XTALIN.OSC1_IN (Not Connected GEN-1, GEN-2 GND) */
+			0x2B4 (PIN_INPUT | MUX_MODE0) /* (AE6) RTC_PWRONRSTn.RTC_PORz */
+		>;
+	};
+
+	gpio_pins: gpio_pins {
+		pinctrl-single,pins = <
+			0x278 (PIN_INPUT_PULLDOWN | WAKEUP_ENABLE | MUX_MODE7) /* (H20) clkreq.gpio0_24 (BUTTON-PWRn) */
+			0x15C (PIN_INPUT_PULLUP | MUX_MODE7) /* (T20) spi0_cs0.gpio0_5 PMIC-PFOn */
+			0x158 (PIN_INPUT_PULLUP | MUX_MODE7) /* (T21) spi0_d1.gpio0_4 PMIC-WAKEUPn */
+			0x004 (PIN_INPUT | MUX_MODE7) /* (A5) gpmc_ad1.gpio1_1 PWR-GOODn/PSU-PWR-GOODn */
+			0x00C (PIN_INPUT | MUX_MODE7) /* (A6) gpmc_ad3.gpio1_3 MUX-STAT */
+			0x008 (PIN_INPUT | MUX_MODE7) /* (B6) gpmc_ad2.gpio1_2 BUCK-5V-PGOOD */
+			0x01C (PIN_INPUT | MUX_MODE7) /* (B8) gpmc_ad7.gpio1_7 3V3-CHAMBER-OCn */
+			0x088 (PIN_INPUT | MUX_MODE7) /* (B12) gpmc_csn3.gpio2_0 3V3-TOP-OCn */
+			/* This is a chamber I2C interrupt on Method/Method X and an AC voltage
+				 fault input on Method XL. */
+			0x268 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (P20) spi2_d1.gpio3_23 (GEN-1 CH-I2C-INTn, GEN-2 CHAMBER-INTn (Dragon Net: MAINS-VAC-FAULT)	*/
+			0x26C (PIN_INPUT | MUX_MODE7) /* (T23) spi2_cs0.gpio3_25 PWR-EN (GEN-1) */
+			0x1B8 (PIN_INPUT | MUX_MODE7) /* (AC18) cam0_field.gpio4_2 12V-CHAMBER-OCn */
+			0x1D0 (PIN_INPUT | MUX_MODE7) /* (AD24) cam1_data8.gpio4_8 NFC-INT-B/BB-FILAMENT-SWITCH */
+			0x1D4 (PIN_INPUT | MUX_MODE7) /* (AD25) cam1_hd.gpio4_9 NFC-INT-A/AA-FILAMENT-SWITCH */
+			0x1DC (PIN_INPUT | MUX_MODE7) /* (AE21) cam1_pclk.gpio4_11 5V-TOP-OCn (GEN-2) */
+			0x1FC (PIN_INPUT | MUX_MODE7) /* (AE23) cam1_data5.gpio4_19 HW-RES*/
+			0x204 (PIN_INPUT | MUX_MODE7) /* (AE24) cam1_data7.gpio4_21 HW-RES*/
+			0x238 (PIN_INPUT | MUX_MODE7) /* (D25) gpio5_8.gpio5_8 3V3-AA-OCn */
+			0x24C (PIN_INPUT | MUX_MODE7) /* (E24) gpio5_13.gpio5_13 3V3-BB-OCn */
+		>;
+	};
+
+	mxl_pins: mxl_pins { }; /* Gen-2 Method XL */
+
+	misc_pins: misc_pins {
+		pinctrl-single,pins = <
+			0x27C (PIN_INPUT | MUX_MODE0) /* (G22) WARMRSTn.nRESETIN_OUT RESETOUTn */
+			0x260 (PIN_INPUT | MUX_MODE7) /* (N20) spi2_sclk.gpio3_24 MII-PWDN-INTn */
+			0x284 (PIN_INPUT | MUX_MODE0) /* (G25) EXTINTn.nNMI PMIC-INTn */
+			/* (B25) XTALOUT.OSC0_OUT */
+			/* (C25) XTALIN.OSC0_IN */
+			/* (T25) USB1_VBUS.USB1_VBUS */
+			/* (U22) USB1_CE.USB1_CE */
+			/* (U23) USB0_VBUS.USB1_VBUS */
+			/* (U24) USB0_ID.USB0_ID */
+			/* (U25) USB1_ID.USB1_ID */
+			/* (V24) USB1_DP.USB1_DP USB1-DATA_P */ 
+			/* (V25) USB1_DM.USB1_DM USB1-DATA_N */
+			/* (W22) USB0_CE.USB0_CE */
+			/* (W24) USB0_DM.USB0_DM */
+			/* (W25) USB0_DP.USB0_DP */
+			/* (Y23) PWRONRSTn.porz */
+		>;
+	};
+
+	// adc_pins: adc_pins {
+			/* (Y12) ADC0_AIN1.ADC0_AIN1 3V3SB-ISENSE*/
+			/* (Y13) ADC0_AIN2.ADC0_AIN2 12V-VSENSE */
+			/* (Y15) ADC1_AIN5.ADC1_AIN5 5V-ISENSE (GEN-2 Only) */
+			/* (AA12) ADC0_AIN0.ADC0_AIN0 3V3SB-VSENSE */
+			/* (AA13) ADC0_AIN3.ADC0_AIN3 12V-ISENSE	*/
+			/* (AA15) ADC1_AIN4.ADC1_AIN4 5V-ISENSE */
+			/* (AA16) ADC1_AIN2.ADC1_AIN2 36V-TOP-ISENSE */
+			/* (AB13) ADC0_AIN4.ADC0_AIN4 36V-VSENSE */
+			/* (AB15) ADC1_AIN3.ADC1_AIN3 36V-TOP-ISENSE (GEN-2 Only) */
+			/* (AB16) ADC1_AIN1.ADC1_AIN1 12V-TOP-ISENSE (GEN-2 Only) */
+			/* (AC13) ADC0_AIN5.ADC0_AIN5 36V-ISENSE */
+			/* (AC16) ADC1_AIN0.ADC1_AIN0 12V-TOP-ISENSE */
+			/* (AD13) ADC0_AIN6.ADC0_AIN6 3V3-VSENSE */
+			/* (AD14) ADC0_VREFP.ADC0_VREFP */
+			/* (AD15) ADC1_VREFN.ADC1_VREFN */
+			/* (AD16) ADC0_VREFP.ADC0_VREFP 5V-VSENSE (GEN-2 Only) */
+			/* (AE13) ADC0_AIN7.ADC0_AIN7 3V3-ISENSE */
+			/* (AE14) ADC0_VREFN.ADC0_VREFN */
+			/* (AE15) ADC1_VREFP.ADC1_VREFP */
+			/* (AE16) ADC1_AIN6.ADC1_AIN6 5V-VSENSE */
+	// };
+
+	// Unused pins for Method/Method X on both GEN-1 and GEN-2.
 	unused_pins: unused_pins {
 		pinctrl-single,pins = <
-			/* A lot of these are not unused... */
-			/* for all GOOD and OCn: pulled low if there is a fault) */
-			0x004 (PIN_INPUT_PULLUP | MUX_MODE7) /* (A5) gpmc_ad1.gpio1_1 PWR-GOOD */
-			0x008 (PIN_INPUT_PULLUP | MUX_MODE7) /* (B6) gpmc_ad2.gpio1_2 BUCK-5V-PGOOD */
-			0x01C (PIN_INPUT_PULLUP | MUX_MODE7) /* (B8) gpmc_ad7.gpio1_7 3V3-CH-OCn */
-			0x088 (PIN_INPUT_PULLUP | MUX_MODE7) /* (B12) gpmc_csn3.gpio2_0 */
-			0x10C (PIN_INPUT_PULLUP | MUX_MODE7) /* (B14) mii1_crs */
-			0x110 (PIN_INPUT_PULLUP | MUX_MODE7) /* (B13) mii1_rx_er */
-			0x124 (PIN_INPUT_PULLUP | MUX_MODE7) /* (A14) mii1_txd1 */
-			0x130 (PIN_INPUT_PULLUP | MUX_MODE7) /* (D13) mii1_rx_clk */
-			0x134 (PIN_INPUT_PULLUP | MUX_MODE7) /* (C14) mii1_rxd3 */
-			0x140 (PIN_INPUT_PULLUP | MUX_MODE7) /* (F17) mii1_rxd0.gpio2_21 */
-			0x144 (PIN_INPUT_PULLUP | MUX_MODE7) /* (A16) rmii1_ref_clk.gpio0_29 */
-			0x158 (PIN_INPUT_PULLUP | MUX_MODE7) /* (T21) spi0_d1 PMIC-WAKEUPn */
-			0x15C (PIN_INPUT_PULLUP | MUX_MODE7) /* (T20) spi0_cs0 PMIC-PFOn */
-			0x1B8 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (AC18) cam0_field.gpio4_2 */
-			0x1BC (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (AD17) cam0_wen.gpio4_3 */
-			0x1D0 (PIN_INPUT_PULLUP | MUX_MODE7) /* (AD24) cam1_data8 */
-			0x1D4 (PIN_INPUT_PULLUP | MUX_MODE7) /* (AD25) cam1_hd */
-			0x1D8 (PIN_INPUT_PULLUP | MUX_MODE7) /* (AC23) cam1_vd */
-			0x1DC (PIN_INPUT_PULLUP | MUX_MODE7) /* (AE21) cam1_pclk */
-			0x1E0 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (AC25) cam1_field.gpio4_12 */
-			0x1E4 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (AB25) cam1_wen.gpio4_13 */
-			0x1F0 (PIN_INPUT_PULLUP | MUX_MODE7) /* (AD21) cam1_data2 */
-			0x1F4 (PIN_INPUT_PULLUP | MUX_MODE7) /* (AE22) cam1_data3 */
-			0x1F8 (PIN_INPUT_PULLUP | MUX_MODE7) /* (AD22) cam1_data4 */
-			0x1FC (PIN_INPUT_PULLUP | MUX_MODE7) /* (AE23) cam1_data5 */
-			0x200 (PIN_INPUT_PULLUP | MUX_MODE7) /* (AD23) cam1_data6 */
-			0x204 (PIN_INPUT_PULLUP | MUX_MODE7) /* (AE24) cam1_data7 */
-			0x210 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (Y18) cam0_data2.gpio4_24 */
-			0x214 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (AA18) cam0_data3.gpio4_25 */
-			0x230 (PIN_INPUT_PULLUP | MUX_MODE7) /* (H22) uart3_ctsn */
-			0x234 (PIN_INPUT_PULLUP | MUX_MODE7) /* (K24) uart3_rtsn */
-			0x238 (PIN_INPUT_PULLUP | MUX_MODE7) /* (D25) gpio5_8.gpio5_8 3V3-AA-OCn */
-			0x240 (PIN_INPUT_PULLUP | MUX_MODE7) /* (G20) gpio5_10.gpio5_10 12V-IF-OCn */
-			0x244 (PIN_INPUT_PULLUP | MUX_MODE7) /* (F23) gpio5_11.gpio5_11 12V-TH-OCn */
-			0x24C (PIN_INPUT_PULLUP | MUX_MODE7) /* (E24) gpio5_13.gpio5_13 3V3-BB-OCn */
-			0x250 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (P25) spi4_sclk.gpio5_4 */
-			0x254 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (R24) spi4_d0.gpio5_5 */
-			0x258 (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (P24) spi4_d1.gpio5_6 */
-			0x25C (PIN_INPUT_PULLDOWN | MUX_MODE7) /* (N25) spi4_cs0.gpio5_7 */
-			0x27C (PIN_INPUT)  /* (G22) WARMRSTn.nRESETIN_OUT RESETOUTn */
-			0x2AC (PIN_INPUT_PULLDOWN | MUX_MODE0) /* (AE5) RTC_XTALIN.OSC1_IN */
-			0x2B0 (PIN_OUTPUT_PULLDOWN | MUX_MODE0) /* (AE4) RTC_XTALOUT.OSC1_OUT */
-			0x2BC (PIN_OUTPUT_PULLDOWN | MUX_MODE0) /* (AD6) RTC_PMIC_EN.RTC_PMIC_EN */
-			0x278 (PIN_INPUT_PULLDOWN | WAKEUP_ENABLE | MUX_MODE7)	/* xdma_evt_intr1 */
-			/* 0x00C PIN_INPUT (A6) gpmc_ad3 MUX-STAT revc-new - (pulled low if on standby power, pulled high for 36V power) */
-			/* 0x17C (L22) uart1_rtsn RTC-INTn revc-new - (interrupt output from the RTC) */
-			/* 0x220 (AE20) cam0_data6 AUX-PWM revc-new */
-			/* 0x260 (N20) spi2_sclk MII-PWDN-INTn revc-new */
-			/* 0x274 (C24) xdma_event_intr1 CLKOUT2 revc-new */
-			/* 0x284 CTRL_CONF_NNMI (G25) EXTINTn PMIC-INTn revc-new */
-			/* 0x2B4 CTRL_CONF_RTC_PORZ (AE6) RTC_PWRONRSTn -> tied to ground revc-new */
-			/* 0x2B8 CTRL_CONF_EXT_WAKEUP0 (AE3) RTC_WAKEUP -> tied to ground revc-new */
+			0x07C (PIN_INPUT | MUX_MODE7) /* (A8) gpmc_csn0.gpio1_29 */
+			0x090 (PIN_INPUT | MUX_MODE7) /* (A9) gpmc_advn_ale.gpio2_2 */
+			0x124 (PIN_INPUT | MUX_MODE7) /* (A14) mii1_txd1.gpio0_21 */
+			0x144 (PIN_INPUT | MUX_MODE7) /* (A16) rmii1_ref_clk.gpio0_29 */
+			0x110 (PIN_INPUT | MUX_MODE7) /* (B13) mii1_rx_er.gpio3_2 */
+			0x10C (PIN_INPUT | MUX_MODE7) /* (B14) mii1_crs.gpio3_1 */
+			0x018 (PIN_INPUT | MUX_MODE7) /* (C8) gpmc_ad6.gpio1_6 */
+			0x134 (PIN_INPUT | MUX_MODE7) /* (C14) mii1_rxd3.gpio2_18 */
+			0x130 (PIN_INPUT | MUX_MODE7) /* (D13) mii1_rx_clk.gpio3_10 */
+			0x140 (PIN_INPUT | MUX_MODE7) /* (F17) mii1_rxd0.gpio2_21 */
+			0x244 (PIN_INPUT | MUX_MODE7) /* (F23) gpio5_11.gpio5_11 */
+			0x23C (PIN_INPUT | MUX_MODE7) /* (F24) gpio5_9.gpio5_9 */
+			0x240 (PIN_INPUT | MUX_MODE7) /* (G20) gpio5_10.gpio5_10 */
+			0x230 (PIN_INPUT | MUX_MODE7) /* (H22) uart3_ctsn.gpio5_0 */
+			0x234 (PIN_INPUT | MUX_MODE7) /* (K24) uart3_rtsn.gpio5_1 */
+			0x25C (PIN_INPUT | MUX_MODE7) /* (N25) spi4_cs0.gpio5_7 */
+			0x258 (PIN_INPUT | MUX_MODE7) /* (P24) spi4_d1.gpio5_6 */
+			0x250 (PIN_INPUT | MUX_MODE7) /* (P25) spi4_sclk.gpio5_4 */
+			0x254 (PIN_INPUT | MUX_MODE7) /* (R24) spi4_d0.gpio5_5 */
+			0x210 (PIN_INPUT | MUX_MODE7) /* (Y18) cam0_data2.gpio4_24 */
+			0x214 (PIN_INPUT | MUX_MODE7) /* (AA18) cam0_data3.gpio4_25 */
+			0x1E4 (PIN_INPUT | MUX_MODE7) /* (AB25) cam1_wen.gpio4_13 */
+			0x1E0 (PIN_INPUT | MUX_MODE7) /* (AC25) cam1_field.gpio4_12 */
+			0x1BC (PIN_INPUT | MUX_MODE7) /* (AD17) cam0_wen.gpio4_3 */
+			0x1F0 (PIN_INPUT | MUX_MODE7) /* (AD21) cam1_data2.gpio4_16 */
+			0x1F8 (PIN_INPUT | MUX_MODE7) /* (AD22) cam1_data4.gpio4_18 */
+			0x200 (PIN_INPUT | MUX_MODE7) /* (AD23) cam1_data6.gpio4_20 */
+			0x220 (PIN_INPUT | MUX_MODE7) /* (AE20) cam0_data6.gpio4_28 */
+			0x1F4 (PIN_INPUT | MUX_MODE7) /* (AE22) cam1_data3.gpio4_11 */
 		>;
 	};
 
+	// TODO: This is perhaps an issue. G21 is not connected at all on GEN-2,
+	// however, on GEN-1 it is actually connected to the RTC-INTn output of the
+	// PCF8523T RTC chip, which is a 32KHz clock output per the GEN-2 schematic.
+	// Not sure what it is configured as on GEN-1.
 	usb1_pins_default: usb1_pins_default {
 		pinctrl-single,pins = <
-			0x2C0 (DS0_PULL_UP_DOWN_EN | PIN_INPUT_PULLDOWN | MUX_MODE7) /* (G21) USB0_DRVVBUS. */
+			0x2C0 (DS0_PULL_UP_DOWN_EN | PIN_INPUT_PULLDOWN | MUX_MODE7) /* (G21) USB0_DRVVBUS */
 		>;
 	};
 
@@ -753,15 +756,6 @@
 		status = "okay";
 		compatible = "ti,tlc59108";
 		reg = <0x40>;
-	};
-};
-
-&epwmss3 {
-	status = "okay";
-	ehrpwm3: pwm@48306200 {
-		status = "okay";
-		pinctrl-names = "default";
-		pinctrl-0 = <&ehrpwm3_pins>;
 	};
 };
 
@@ -908,8 +902,8 @@
 };
 
 /* &rtc { */
-/*   status = "okay"; */
-/*   ext-clk-src; */
+/*	 status = "okay"; */
+/*	 ext-clk-src; */
 /* }; */
 
 &pruss0 {
@@ -945,9 +939,9 @@
 
 &magadc {
 	status = "okay";
-  mag {
-    ti,tracks = <0>;
-  };
+	mag {
+		ti,tracks = <0>;
+	};
 	adc {
 		ti,adc-channels = <0  2  4  6 >;
 	};
