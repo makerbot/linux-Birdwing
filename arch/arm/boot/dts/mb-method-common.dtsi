@@ -451,14 +451,13 @@
 		>;
 	};
 
-	// PRU pins for Method/Method X on both GEN-1 and GEN-2
-	pruss_pins: pruss_pins {
+	/* All PRU pins which are the same across all machines (ie all but pru0-0 pin 12) */
+	pruss_common_pins: pruss_common_pins {
 		pinctrl-single,pins = <
 			0x0F0 (PIN_OUTPUT | MUX_MODE5) /* (B1) mmc0_dat3.pr0_pru0_gpo8 MOT-B-STEP */
 			0x0F4 (PIN_OUTPUT | MUX_MODE5) /* (B2) mmc0_dat2.pr0_pru0_gpo9 MOT-B-DIR */
 			0x0F8 (PIN_OUTPUT | MUX_MODE5) /* (C2) mmc0_dat1.pr0_pru0_gpo10 MOT-AA-STEP (Method/Method-X) */
 			0x0FC (PIN_OUTPUT | MUX_MODE5) /* (C1) mmc0_dat0.pr0_pru0_gpo11 MOT-AA-DIR (Method/Method-X) */
-			0x100 (PIN_OUTPUT | MUX_MODE5) /* (D1) mmc0_clk.pr0_pru0_gpo12 MOT-BB-STEP (Method/Method-X) */
 			0x104 (PIN_OUTPUT | MUX_MODE5) /* (D2) mmc0_cmd.pr0_pru0_gpo13 MOT-BB-DIR (Method/Method-X) */
 			0x190 (PIN_OUTPUT | MUX_MODE5) /* (N24) mcasp0_aclkx.pr0_pru0_gpo0 MOT-X-STEP */
 			0x194 (PIN_OUTPUT | MUX_MODE5) /* (N22) mcasp0_fsx.pr0_pru0_gpo1 MOT-X-DIR */
@@ -535,13 +534,6 @@
 		>;
 	};
 
-	ehrpwm3_pins: ehrpwm3_pins {
-		pinctrl-single,pins = <
-			0x218 (PIN_OUTPUT | MUX_MODE6) /* (AE19) cam0_data4.ehrpwm3A CH-PWM-A */
-			0x21C (PIN_OUTPUT | MUX_MODE6) /* (AD19) cam0_data5.ehrpwm3B CH-PWM-B */
-		>;
-	};
-
 	power_pins: power_pins {
 		pinctrl-single,pins = <
 			0x010 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (B7) gpmc_ad4.gpio1_4 3V3-CH-EN */
@@ -593,7 +585,18 @@
 		>;
 	};
 
-	mxl_pins: mxl_pins { }; /* Gen-2 Method XL */
+	/* Pins that are different on the method XL.  Settings for normal method are
+	 * listed here and are then overwritten in the xl dts file.  Method uses pwm
+	 * output on ehrpwm3 channels A and B to drive the chamber heaters, and has
+	 * pru0_0 pin 12 configured as an output to drive an assist motor.
+	 */
+	mxl_pins: mxl_pins {
+		pinctrl-single,pins = <
+			0x218 (PIN_OUTPUT | MUX_MODE6) /* (AE19) cam0_data4.ehrpwm3A CH-PWM-A */
+			0x21C (PIN_OUTPUT | MUX_MODE6) /* (AD19) cam0_data5.ehrpwm3B CH-PWM-B */
+			0x100 (PIN_OUTPUT | MUX_MODE5) /* (D1) mmc0_clk.pr0_pru0_gpo12 MOT-BB-STEP (Method/Method-X) */
+		>;
+	};
 
 	misc_pins: misc_pins {
 		pinctrl-single,pins = <
@@ -908,7 +911,7 @@
 
 &pruss0 {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pruss_pins>;
+	pinctrl-0 = <&pruss_common_pins>;
 };
 
 &dss {
