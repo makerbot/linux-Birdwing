@@ -30,7 +30,5 @@
 	status = "okay";
 	ehrpwm3: pwm@48306200 {
 		status = "okay";
-		pinctrl-names = "default";
-		pinctrl-0 = <&ehrpwm3_pins>;
 	};
 };

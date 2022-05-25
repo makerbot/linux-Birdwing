@@ -33,34 +33,7 @@
 		pinctrl-single,pins = <
 			0x218 (PIN_OUTPUT_PULLUP | MUX_MODE7) /* (AE19) cam0_data4.gpio4_26 MOBO-USB-HUB-GRSTz */
 			0x21C (PIN_OUTPUT_PULLUP | MUX_MODE7) /* (AD19) cam0_data5.gpio4_27 DRGN-HEAT-EN-OUT */
-		>;
-	};
-
-	/* Compard to Method and Method X, Method XL does not use filament bay motors
-		 and includes an additional Z endstop in place of the filament bay
-		 MOT-BB-STEP signal. */
-	pruss_pins: pruss_pins {
-		pinctrl-single,pins = <
-			0x0F0 (PIN_OUTPUT | MUX_MODE5) /* (B1) mmc0_dat3.pr0_pru0_gpo8 MOT-B-STEP */
-			0x0F4 (PIN_OUTPUT | MUX_MODE5) /* (B2) mmc0_dat2.pr0_pru0_gpo9 MOT-B-DIR */
-			0x0F8 (PIN_OUTPUT | MUX_MODE5) /* (C2) mmc0_dat1.pr0_pru0_gpo10 MOT-AA-STEP (Method/Method-X) */
-			0x0FC (PIN_OUTPUT | MUX_MODE5) /* (C1) mmc0_dat0.pr0_pru0_gpo11 MOT-AA-DIR (Method/Method-X) */
-			0x100 (PIN_INPUT_PULLUP | MUX_MODE5) /* (D1) mmc0_clk.pr0_pru0_gpo12 ENDSTOP-Z-BOT (Method-XL) */
-			0x104 (PIN_OUTPUT | MUX_MODE5) /* (D2) mmc0_cmd.pr0_pru0_gpo13 MOT-BB-DIR (Method/Method-X) */
-			0x190 (PIN_OUTPUT | MUX_MODE5) /* (N24) mcasp0_aclkx.pr0_pru0_gpo0 MOT-X-STEP */
-			0x194 (PIN_OUTPUT | MUX_MODE5) /* (N22) mcasp0_fsx.pr0_pru0_gpo1 MOT-X-DIR */
-			0x198 (PIN_OUTPUT | MUX_MODE5) /* (H23) mcasp0_axr0.pr0_pru0_gpo2 MOT-Y-STEP */
-			0x19C (PIN_OUTPUT | MUX_MODE5) /* (M24) mcasp0_ahclkr.pr0_pru0_gpo3 MOT-Y-DIR */
-			0x1A0 (PIN_OUTPUT | MUX_MODE5) /* (L23) mcasp0_aclkr.pr0_pru0_gpo4 MOT-Z-STEP */
-			0x1A4 (PIN_OUTPUT | MUX_MODE5) /* (K23) mcasp0_fsr.pr0_pru0_gpo5 MOT-Z-DIR */
-			0x1A8 (PIN_OUTPUT | MUX_MODE5) /* (M25) mcasp0_axr1.pr0_pru0_gpo6 MOT-A-DIR */
-			0x1AC (PIN_OUTPUT | MUX_MODE5) /* (L24) mcasp0_ahclkx.pr0_pru0_gpo7 MOT-A-STEP */
-			0x1C0 (PIN_OUTPUT | MUX_MODE3) /* (AC20) cam0_pclk.pr0_pru0_gpo14 TH-SYNC-OUT */
-			0x1C4 (PIN_INPUT | MUX_MODE5) /* (AB19) cam0_data8.pr0_pru0_gpi15 TH-SYNC-IN */
-			0x1C8 (PIN_INPUT_PULLUP | MUX_MODE5) /* (AA19) cam0_data9.pr0_pru0_gpi16 ENDSTOP-X */
-			0x1CC (PIN_INPUT_PULLUP | MUX_MODE5) /* (AC24) cam1_data9.pr0_pru0_gpi17 ENDSTOP-Y */
-			0x22C (PIN_INPUT_PULLUP | MUX_MODE5) /* (H24) uart3_txd.pr0_pru0_gpi19 LID-OR-DOOR */
-			0x228 (PIN_INPUT_PULLUP | MUX_MODE5) /* (H25) uart3_rxd.pr0_pru0_gpi18 ENDSTOP-Z */
+			0x100 (PIN_INPUT_PULLUP | MUX_MODE6) /* (D1) mmc0_clk.pr0_pru0_gpo12 ENDSTOP-Z-BOT (Method-XL) */
 		>;
 	};
 };

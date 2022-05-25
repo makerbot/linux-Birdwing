@@ -327,7 +327,6 @@
 			0x074 (PIN_INPUT_PULLDOWN | MUX_MODE1) /* (B3) gpmc_wpn.gmii2_rxer MII-RXER */
 			0x078 (PIN_INPUT | MUX_MODE1) /* (A3) gpmc_be1n.gmii2_col MII-COL */
 			0x270 (PIN_OUTPUT | MUX_MODE3) /* (D24) xdma_event_intr0.clkout1 CLKOUT1/CLKOUT1-25MHZ */
-			0x274 (PIN_OUTPUT | MUX_MODE3) /* (C24) xdma_event_intr1.clkout2 CLKOUT2 (GEN-1 Only) */ 
 		>;
 	};
 
@@ -451,14 +450,13 @@
 		>;
 	};
 
-	// PRU pins for Method/Method X on both GEN-1 and GEN-2
-	pruss_pins: pruss_pins {
+	/* All PRU pins which are the same across all machines (ie all but pru0-0 pin 12) */
+	pruss_common_pins: pruss_common_pins {
 		pinctrl-single,pins = <
 			0x0F0 (PIN_OUTPUT | MUX_MODE5) /* (B1) mmc0_dat3.pr0_pru0_gpo8 MOT-B-STEP */
 			0x0F4 (PIN_OUTPUT | MUX_MODE5) /* (B2) mmc0_dat2.pr0_pru0_gpo9 MOT-B-DIR */
 			0x0F8 (PIN_OUTPUT | MUX_MODE5) /* (C2) mmc0_dat1.pr0_pru0_gpo10 MOT-AA-STEP (Method/Method-X) */
 			0x0FC (PIN_OUTPUT | MUX_MODE5) /* (C1) mmc0_dat0.pr0_pru0_gpo11 MOT-AA-DIR (Method/Method-X) */
-			0x100 (PIN_OUTPUT | MUX_MODE5) /* (D1) mmc0_clk.pr0_pru0_gpo12 MOT-BB-STEP (Method/Method-X) */
 			0x104 (PIN_OUTPUT | MUX_MODE5) /* (D2) mmc0_cmd.pr0_pru0_gpo13 MOT-BB-DIR (Method/Method-X) */
 			0x190 (PIN_OUTPUT | MUX_MODE5) /* (N24) mcasp0_aclkx.pr0_pru0_gpo0 MOT-X-STEP */
 			0x194 (PIN_OUTPUT | MUX_MODE5) /* (N22) mcasp0_fsx.pr0_pru0_gpo1 MOT-X-DIR */
@@ -535,13 +533,6 @@
 		>;
 	};
 
-	ehrpwm3_pins: ehrpwm3_pins {
-		pinctrl-single,pins = <
-			0x218 (PIN_OUTPUT | MUX_MODE6) /* (AE19) cam0_data4.ehrpwm3A CH-PWM-A */
-			0x21C (PIN_OUTPUT | MUX_MODE6) /* (AD19) cam0_data5.ehrpwm3B CH-PWM-B */
-		>;
-	};
-
 	power_pins: power_pins {
 		pinctrl-single,pins = <
 			0x010 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (B7) gpmc_ad4.gpio1_4 3V3-CH-EN */
@@ -593,7 +584,18 @@
 		>;
 	};
 
-	mxl_pins: mxl_pins { }; /* Gen-2 Method XL */
+	/* Pins that are different on the method XL.  Settings for normal method are
+	 * listed here and are then overwritten in the xl dts file.  Method uses pwm
+	 * output on ehrpwm3 channels A and B to drive the chamber heaters, and has
+	 * pru0_0 pin 12 configured as an output to drive an assist motor.
+	 */
+	mxl_pins: mxl_pins {
+		pinctrl-single,pins = <
+			0x218 (PIN_OUTPUT | MUX_MODE6) /* (AE19) cam0_data4.ehrpwm3A CH-PWM-A */
+			0x21C (PIN_OUTPUT | MUX_MODE6) /* (AD19) cam0_data5.ehrpwm3B CH-PWM-B */
+			0x100 (PIN_OUTPUT | MUX_MODE5) /* (D1) mmc0_clk.pr0_pru0_gpo12 MOT-BB-STEP (Method/Method-X) */
+		>;
+	};
 
 	misc_pins: misc_pins {
 		pinctrl-single,pins = <
@@ -639,38 +641,47 @@
 			/* (AE16) ADC1_AIN6.ADC1_AIN6 5V-VSENSE */
 	// };
 
-	// Unused pins for Method/Method X on both GEN-1 and GEN-2.
+	/* Unused pins for Method/Method X on both GEN-1 and GEN-2.  Since these are
+     * unused, we disable the input circuitry on all of them under the principle
+     * that it is always better to disable something that you are not using, and
+     * we put a pulldown in place on all of them because it is always better to
+     * not leave nets floating.  We mux these to gpio when available so that
+     * nothing will attempt to drive them.
+     */
 	unused_pins: unused_pins {
 		pinctrl-single,pins = <
-			0x07C (PIN_INPUT | MUX_MODE7) /* (A8) gpmc_csn0.gpio1_29 */
-			0x090 (PIN_INPUT | MUX_MODE7) /* (A9) gpmc_advn_ale.gpio2_2 */
-			0x124 (PIN_INPUT | MUX_MODE7) /* (A14) mii1_txd1.gpio0_21 */
-			0x144 (PIN_INPUT | MUX_MODE7) /* (A16) rmii1_ref_clk.gpio0_29 */
-			0x110 (PIN_INPUT | MUX_MODE7) /* (B13) mii1_rx_er.gpio3_2 */
-			0x10C (PIN_INPUT | MUX_MODE7) /* (B14) mii1_crs.gpio3_1 */
-			0x018 (PIN_INPUT | MUX_MODE7) /* (C8) gpmc_ad6.gpio1_6 */
-			0x134 (PIN_INPUT | MUX_MODE7) /* (C14) mii1_rxd3.gpio2_18 */
-			0x130 (PIN_INPUT | MUX_MODE7) /* (D13) mii1_rx_clk.gpio3_10 */
-			0x140 (PIN_INPUT | MUX_MODE7) /* (F17) mii1_rxd0.gpio2_21 */
-			0x244 (PIN_INPUT | MUX_MODE7) /* (F23) gpio5_11.gpio5_11 */
-			0x23C (PIN_INPUT | MUX_MODE7) /* (F24) gpio5_9.gpio5_9 */
-			0x240 (PIN_INPUT | MUX_MODE7) /* (G20) gpio5_10.gpio5_10 */
-			0x230 (PIN_INPUT | MUX_MODE7) /* (H22) uart3_ctsn.gpio5_0 */
-			0x234 (PIN_INPUT | MUX_MODE7) /* (K24) uart3_rtsn.gpio5_1 */
-			0x25C (PIN_INPUT | MUX_MODE7) /* (N25) spi4_cs0.gpio5_7 */
-			0x258 (PIN_INPUT | MUX_MODE7) /* (P24) spi4_d1.gpio5_6 */
-			0x250 (PIN_INPUT | MUX_MODE7) /* (P25) spi4_sclk.gpio5_4 */
-			0x254 (PIN_INPUT | MUX_MODE7) /* (R24) spi4_d0.gpio5_5 */
-			0x210 (PIN_INPUT | MUX_MODE7) /* (Y18) cam0_data2.gpio4_24 */
-			0x214 (PIN_INPUT | MUX_MODE7) /* (AA18) cam0_data3.gpio4_25 */
-			0x1E4 (PIN_INPUT | MUX_MODE7) /* (AB25) cam1_wen.gpio4_13 */
-			0x1E0 (PIN_INPUT | MUX_MODE7) /* (AC25) cam1_field.gpio4_12 */
-			0x1BC (PIN_INPUT | MUX_MODE7) /* (AD17) cam0_wen.gpio4_3 */
-			0x1F0 (PIN_INPUT | MUX_MODE7) /* (AD21) cam1_data2.gpio4_16 */
-			0x1F8 (PIN_INPUT | MUX_MODE7) /* (AD22) cam1_data4.gpio4_18 */
-			0x200 (PIN_INPUT | MUX_MODE7) /* (AD23) cam1_data6.gpio4_20 */
-			0x220 (PIN_INPUT | MUX_MODE7) /* (AE20) cam0_data6.gpio4_28 */
-			0x1F4 (PIN_INPUT | MUX_MODE7) /* (AE22) cam1_data3.gpio4_11 */
+			0x018 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (C8) gpmc_ad6.gpio1_6 */
+			0x07C (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (A8) gpmc_csn0.gpio1_29 */
+			0x090 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (A9) gpmc_advn_ale.gpio2_2 */
+			0x10C (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (B14) mii1_crs.gpio3_1 */
+			0x110 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (B13) mii1_rx_er.gpio3_2 */
+			0x124 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (A14) mii1_txd1.gpio0_21 */
+			0x130 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (D13) mii1_rx_clk.gpio3_10 */
+			0x134 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (C14) mii1_rxd3.gpio2_18 */
+			0x140 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (F17) mii1_rxd0.gpio2_21 */
+			0x144 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (A16) rmii1_ref_clk.gpio0_29 */
+			0x1BC (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (AD17) cam0_wen.gpio4_3 */
+			0x1E0 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (AC25) cam1_field.gpio4_12 */
+			0x1E4 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (AB25) cam1_wen.gpio4_13 */
+			0x1F0 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (AD21) cam1_data2.gpio4_16 */
+			0x1F4 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (AE22) cam1_data3.gpio4_11 */
+			0x1F8 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (AD22) cam1_data4.gpio4_18 */
+			0x200 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (AD23) cam1_data6.gpio4_20 */
+			0x210 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (Y18) cam0_data2.gpio4_24 */
+			0x214 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (AA18) cam0_data3.gpio4_25 */
+			0x220 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (AE20) cam0_data6.gpio4_28 */
+			0x230 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (H22) uart3_ctsn.gpio5_0 */
+			0x234 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (K24) uart3_rtsn.gpio5_1 */
+			0x23C (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (F24) gpio5_9.gpio5_9 */
+			0x240 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (G20) gpio5_10.gpio5_10 */
+			0x244 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (F23) gpio5_11.gpio5_11 */
+			0x250 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (P25) spi4_sclk.gpio5_4 */
+			0x254 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (R24) spi4_d0.gpio5_5 */
+			0x258 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (P24) spi4_d1.gpio5_6 */
+			0x25C (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (N25) spi4_cs0.gpio5_7 */
+			0x274 (PIN_OUTPUT_PULLDOWN | MUX_MODE7) /* (C24) xdma_event_intr1.gpio5_29 */ 
+			0x2B0 (PIN_OUTPUT_PULLDOWN | MUX_MODE0) /* (AE4) rtc_xtalout.osc1_out */ 
+			0x2BC (PIN_OUTPUT_PULLDOWN | MUX_MODE0) /* (AD6) rtc_pmic_en.rtc_pmic_en */ 
 		>;
 	};
 
@@ -908,7 +919,7 @@
 
 &pruss0 {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pruss_pins>;
+	pinctrl-0 = <&pruss_common_pins>;
 };
 
 &dss {
